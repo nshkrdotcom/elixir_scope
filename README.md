@@ -2,10 +2,12 @@
 
 **Revolutionary AST-based debugging and code intelligence platform for Elixir applications**
 
+<!--
 [![Elixir CI](https://github.com/nshkrdotcom/ElixirScope/workflows/Elixir%20CI/badge.svg)](https://github.com/nshkrdotcom/ElixirScope/actions)
 [![Coverage Status](https://coveralls.io/repos/github/nshkrdotcom/ElixirScope/badge.svg?branch=main)](https://coveralls.io/github/nshkrdotcom/ElixirScope?branch=main)
 [![Hex.pm](https://img.shields.io/hexpm/v/elixir_scope.svg)](https://hex.pm/packages/elixir_scope)
 [![Documentation](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/elixir_scope)
+--->
 
 ## 🚀 Overview
 
