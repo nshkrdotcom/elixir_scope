@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Distributed.GlobalClock do
   @moduledoc """
   Distributed global clock for ElixirScope event synchronization.

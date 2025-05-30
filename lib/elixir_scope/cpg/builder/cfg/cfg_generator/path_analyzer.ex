@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.CFGGenerator.PathAnalyzer do
   @moduledoc """
   Path analysis functions for the CFG generator.

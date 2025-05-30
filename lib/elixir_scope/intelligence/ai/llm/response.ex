@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Intelligence.AI.LLM.Response do
   @moduledoc """
   Standardized response format for LLM providers.

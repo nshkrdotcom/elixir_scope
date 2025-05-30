@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Config do
   @moduledoc """
   Configuration management for ElixirScope.

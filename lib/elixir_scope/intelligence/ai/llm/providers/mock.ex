@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Intelligence.AI.LLM.Providers.Mock do
   @moduledoc """
   Mock LLM provider for testing and fallback scenarios.

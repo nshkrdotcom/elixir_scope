@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.CFGGenerator.ExpressionProcessors.BasicProcessors do
   @moduledoc """
   Processors for basic expressions like variables, literals, operations, and statement sequences.

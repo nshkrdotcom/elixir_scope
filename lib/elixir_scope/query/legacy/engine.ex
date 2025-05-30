@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Query.Legacy do
   @moduledoc """
   Optimized query engine for event retrieval.

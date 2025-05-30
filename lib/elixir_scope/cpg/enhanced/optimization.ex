@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.CPG.Enhanced.Optimization do
   @moduledoc """
   CPG.Enhanced.Optimization module for ElixirScope.

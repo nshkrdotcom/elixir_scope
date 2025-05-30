@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Integration.AnalysisIntelligence do
   @moduledoc """
   Integration.AnalysisIntelligence module for ElixirScope.

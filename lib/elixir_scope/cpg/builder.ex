@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.CPGBuilder do
   @moduledoc """
   Code Property Graph builder for comprehensive AST analysis.

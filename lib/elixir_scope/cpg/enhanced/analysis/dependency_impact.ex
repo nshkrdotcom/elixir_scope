@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.CPG.Enhanced.Analysis.DependencyImpact do
   @moduledoc """
   CPG.Enhanced.Analysis.DependencyImpact module for ElixirScope.

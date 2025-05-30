@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Debugger.Visualization do
   @moduledoc """
   Debugger.Visualization module for ElixirScope.

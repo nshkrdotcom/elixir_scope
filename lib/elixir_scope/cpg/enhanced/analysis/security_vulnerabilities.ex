@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.CPG.Enhanced.Analysis.SecurityVulnerabilities do
   @moduledoc """
   CPG.Enhanced.Analysis.SecurityVulnerabilities module for ElixirScope.

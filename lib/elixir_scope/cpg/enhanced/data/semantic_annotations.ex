@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.CPG.Enhanced.Data.SemanticAnnotations do
   @moduledoc """
   CPG.Enhanced.Data.SemanticAnnotations module for ElixirScope.

@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.EnhancedRepository do
   @moduledoc """
   Enhanced AST Repository with advanced analysis capabilities.

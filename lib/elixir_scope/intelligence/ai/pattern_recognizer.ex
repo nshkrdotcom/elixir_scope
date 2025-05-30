@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Intelligence.AI.PatternRecognizer do
   @moduledoc """
   Pattern recognition for Elixir code structures.

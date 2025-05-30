@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.ProjectPopulator.SecurityAnalyzer do
   @moduledoc """
   Performs security analysis on modules and functions.

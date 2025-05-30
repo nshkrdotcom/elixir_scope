@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.QueryBuilder.Normalizer do
   @moduledoc """
   Normalizes query specifications into consistent internal format.

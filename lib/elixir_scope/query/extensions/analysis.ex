@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Query.Extensions.Analysis do
   @moduledoc """
   Query.Extensions.Analysis module for ElixirScope.

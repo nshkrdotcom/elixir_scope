@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.VariableData do
   @moduledoc """
   Variable data structure for enhanced AST analysis.

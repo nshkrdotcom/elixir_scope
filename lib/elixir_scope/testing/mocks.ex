@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Testing.Mocks do
   @moduledoc """
   Testing.Mocks module for ElixirScope.

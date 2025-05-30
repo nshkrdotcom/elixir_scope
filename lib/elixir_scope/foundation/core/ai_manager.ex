@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Core.AIManager do
   @moduledoc """
   Manages AI integration and analysis capabilities.

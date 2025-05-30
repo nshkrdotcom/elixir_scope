@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.CPGData do
   @moduledoc """
   Code Property Graph (CPG) that unifies AST, CFG, and DFG representations.

@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.ProjectPopulator.OptimizationHints do
   @moduledoc """
   Generates optimization hints for modules and functions.

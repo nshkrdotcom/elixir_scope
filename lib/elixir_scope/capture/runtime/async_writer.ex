@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Capture.Runtime.AsyncWriter do
   @moduledoc """
   AsyncWriter is a worker process that consumes events from ring buffers,

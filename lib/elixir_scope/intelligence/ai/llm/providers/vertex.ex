@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Intelligence.AI.LLM.Providers.Vertex do
   @moduledoc """
   Vertex AI LLM provider for real AI-powered code analysis.

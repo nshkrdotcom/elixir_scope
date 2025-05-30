@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Core.EventManager do
   @moduledoc """
   Manages runtime event querying and filtering.

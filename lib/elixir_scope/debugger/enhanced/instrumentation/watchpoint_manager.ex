@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Capture.Runtime.EnhancedInstrumentation.WatchpointManager do
   @moduledoc """
   Manages semantic watchpoints for enhanced instrumentation.

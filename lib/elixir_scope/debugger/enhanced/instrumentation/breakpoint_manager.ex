@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Capture.Runtime.EnhancedInstrumentation.BreakpointManager do
   @moduledoc """
   Manages structural and data flow breakpoints for enhanced instrumentation.

@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.ASTRepository.TestSupport.Fixtures.SampleASTs do
   @moduledoc """
   Curated AST samples for testing AST parser enhancement and correlation functionality.

@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.SupportingStructures do
   @moduledoc """
   Supporting data structures for the Enhanced AST Repository.

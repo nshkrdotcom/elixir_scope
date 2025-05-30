@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule Mix.Tasks.Compile.ElixirScope do
   @moduledoc """
   Mix compiler that transforms Elixir ASTs to inject ElixirScope instrumentation.

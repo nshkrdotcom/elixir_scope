@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Capture.Runtime.EnhancedInstrumentation.DebuggerInterface do
   @moduledoc """
   Interface module for integrating with debugger systems.

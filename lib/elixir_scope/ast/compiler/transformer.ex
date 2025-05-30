@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Transformer do
   @moduledoc """
   Core AST transformation engine for ElixirScope instrumentation.

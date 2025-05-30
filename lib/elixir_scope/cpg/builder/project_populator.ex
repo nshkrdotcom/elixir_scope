@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.ProjectPopulator do
   @moduledoc """
   Enhanced project populator for comprehensive AST analysis and repository population.

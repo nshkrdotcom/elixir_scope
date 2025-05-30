@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.ASTReporting do
   @moduledoc """
   AST-specific event reporting functionality.

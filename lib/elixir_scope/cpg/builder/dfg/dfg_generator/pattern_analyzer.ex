@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.DFGGenerator.PatternAnalyzer do
   @moduledoc """
   Analyzes pattern matching structures in Elixir AST.

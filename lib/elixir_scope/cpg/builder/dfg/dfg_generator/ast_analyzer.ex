@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.DFGGenerator.ASTAnalyzer do
   @moduledoc """
   Analyzes AST structures for data flow patterns.

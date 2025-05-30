@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Capture.Runtime.TemporalBridgeEnhancement.ASTContextBuilder do
   @moduledoc """
   AST context building utilities for TemporalBridgeEnhancement.

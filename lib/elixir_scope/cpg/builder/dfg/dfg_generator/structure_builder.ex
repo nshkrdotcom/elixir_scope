@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.DFGGenerator.StructureBuilder do
   @moduledoc """
   Builds the final DFG data structure from analyzed state.

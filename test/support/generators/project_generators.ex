@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Test.Support.ProjectGenerators do
   @moduledoc """
   Generate test project structures

@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.CPGBuilder.SecurityAnalyzer do
   @moduledoc """
   Security analysis for CPG including taint analysis and vulnerability detection.

@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.EnhancedModuleData do
   @moduledoc """
   Enhanced module data structure for advanced AST analysis.

@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Debugger.AIAssistant do
   @moduledoc """
   Debugger.AIAssistant module for ElixirScope.

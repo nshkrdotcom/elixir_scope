@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.PatternMatcher.Validators do
   @moduledoc """
   Validation functions for pattern matching operations.

@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Capture.Runtime.TemporalBridgeEnhancement do
   @moduledoc """
   Temporal Bridge Enhancement for AST-Aware Time-Travel Debugging.

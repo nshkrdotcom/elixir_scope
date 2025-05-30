@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.CPGBuilder.QueryProcessor do
   @moduledoc """
   Query processing for CPG including pattern detection and analysis queries.

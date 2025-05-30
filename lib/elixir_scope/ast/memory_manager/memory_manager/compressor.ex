@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.MemoryManager.Compressor do
   @moduledoc """
   Data compression subsystem for compressing infrequently accessed analysis data.

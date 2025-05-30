@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Capture.Runtime.TemporalBridgeEnhancement.TraceBuilder do
   @moduledoc """
   Execution trace building for TemporalBridgeEnhancement.

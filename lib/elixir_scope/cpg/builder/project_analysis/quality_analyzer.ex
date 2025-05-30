@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.ProjectPopulator.QualityAnalyzer do
   @moduledoc """
   Analyzes quality metrics for modules and functions.

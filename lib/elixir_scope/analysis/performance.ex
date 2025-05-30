@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Analysis.Performance do
   @moduledoc """
   Analysis.Performance module for ElixirScope.

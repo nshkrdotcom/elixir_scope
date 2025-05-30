@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.MemoryManager.PressureHandler do
   @moduledoc """
   Memory pressure handling subsystem for responding to memory constraints.

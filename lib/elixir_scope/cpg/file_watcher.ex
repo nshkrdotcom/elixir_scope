@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.FileWatcher do
   @moduledoc """
   Real-time file system watcher for enhanced AST repository.

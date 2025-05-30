@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.ProjectPopulator.PerformanceMetrics do
   @moduledoc """
   Calculates performance metrics for project analysis.

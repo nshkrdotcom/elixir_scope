@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Capture.Runtime.TemporalBridgeEnhancement.StateManager do
   @moduledoc """
   State management for TemporalBridgeEnhancement.

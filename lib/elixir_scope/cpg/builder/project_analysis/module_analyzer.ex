@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.ProjectPopulator.ModuleAnalyzer do
   @moduledoc """
   Analyzes parsed modules and generates enhanced module data.

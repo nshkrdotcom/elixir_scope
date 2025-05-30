@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.PatternMatcher.Cache do
   @moduledoc """
   Caching layer for pattern matching results to improve performance.

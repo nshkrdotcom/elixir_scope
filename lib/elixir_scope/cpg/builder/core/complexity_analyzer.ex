@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.CPGBuilder.ComplexityAnalyzer do
   @moduledoc """
   Complexity analysis for CPG including path-sensitive analysis and metrics calculation.

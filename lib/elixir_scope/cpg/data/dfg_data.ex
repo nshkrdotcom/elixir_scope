@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.DFGData do
   @moduledoc """
   Enhanced Data Flow Graph representation for Elixir code.

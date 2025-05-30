@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.DFGGenerator.VariableTracker do
   @moduledoc """
   Tracks variable definitions, uses, and lifetimes throughout the AST.

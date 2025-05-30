@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Query.Executor do
   @moduledoc """
   Query.Executor module for ElixirScope.

@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.PatternMatcher.Config do
   @moduledoc """
   Configuration management for the Pattern Matcher system.

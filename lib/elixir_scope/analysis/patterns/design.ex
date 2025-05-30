@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Analysis.Patterns.Design do
   @moduledoc """
   Analysis.Patterns.Design module for ElixirScope.

@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.DFGGenerator.StateManager do
   @moduledoc """
   Manages state transitions and scope handling for DFG generation.

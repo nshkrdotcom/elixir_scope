@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.MemoryManager.Cleaner do
   @moduledoc """
   Data cleanup subsystem for removing stale and unused AST data.

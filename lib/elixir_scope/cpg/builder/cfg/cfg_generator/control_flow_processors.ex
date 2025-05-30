@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.CFGGenerator.ControlFlowProcessors do
   @moduledoc """
   Processors for control flow constructs (case, if, try, etc.).

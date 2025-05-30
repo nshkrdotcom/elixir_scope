@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.QueryBuilder.Supervisor do
   @moduledoc """
   Supervisor for the QueryBuilder system components.

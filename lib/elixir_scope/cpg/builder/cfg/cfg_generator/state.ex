@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.CFGGenerator.State do
   @moduledoc """
   State structure used throughout the CFG generation process.

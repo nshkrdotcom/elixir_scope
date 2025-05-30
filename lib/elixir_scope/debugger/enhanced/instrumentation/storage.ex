@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Capture.Runtime.EnhancedInstrumentation.Storage do
   @moduledoc """
   Manages ETS storage for enhanced instrumentation data.

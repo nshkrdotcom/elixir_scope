@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Storage.EventStore do
   @moduledoc """
   High-performance event storage with ETS-based indexing.

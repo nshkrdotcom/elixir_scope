@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.CPG.Analysis do
   @moduledoc """
   CPG.Analysis module for ElixirScope.

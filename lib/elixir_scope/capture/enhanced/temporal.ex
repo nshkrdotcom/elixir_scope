@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Capture.Runtime.Enhanced.Temporal do
   @moduledoc """
   Capture.Enhanced.Temporal module for ElixirScope.

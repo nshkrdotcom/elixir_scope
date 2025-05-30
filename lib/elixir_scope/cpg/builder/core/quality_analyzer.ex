@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.CPGBuilder.QualityAnalyzer do
   @moduledoc """
   Code quality analysis for CPG including code smell detection and maintainability metrics.

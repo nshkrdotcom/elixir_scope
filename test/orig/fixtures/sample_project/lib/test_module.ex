@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule TestModule do
   @moduledoc """
   Simple test module for Mix compiler integration tests.

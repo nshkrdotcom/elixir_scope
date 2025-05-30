@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Query.Optimizer do
   @moduledoc """
   Query.Optimizer module for ElixirScope.

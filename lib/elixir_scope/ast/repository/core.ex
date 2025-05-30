@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Repository do
   @moduledoc """
   Central repository for AST storage with runtime correlation capabilities.

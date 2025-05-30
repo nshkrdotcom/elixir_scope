@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.ComplexityMetrics do
   @moduledoc """
   Comprehensive complexity metrics for AST analysis.

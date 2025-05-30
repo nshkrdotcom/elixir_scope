@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.CPGBuilder.PerformanceAnalyzer do
   @moduledoc """
   Performance analysis for CPG including bottleneck detection and optimization suggestions.

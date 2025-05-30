@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Core.StateManager do
   @moduledoc """
   Manages process state history and temporal queries.

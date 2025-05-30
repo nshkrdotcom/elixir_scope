@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.CPGBuilder.GraphMerger do
   @moduledoc """
   Graph merging functionality for combining CFG and DFG into unified CPG.

@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Analysis.Patterns.Smells do
   @moduledoc """
   Analysis.Patterns.Smells module for ElixirScope.

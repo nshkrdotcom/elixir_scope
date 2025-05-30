@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.QueryBuilder.Executor do
   @moduledoc """
   Executes queries against the repository with filtering, ordering, and selection.

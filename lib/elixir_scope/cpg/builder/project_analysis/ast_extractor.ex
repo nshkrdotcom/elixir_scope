@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.ProjectPopulator.ASTExtractor do
   @moduledoc """
   Extracts information from AST structures.

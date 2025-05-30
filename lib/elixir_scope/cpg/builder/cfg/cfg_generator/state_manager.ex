@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.CFGGenerator.StateManager do
   @moduledoc """
   State management functions for the CFG generator.

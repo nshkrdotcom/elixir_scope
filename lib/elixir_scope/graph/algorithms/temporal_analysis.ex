@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Graph.Algorithms.TemporalAnalysis do
   @moduledoc """
   Graph.Algorithms.TemporalAnalysis module for ElixirScope.

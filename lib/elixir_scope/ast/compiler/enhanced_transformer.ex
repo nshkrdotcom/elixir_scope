@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.EnhancedTransformer do
   @moduledoc """
   Enhanced AST transformer for granular compile-time instrumentation.

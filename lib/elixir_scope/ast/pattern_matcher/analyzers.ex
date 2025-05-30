@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.PatternMatcher.Analyzers do
   @moduledoc """
   Core analysis functions for different pattern types.

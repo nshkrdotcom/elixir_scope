@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.CoreReporting do
   @moduledoc """
   Core event reporting functionality for the instrumentation runtime.

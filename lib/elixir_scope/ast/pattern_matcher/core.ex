@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.PatternMatcher.Core do
   @moduledoc """
   Core pattern matching logic and analysis functions.

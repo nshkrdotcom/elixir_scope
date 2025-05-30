@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Capture.Runtime.EnhancedInstrumentation do
   @moduledoc """
   Enhanced Instrumentation Integration for AST-Runtime Correlation.

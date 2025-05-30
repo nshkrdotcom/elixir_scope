@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.MemoryManager.Config do
   @moduledoc """
   Configuration management for the Memory Manager subsystem.

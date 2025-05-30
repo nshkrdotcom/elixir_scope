@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.ProjectPopulator.ComplexityAnalyzer do
   @moduledoc """
   Analyzes complexity metrics for modules and functions.

@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Analysis.Patterns.AntiPatterns do
   @moduledoc """
   Analysis.Patterns.AntiPatterns module for ElixirScope.

@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.FunctionData do
   @moduledoc """
   Function-level data structure with static analysis and runtime correlation.

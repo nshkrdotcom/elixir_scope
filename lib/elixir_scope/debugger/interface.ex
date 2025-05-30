@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Debugger.Interface do
   @moduledoc """
   Debugger.Interface module for ElixirScope.

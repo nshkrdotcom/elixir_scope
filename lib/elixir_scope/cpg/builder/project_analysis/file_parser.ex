@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.ProjectPopulator.FileParser do
   @moduledoc """
   Handles parsing of Elixir files into AST format.

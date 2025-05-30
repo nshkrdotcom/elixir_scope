@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.RuntimeCorrelator.CacheManager do
   @moduledoc """
   Cache management for the RuntimeCorrelator system.

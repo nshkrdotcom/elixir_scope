@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.PatternMatcher.PatternLibrary do
   @moduledoc """
   Pattern library management and default pattern definitions.

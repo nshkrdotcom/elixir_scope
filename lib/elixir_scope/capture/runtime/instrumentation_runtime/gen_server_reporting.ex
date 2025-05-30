@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.GenServerReporting do
   @moduledoc """
   GenServer integration reporting functionality.

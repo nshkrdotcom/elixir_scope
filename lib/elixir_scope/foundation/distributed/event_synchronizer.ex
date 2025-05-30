@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Distributed.EventSynchronizer do
   @moduledoc """
   Synchronizes events across distributed ElixirScope nodes.

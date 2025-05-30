@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Intelligence.AI.Analysis.IntelligentCodeAnalyzer do
   @moduledoc """
   AI-powered code analyzer that provides deep semantic analysis, quality assessment,

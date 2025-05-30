@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.InstrumentationMapper do
   @moduledoc """
   Maps AST nodes to instrumentation strategies and points.

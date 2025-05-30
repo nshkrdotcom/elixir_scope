@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Intelligence.Insights do
   @moduledoc """
   Intelligence.Insights module for ElixirScope.

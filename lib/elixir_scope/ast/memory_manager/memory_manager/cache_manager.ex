@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.MemoryManager.CacheManager do
   @moduledoc """
   Multi-level caching system with LRU eviction for the AST Repository.

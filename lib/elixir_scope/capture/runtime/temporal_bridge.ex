@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Capture.Runtime.TemporalBridge do
   @moduledoc """
   Bridge between InstrumentationRuntime and TemporalStorage for real-time temporal correlation.

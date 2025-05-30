@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.DFGGenerator.DependencyAnalyzer do
   @moduledoc """
   Analyzes dependencies and detects circular references in data flow.

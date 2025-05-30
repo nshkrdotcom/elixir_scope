@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.Context do
   @moduledoc """
   Manages instrumentation context for processes.

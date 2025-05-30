@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Parser do
   @moduledoc """
   Enhanced AST parser that assigns unique node IDs to instrumentable AST nodes,

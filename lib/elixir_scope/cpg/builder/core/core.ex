@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.CPGBuilder.Core do
   @moduledoc """
   Core CPG building orchestration module.

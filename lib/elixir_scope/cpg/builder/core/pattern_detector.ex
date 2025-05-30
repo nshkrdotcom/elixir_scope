@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.CPGBuilder.PatternDetector do
   @moduledoc """
   Pattern detection for CPG analysis including code patterns and anti-patterns.

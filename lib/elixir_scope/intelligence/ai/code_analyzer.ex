@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Intelligence.AI.CodeAnalyzer do
   @moduledoc """
   AI-powered code analysis engine for ElixirScope.

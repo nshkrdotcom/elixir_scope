@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Intelligence.AI.LLM.Providers.Gemini do
   @moduledoc """
   Gemini LLM provider for real AI-powered code analysis.

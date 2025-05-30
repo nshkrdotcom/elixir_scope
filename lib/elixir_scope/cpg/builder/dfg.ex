@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.DFGGenerator do
   @moduledoc """
   Data Flow Graph generator for comprehensive AST analysis.

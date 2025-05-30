@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Capture.Runtime.TemporalBridgeEnhancement.Types do
   @moduledoc """
   Type definitions for TemporalBridgeEnhancement.

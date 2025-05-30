@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Capture.Runtime.TemporalBridgeEnhancement.CacheManager do
   @moduledoc """
   Cache management for TemporalBridgeEnhancement.

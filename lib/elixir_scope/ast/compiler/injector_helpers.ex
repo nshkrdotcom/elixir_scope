@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.InjectorHelpers do
   @moduledoc """
   Helper functions for injecting ElixirScope instrumentation into AST nodes.

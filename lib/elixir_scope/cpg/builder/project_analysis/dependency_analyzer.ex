@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.ProjectPopulator.DependencyAnalyzer do
   @moduledoc """
   Analyzes dependencies between modules.

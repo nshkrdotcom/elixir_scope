@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.MemoryManager do
   @moduledoc """
   Main memory management coordinator for the Enhanced AST Repository.

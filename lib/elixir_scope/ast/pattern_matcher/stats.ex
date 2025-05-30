@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.PatternMatcher.Stats do
   @moduledoc """
   Statistical analysis functions for pattern matching results.

@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.EctoReporting do
   @moduledoc """
   Ecto database integration reporting functionality.

@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.QueryBuilder do
   @moduledoc """
   Advanced query builder for the Enhanced AST Repository.

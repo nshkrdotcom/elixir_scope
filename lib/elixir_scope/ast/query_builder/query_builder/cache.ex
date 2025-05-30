@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.QueryBuilder.Cache do
   @moduledoc """
   Handles query result caching with TTL and cleanup.

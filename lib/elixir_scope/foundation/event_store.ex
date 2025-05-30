@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.EventStore do
   @moduledoc """
   EventStore API wrapper that provides the expected interface for components.

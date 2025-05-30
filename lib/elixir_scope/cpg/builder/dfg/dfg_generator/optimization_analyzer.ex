@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.DFGGenerator.OptimizationAnalyzer do
   @moduledoc """
   Analyzes the DFG for optimization opportunities and generates phi nodes.

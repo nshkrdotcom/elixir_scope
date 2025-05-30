@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Capture.Runtime.RingBuffer do
   @moduledoc """
   High-performance lock-free ring buffer for event ingestion.

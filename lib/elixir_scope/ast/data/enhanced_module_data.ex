@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.EnhancedModuleData do
   @moduledoc """
   Comprehensive module representation with full AST and analysis metadata.

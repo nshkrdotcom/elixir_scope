@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.MemoryManager.Monitor do
   @moduledoc """
   Memory monitoring subsystem for tracking repository memory usage.

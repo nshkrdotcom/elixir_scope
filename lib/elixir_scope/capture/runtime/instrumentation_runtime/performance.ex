@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.Performance do
   @moduledoc """
   Performance monitoring and measurement functionality.

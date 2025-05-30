@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Analysis.Quality do
   @moduledoc """
   Analysis.Quality module for ElixirScope.

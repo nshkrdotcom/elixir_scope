@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.Synchronizer do
   @moduledoc """
   File synchronizer for enhanced AST repository.

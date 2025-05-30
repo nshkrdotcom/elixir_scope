@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.CFGGenerator.ASTProcessor do
   @moduledoc """
   Main AST processing functions for the CFG generator.

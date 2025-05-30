@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.DataStructures do
   @moduledoc """
   AST.Enhanced.DataStructures module for ElixirScope.

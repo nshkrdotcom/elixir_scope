@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.SharedDataStructures do
   @moduledoc """
   Shared data structures used across CFG, DFG, and CPG components.

@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.CFGGenerator do
   @moduledoc """
   Enhanced Control Flow Graph generator for Elixir functions.

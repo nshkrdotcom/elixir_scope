@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.CPG.Enhanced.Analysis.PerformanceHotspots do
   @moduledoc """
   CPG.Enhanced.Analysis.PerformanceHotspots module for ElixirScope.

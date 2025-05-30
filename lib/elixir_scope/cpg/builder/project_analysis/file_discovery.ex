@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.ProjectPopulator.FileDiscovery do
   @moduledoc """
   Handles discovery of Elixir files in a project directory.

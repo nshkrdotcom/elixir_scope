@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.RuntimeCorrelator.Config do
   @moduledoc """
   Configuration settings for the RuntimeCorrelator system.

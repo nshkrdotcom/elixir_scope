@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.Enhanced.CFGData do
   @moduledoc """
   Enhanced Control Flow Graph representation for Elixir code.

@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.Events do
   @moduledoc """
   Core event structures for ElixirScope.

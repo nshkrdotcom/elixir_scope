@@ -1,3 +1,4 @@
+# ORIG_FILE
 defmodule ElixirScope.AST.QueryBuilder.Validator do
   @moduledoc """
   Validates query structures for correctness and safety.
