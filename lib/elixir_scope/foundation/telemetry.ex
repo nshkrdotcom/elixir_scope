@@ -7,7 +7,7 @@ defmodule ElixirScope.Foundation.Telemetry do
   """
 
   require Logger
-  alias ElixirScope.Foundation.{Utils, Error, ErrorContext}
+  alias ElixirScope.Foundation.{Utils} #, Error} #, ErrorContext}
 
   @telemetry_events [
     # Configuration events
@@ -39,26 +39,34 @@ defmodule ElixirScope.Foundation.Telemetry do
 
   @spec measure_event([atom(), ...], map(), (() -> t)) :: t when t: var
   def measure_event(event_name, metadata \\ %{}, fun) when is_function(fun, 0) do
-    context = ErrorContext.new(__MODULE__, :measure_event,
-      metadata: %{event_name: event_name, metadata: metadata})
-
     start_time = Utils.monotonic_timestamp()
 
-    result = ErrorContext.with_context(context, fun)
+    # Don't wrap in ErrorContext - let exceptions propagate
+    try do
+      result = fun.()
 
-    end_time = Utils.monotonic_timestamp()
-    duration = end_time - start_time
+      end_time = Utils.monotonic_timestamp()
+      duration = end_time - start_time
 
-    measurements = %{duration: duration, timestamp: end_time}
-    :telemetry.execute(event_name, measurements, metadata)
+      measurements = %{duration: duration, timestamp: end_time}
+      :telemetry.execute(event_name, measurements, metadata)
 
-    # If there was an error in the function, we still measured it
-    case result do
-      {:error, _} = error ->
-        emit_error_event(event_name, metadata, error)
-        error
-      other ->
-        other
+      result
+    rescue
+      exception ->
+        # Still measure the duration even if it failed
+        end_time = Utils.monotonic_timestamp()
+        duration = end_time - start_time
+
+        measurements = %{duration: duration, timestamp: end_time}
+        error_metadata = Map.put(metadata, :exception, exception)
+
+        # Emit both the normal event and an error event
+        :telemetry.execute(event_name, measurements, error_metadata)
+        emit_error_event(event_name, metadata, {:error, exception})
+
+        # Re-raise the exception so the test can catch it
+        reraise exception, __STACKTRACE__
     end
   end
 
@@ -125,19 +133,18 @@ defmodule ElixirScope.Foundation.Telemetry do
     """)
   end
 
-  @spec emit_error_event([atom(), ...], map(), {:error, term()}) :: :ok
-  defp emit_error_event(event_name, metadata, error) do
-    error_metadata = case error do
-      {:error, %Error{} = err} ->
-        Map.merge(metadata, %{
-          error_code: err.code,
-          error_message: err.message
-        })
-      {:error, reason} ->
-        Map.merge(metadata, %{
-          error_type: :external_error,
-          error_message: inspect(reason)
-        })
+  @spec emit_error_event([atom(), ...], map(), {:error, struct()}) :: :ok
+  defp emit_error_event(event_name, metadata, {:error, err}) do
+    error_metadata = if err.__struct__ == ElixirScope.Foundation.Error do
+      Map.merge(metadata, %{
+        error_code: err.code,
+        error_message: err.message
+      })
+    else
+      Map.merge(metadata, %{
+        error_type: :external_error,
+        error_message: inspect(err)
+      })
     end
 
     measurements = %{error_count: 1, timestamp: Utils.monotonic_timestamp()}

@@ -46,7 +46,7 @@ defmodule ElixirScope.Foundation.TestHelpers do
     original_config = Config.get()
 
     # Apply overrides
-    test_config = deep_merge_config(original_config, config_overrides)
+    _test_config = deep_merge_config(original_config, config_overrides)
 
     try do
       # This would require additional Config API in a real implementation

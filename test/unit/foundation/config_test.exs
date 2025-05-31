@@ -1,5 +1,6 @@
 defmodule ElixirScope.Foundation.ConfigTest do
   use ExUnit.Case, async: false  # Config tests must be synchronous
+  @moduletag :foundation
 
   alias ElixirScope.Foundation.{Config, Error}
   alias ElixirScope.Foundation.TestHelpers

@@ -123,6 +123,8 @@ defmodule ElixirScope.Foundation.Config do
   end
 
   @impl Access
+  @spec get_and_update(ElixirScope.Foundation.Config.t(), any(), (any() -> :pop | {any(), any()})) ::
+          {any(), struct()}
   def get_and_update(%__MODULE__{} = config, key, function) do
     map_config = Map.from_struct(config)
 

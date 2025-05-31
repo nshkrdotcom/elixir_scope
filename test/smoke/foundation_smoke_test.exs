@@ -5,6 +5,7 @@ defmodule ElixirScope.Smoke.FoundationTest do
   """
 
   use ExUnit.Case
+  @moduletag :foundation
 
   alias ElixirScope.Foundation
   alias ElixirScope.Foundation.{Config, Events, Utils, Telemetry, Error}

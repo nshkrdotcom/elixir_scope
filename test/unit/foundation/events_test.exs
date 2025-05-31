@@ -1,7 +1,8 @@
 defmodule ElixirScope.Foundation.EventsTest do
   use ExUnit.Case, async: true
+  @moduletag :foundation
 
-  alias ElixirScope.Foundation.{Events, Utils, Error}
+  alias ElixirScope.Foundation.{Events}
 
   describe "event creation" do
     test "creates basic event with required fields" do

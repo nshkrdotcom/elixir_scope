@@ -1,5 +1,6 @@
 defmodule ElixirScope.Foundation.UtilsTest do
   use ExUnit.Case, async: true
+  @moduletag :foundation
 
   alias ElixirScope.Foundation.Utils
 
