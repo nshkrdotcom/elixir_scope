@@ -1,56 +1,34 @@
 defmodule ElixirScope.Foundation do
   @moduledoc """
-  Layer 1: Foundation - Core Infrastructure and Utilities
+  Main public API for ElixirScope Foundation layer.
 
-  ## Responsibilities
-  - Provide core utilities for all other layers
-  - Manage application-wide configuration
-  - Handle event system and telemetry
-  - Establish common types and protocols
-
-  ## Dependencies (Allowed)
-  - Standard Elixir/OTP libraries only
-  - No dependencies on other ElixirScope layers
-
-  ## Dependencies (Forbidden)
-  - AST, Graph, CPG, or any higher layers
-  - This is the bottom layer - nothing below it
-
-  ## Interface Stability
-  - Core utilities: STABLE (comprehensive tests required)
-  - Configuration management: STABLE (comprehensive tests required)
-  - Event system: STABLE (comprehensive tests required)
-  - Telemetry: MEDIUM STABILITY (smoke tests sufficient)
+  Provides unified access to all Foundation services including configuration,
+  events, telemetry, and error handling. This is the main entry point for
+  interacting with the Foundation layer.
   """
 
-  alias ElixirScope.Foundation.{Error, ErrorContext}
+  alias ElixirScope.Foundation.{Config, Events, Telemetry}
+  alias ElixirScope.Foundation.Types.Error
 
   @doc """
-  Initialize the Foundation layer.
-  Should be called first before any other ElixirScope components.
+  Initialize the entire Foundation layer.
+
+  Starts all Foundation services in the correct order and ensures
+  they are properly configured and ready for use.
+
+  ## Examples
+
+      iex> ElixirScope.Foundation.initialize()
+      :ok
+
+      iex> ElixirScope.Foundation.initialize(config: [debug_mode: true])
+      :ok
   """
   @spec initialize(keyword()) :: :ok | {:error, Error.t()}
   def initialize(opts \\ []) do
-    context = ErrorContext.new(__MODULE__, :initialize, metadata: %{opts: opts})
-
-    with :ok <-
-           add_operation_context(
-             ElixirScope.Foundation.Config.initialize(opts),
-             context,
-             :config_initialization
-           ),
-         :ok <-
-           add_operation_context(
-             ElixirScope.Foundation.Events.initialize(),
-             context,
-             :events_initialization
-           ),
-         :ok <-
-           add_operation_context(
-             ElixirScope.Foundation.Telemetry.initialize(),
-             context,
-             :telemetry_initialization
-           ) do
+    with :ok <- Config.initialize(Keyword.get(opts, :config, [])),
+         :ok <- Events.initialize(),
+         :ok <- Telemetry.initialize() do
       :ok
     else
       {:error, _} = error -> error
@@ -58,30 +36,125 @@ defmodule ElixirScope.Foundation do
   end
 
   @doc """
-  Get Foundation layer status and health information.
+  Get the status of all Foundation services.
+
+  Returns a map containing the status of each core service.
+
+  ## Examples
+
+      iex> ElixirScope.Foundation.status()
+      {:ok, %{
+        config: %{status: :running, uptime_ms: 12345},
+        events: %{status: :running, events_count: 1000},
+        telemetry: %{status: :running, metrics_count: 50}
+      }}
   """
-  @spec status() :: %{
-          config: :ok | {:error, term()},
-          events: :ok | {:error, term()},
-          telemetry: :ok | {:error, term()},
-          uptime_ms: non_neg_integer()
-        }
-  def status do
-    %{
-      config: ElixirScope.Foundation.Config.status(),
-      events: ElixirScope.Foundation.Events.status(),
-      telemetry: ElixirScope.Foundation.Telemetry.status(),
-      uptime_ms: System.monotonic_time(:millisecond)
-    }
+  @spec status() :: {:ok, map()} | {:error, Error.t()}
+  def status() do
+    with {:ok, config_status} <- Config.status(),
+         {:ok, events_status} <- Events.status(),
+         {:ok, telemetry_status} <- Telemetry.status() do
+      {:ok, %{
+        config: config_status,
+        events: events_status,
+        telemetry: telemetry_status
+      }}
+    else
+      {:error, _} = error -> error
+    end
   end
 
-  # Helper that adds operation context to errors, normalizes success values
-  @spec add_operation_context(
-          :ok | {:ok, term()} | {:error, Error.t()} | {:error, term()},
-          ErrorContext.context(),
-          atom()
-        ) :: :ok | {:ok, term()} | {:error, Error.t()}
-  defp add_operation_context(result, context, operation) do
-    ErrorContext.add_context(result, context, %{operation: operation})
+  @doc """
+  Check if all Foundation services are available and ready.
+
+  ## Examples
+
+      iex> ElixirScope.Foundation.available?()
+      true
+  """
+  @spec available?() :: boolean()
+  def available?() do
+    Config.available?() and Events.available?() and Telemetry.available?()
+  end
+
+  @doc """
+  Get version information for the Foundation layer.
+
+  ## Examples
+
+      iex> ElixirScope.Foundation.version()
+      "0.1.0"
+  """
+  @spec version() :: String.t()
+  def version() do
+    Application.spec(:elixir_scope, :vsn) |> to_string()
+  end
+
+  @doc """
+  Shutdown the Foundation layer gracefully.
+
+  This stops all Foundation services in reverse order and ensures
+  proper cleanup of resources.
+
+  ## Examples
+
+      iex> ElixirScope.Foundation.shutdown()
+      :ok
+  """
+  @spec shutdown() :: :ok
+  def shutdown() do
+    # Stop services in reverse order
+    # Let the supervision tree handle the actual shutdown
+    case Process.whereis(ElixirScope.Foundation.Supervisor) do
+      nil -> :ok
+      pid -> 
+        Supervisor.stop(pid, :normal)
+        :ok
+    end
+  end
+
+  @doc """
+  Get comprehensive health information for the Foundation layer.
+
+  Returns detailed health and performance metrics for monitoring.
+
+  ## Examples
+
+      iex> ElixirScope.Foundation.health()
+      {:ok, %{
+        status: :healthy,
+        uptime_ms: 3600000,
+        services: %{...},
+        metrics: %{...}
+      }}
+  """
+  @spec health() :: {:ok, map()} | {:error, Error.t()}
+  def health() do
+    case status() do
+      {:ok, service_status} ->
+        health_info = %{
+          status: determine_overall_health(service_status),
+          timestamp: System.monotonic_time(:millisecond),
+          services: service_status,
+          foundation_available: available?(),
+          elixir_version: System.version(),
+          otp_release: System.otp_release()
+        }
+        {:ok, health_info}
+
+      {:error, _} = error ->
+        error
+    end
+  end
+
+  ## Private Functions
+
+  defp determine_overall_health(service_status) do
+    all_running = 
+      service_status
+      |> Map.values()
+      |> Enum.all?(fn status -> Map.get(status, :status) == :running end)
+
+    if all_running, do: :healthy, else: :degraded
   end
 end

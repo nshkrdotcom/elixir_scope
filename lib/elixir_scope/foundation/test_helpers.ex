@@ -22,6 +22,19 @@ defmodule ElixirScope.Foundation.TestHelpers do
     end
   end
 
+  def debug_config_state do
+    config_pid = GenServer.whereis(Config)
+    supervisor_pid = Process.whereis(ElixirScope.Foundation.Supervisor)
+
+    IO.puts("""
+    Config Debug State:
+      Config PID: #{inspect(config_pid)}
+      Config Alive: #{config_pid && Process.alive?(config_pid)}
+      Supervisor PID: #{inspect(supervisor_pid)}
+      Supervisor Alive: #{supervisor_pid && Process.alive?(supervisor_pid)}
+    """)
+  end
+
   @doc """
   Creates a test event with known data.
   """

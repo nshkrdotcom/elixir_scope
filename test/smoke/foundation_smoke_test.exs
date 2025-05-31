@@ -57,7 +57,7 @@ defmodule ElixirScope.Smoke.FoundationTest do
 
     test "rejects updates to forbidden paths" do
       result = Config.update([:ai, :provider], :openai)
-      assert {:error, %Error{code: :config_update_forbidden}} = result
+      assert {:error, %Error{error_type: :config_update_forbidden}} = result
     end
   end
 
@@ -182,7 +182,7 @@ defmodule ElixirScope.Smoke.FoundationTest do
           end
         )
 
-      assert {:error, %Error{code: :test_error}} = result
+      assert {:error, %Error{error_type: :test_error}} = result
     end
   end
 

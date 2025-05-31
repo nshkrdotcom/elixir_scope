@@ -102,6 +102,7 @@ defmodule ElixirScope.MixProject do
       {:telemetry, "~> 1.2"},
 
       # Development and testing
+      {:mox, "~> 1.2", only: [:dev, :test]},
       {:ex_doc, "~> 0.30", only: :dev, runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},

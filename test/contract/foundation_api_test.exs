@@ -22,7 +22,7 @@ defmodule ElixirScope.Contract.FoundationAPITest do
       assert Map.has_key?(status, :uptime_ms)
 
       # Values should be status indicators or metrics
-      assert status.config in [:ok, {:error, term}] or match?({:error, _}, status.config)
+      assert status.config == :ok or match?({:error, _}, status.config)
       assert is_integer(status.uptime_ms)
     end
   end
@@ -114,10 +114,10 @@ defmodule ElixirScope.Contract.FoundationAPITest do
       assert duration >= 0
 
       # measure_memory should return {result, {before, after, diff}} tuple
-      {result, {before, after, diff}} = Utils.measure_memory(fn -> :test_result end)
+      {result, {before, and_after, diff}} = Utils.measure_memory(fn -> :test_result end)
       assert result == :test_result
       assert is_integer(before)
-      assert is_integer(after)
+      assert is_integer(and_after)
       assert is_integer(diff)
     end
 

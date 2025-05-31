@@ -2,14 +2,15 @@ defmodule ElixirScope.Foundation.EventsTest do
   use ExUnit.Case, async: true
   @moduletag :foundation
 
-  alias ElixirScope.Foundation.{Events}
+  alias ElixirScope.Foundation.Events
+  alias ElixirScope.Foundation.Types.Event
 
   describe "event creation" do
     test "creates basic event with required fields" do
       data = %{test: "data"}
-      event = Events.new_event(:test_event, data)
+      {:ok, event} = Events.new_event(:test_event, data)
 
-      assert %Events{} = event
+      assert %Event{} = event
       assert event.event_type == :test_event
       assert event.data == data
       assert is_integer(event.event_id)
@@ -23,7 +24,7 @@ defmodule ElixirScope.Foundation.EventsTest do
       correlation_id = "test-correlation"
       parent_id = 12345
 
-      event =
+      {:ok, event} =
         Events.new_event(:test_event, %{},
           correlation_id: correlation_id,
           parent_id: parent_id
@@ -34,8 +35,8 @@ defmodule ElixirScope.Foundation.EventsTest do
     end
 
     test "generates unique event IDs" do
-      event1 = Events.new_event(:test, %{})
-      event2 = Events.new_event(:test, %{})
+      {:ok, event1} = Events.new_event(:test, %{})
+      {:ok, event2} = Events.new_event(:test, %{})
 
       assert event1.event_id != event2.event_id
     end
@@ -49,9 +50,9 @@ defmodule ElixirScope.Foundation.EventsTest do
   describe "function events" do
     test "creates function entry event" do
       args = [:arg1, :arg2]
-      event = Events.function_entry(TestModule, :test_function, 2, args)
+      {:ok, event} = Events.function_entry(TestModule, :test_function, 2, args)
 
-      assert %Events{event_type: :function_entry} = event
+      assert %Event{event_type: :function_entry} = event
       assert event.data.module == TestModule
       assert event.data.function == :test_function
       assert event.data.arity == 2
@@ -60,7 +61,7 @@ defmodule ElixirScope.Foundation.EventsTest do
     end
 
     test "creates function entry with caller information" do
-      event =
+      {:ok, event} =
         Events.function_entry(TestModule, :test_function, 1, [:arg],
           caller_module: CallerModule,
           caller_function: :caller_function,
@@ -77,7 +78,7 @@ defmodule ElixirScope.Foundation.EventsTest do
       result = :ok
       duration = 1_000_000
 
-      event =
+      {:ok, event} =
         Events.function_exit(
           TestModule,
           :test_function,
@@ -96,11 +97,12 @@ defmodule ElixirScope.Foundation.EventsTest do
     end
 
     test "truncates large function arguments" do
-      large_args = [String.duplicate("x", 2000)]
-      event = Events.function_entry(TestModule, :test_function, 1, large_args)
+      # Create arguments that are definitely over the 10,000 byte default threshold
+      large_args = [String.duplicate("x", 15_000)]
+      {:ok, event} = Events.function_entry(TestModule, :test_function, 1, large_args)
 
-      # Should be truncated due to size
-      assert match?({:truncated, _, _}, event.data.args)
+      # Should be truncated due to size - Utils.truncate_if_large returns a map
+      assert match?(%{truncated: true}, event.data.args)
     end
   end
 
@@ -109,7 +111,7 @@ defmodule ElixirScope.Foundation.EventsTest do
       old_state = %{counter: 0}
       new_state = %{counter: 1}
 
-      event = Events.state_change(self(), :handle_call, old_state, new_state)
+      {:ok, event} = Events.state_change(self(), :handle_call, old_state, new_state)
 
       assert event.event_type == :state_change
       assert event.data.server_pid == self()
@@ -120,7 +122,7 @@ defmodule ElixirScope.Foundation.EventsTest do
     test "detects no change in identical states" do
       same_state = %{counter: 0}
 
-      event = Events.state_change(self(), :handle_call, same_state, same_state)
+      {:ok, event} = Events.state_change(self(), :handle_call, same_state, same_state)
 
       assert event.data.state_diff == :no_change
     end
@@ -128,21 +130,21 @@ defmodule ElixirScope.Foundation.EventsTest do
 
   describe "serialization" do
     test "serializes and deserializes events correctly" do
-      original = Events.new_event(:test_event, %{data: "test"})
+      {:ok, original} = Events.new_event(:test_event, %{data: "test"})
 
-      serialized = Events.serialize(original)
+      {:ok, serialized} = Events.serialize(original)
       assert is_binary(serialized)
 
-      deserialized = Events.deserialize(serialized)
+      {:ok, deserialized} = Events.deserialize(serialized)
       assert deserialized == original
     end
 
     test "calculates serialized size correctly" do
-      event = Events.new_event(:test_event, %{data: "test"})
+      {:ok, event} = Events.new_event(:test_event, %{data: "test"})
 
-      calculated_size = Events.serialized_size(event)
-      actual_serialized = Events.serialize(event)
-      actual_size = if is_binary(actual_serialized), do: byte_size(actual_serialized), else: 0
+      {:ok, calculated_size} = Events.serialized_size(event)
+      {:ok, actual_serialized} = Events.serialize(event)
+      actual_size = byte_size(actual_serialized)
 
       assert calculated_size == actual_size
     end
@@ -154,12 +156,12 @@ defmodule ElixirScope.Foundation.EventsTest do
         list: [1, 2, 3, 4, 5]
       }
 
-      event = Events.new_event(:complex_event, complex_data)
+      {:ok, event} = Events.new_event(:complex_event, complex_data)
 
-      serialized = Events.serialize(event)
+      {:ok, serialized} = Events.serialize(event)
       assert is_binary(serialized)
 
-      deserialized = Events.deserialize(serialized)
+      {:ok, deserialized} = Events.deserialize(serialized)
       assert deserialized == event
     end
 
