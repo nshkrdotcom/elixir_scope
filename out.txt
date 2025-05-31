@@ -1,6 +1,0 @@
-[
-  {
-    "lineNumber": "12",
-    "fileWithPath": "lib/elixir_scope/foundation/config.ex"
-  }
-]

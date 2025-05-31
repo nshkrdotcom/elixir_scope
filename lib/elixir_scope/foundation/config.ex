@@ -258,7 +258,7 @@ defmodule ElixirScope.Foundation.Config do
            :ok <- validate_storage_config(config.storage),
            :ok <- validate_interface_config(config.interface),
            :ok <- validate_dev_config(config.dev) do
-        :ok
+        # :ok
       end
     end)
   end
@@ -394,7 +394,7 @@ defmodule ElixirScope.Foundation.Config do
       with :ok <- validate_provider(provider),
            :ok <- validate_ai_analysis(config.analysis),
            :ok <- validate_ai_planning(config.planning) do
-        :ok
+        # :ok
       end
     end)
   end
@@ -419,7 +419,7 @@ defmodule ElixirScope.Foundation.Config do
   defp validate_ai_analysis(analysis) do
     with :ok <- validate_map(analysis, @ai_analysis_schema),
          :ok <- validate_positive_integers(analysis, [:max_file_size, :timeout, :cache_ttl]) do
-      :ok
+      # :ok
     end
   end
 
@@ -428,7 +428,7 @@ defmodule ElixirScope.Foundation.Config do
     with :ok <- validate_map(planning, @ai_planning_schema),
          :ok <- validate_performance_target(planning.performance_target),
          :ok <- validate_sampling_rate(planning.sampling_rate) do
-      :ok
+      #:ok
     end
   end
 
@@ -492,7 +492,7 @@ defmodule ElixirScope.Foundation.Config do
 
     with :ok <- validate_required_fields(data, required),
          :ok <- validate_field_types(data, types) do
-      :ok
+      # :ok
     end
   end
 

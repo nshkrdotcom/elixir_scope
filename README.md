@@ -48,6 +48,719 @@ ElixirScope is built with a clean 9-layer architecture that ensures modularity, 
 └─────────────────────────────────────┘
 ```
 
+### File Tree
+
+lib
+└── elixir_scope
+    ├── analysis
+    │   ├── architectural.ex
+    │   ├── metrics.ex
+    │   ├── patterns
+    │   │   ├── anti_patterns.ex
+    │   │   ├── design.ex
+    │   │   ├── elixir_specific.ex
+    │   │   ├── otp_patterns.ex
+    │   │   └── smells.ex
+    │   ├── performance.ex
+    │   ├── quality.ex
+    │   ├── recommendations.ex
+    │   └── security.ex
+    ├── analysis.ex
+    ├── application.ex
+    ├── ast
+    │   ├── compile_time
+    │   │   └── orchestrator.ex
+    │   ├── compiler
+    │   │   ├── enhanced_transformer.ex
+    │   │   ├── injector_helpers.ex
+    │   │   ├── mix_task.ex
+    │   │   └── transformer.ex
+    │   ├── data
+    │   │   ├── enhanced_function_data.ex
+    │   │   ├── enhanced_module_data.ex
+    │   │   ├── function_data.ex
+    │   │   ├── instrumentation_mapper.ex
+    │   │   ├── module_analysis
+    │   │   │   ├── ast_analyzer.ex
+    │   │   │   ├── attribute_extractor.ex
+    │   │   │   ├── complexity_calculator.ex
+    │   │   │   ├── dependency_extractor.ex
+    │   │   │   └── pattern_detector.ex
+    │   │   └── module_data.ex
+    │   ├── data.ex
+    │   ├── enhanced
+    │   │   ├── data_structures.ex
+    │   │   ├── enhanced_function_data.ex
+    │   │   ├── enhanced_module_data.ex
+    │   │   └── repository.ex
+    │   ├── legacy
+    │   │   ├── memory_manager.ex
+    │   │   ├── pattern_matcher.ex
+    │   │   ├── performance_optimizer.ex
+    │   │   └── query_builder.ex
+    │   ├── memory_manager
+    │   │   └── memory_manager
+    │   │       ├── cache_manager.ex
+    │   │       ├── cleaner.ex
+    │   │       ├── compressor.ex
+    │   │       ├── config.ex
+    │   │       ├── monitor.ex
+    │   │       ├── pressure_handler.ex
+    │   │       ├── supervisor.ex
+    │   │       └── test_runner.ex
+    │   ├── parser.ex
+    │   ├── pattern_matcher
+    │   │   ├── analyzers.ex
+    │   │   ├── cache.ex
+    │   │   ├── config.ex
+    │   │   ├── core.ex
+    │   │   ├── pattern_library.ex
+    │   │   ├── pattern_rules.ex
+    │   │   ├── stats.ex
+    │   │   ├── types.ex
+    │   │   └── validators.ex
+    │   ├── performance_optimizer
+    │   │   └── performance_optimizer
+    │   │       ├── batch_processor.ex
+    │   │       ├── cache_manager.ex
+    │   │       ├── lazy_loader.ex
+    │   │       ├── optimization_scheduler.ex
+    │   │       └── statistics_collector.ex
+    │   ├── query_builder
+    │   │   └── query_builder
+    │   │       ├── cache.ex
+    │   │       ├── executor.ex
+    │   │       ├── normalizer.ex
+    │   │       ├── optimizer.ex
+    │   │       ├── supervisor.ex
+    │   │       ├── types.ex
+    │   │       └── validator.ex
+    │   ├── repository
+    │   │   ├── core.ex
+    │   │   └── enhanced.ex
+    │   └── repository.ex
+    ├── ast.ex
+    ├── capture
+    │   ├── correlation
+    │   │   ├── runtime
+    │   │   │   ├── breakpoint_manager.ex
+    │   │   │   ├── cache_manager.ex
+    │   │   │   ├── config.ex
+    │   │   │   ├── context_builder.ex
+    │   │   │   ├── event_correlator.ex
+    │   │   │   ├── trace_builder.ex
+    │   │   │   ├── types.ex
+    │   │   │   └── utils.ex
+    │   │   └── runtime_correlator.ex
+    │   ├── correlation.ex
+    │   ├── enhanced
+    │   │   ├── correlation.ex
+    │   │   ├── instrumentation.ex
+    │   │   └── temporal.ex
+    │   ├── ingestors.ex
+    │   ├── instrumentation.ex
+    │   ├── runtime
+    │   │   ├── async_writer.ex
+    │   │   ├── async_writer_pool.ex
+    │   │   ├── enhanced_instrumentation.ex
+    │   │   ├── event_correlator.ex
+    │   │   ├── ingestor
+    │   │   │   ├── channel.ex
+    │   │   │   ├── distributed.ex
+    │   │   │   ├── ecto.ex
+    │   │   │   ├── gen_server.ex
+    │   │   │   ├── live_view.ex
+    │   │   │   └── phoenix.ex
+    │   │   ├── ingestor.ex
+    │   │   ├── instrumentation_runtime
+    │   │   │   ├── ast_reporting.ex
+    │   │   │   ├── context.ex
+    │   │   │   ├── core_reporting.ex
+    │   │   │   ├── ecto_reporting.ex
+    │   │   │   ├── gen_server_reporting.ex
+    │   │   │   ├── performance.ex
+    │   │   │   └── phoenix_reporting.ex
+    │   │   ├── instrumentation_runtime.ex
+    │   │   ├── pipeline_manager.ex
+    │   │   ├── ring_buffer.ex
+    │   │   ├── temporal_bridge.ex
+    │   │   ├── temporal_bridge_enhancement
+    │   │   │   ├── ast_context_builder.ex
+    │   │   │   ├── cache_manager.ex
+    │   │   │   ├── event_processor.ex
+    │   │   │   ├── state_manager.ex
+    │   │   │   ├── trace_builder.ex
+    │   │   │   └── types.ex
+    │   │   ├── temporal_bridge_enhancement.ex
+    │   │   └── temporal_storage.ex
+    │   ├── storage
+    │   │   └── storage
+    │   │       ├── data_access.ex
+    │   │       └── event_store.ex
+    │   ├── storage.ex
+    │   └── temporal.ex
+    ├── capture.ex
+    ├── cpg
+    │   ├── analysis
+    │   │   └── complexity_metrics.ex
+    │   ├── analysis.ex
+    │   ├── builder
+    │   │   ├── call_graph.ex
+    │   │   ├── cfg
+    │   │   │   └── cfg_generator
+    │   │   │       ├── ast_processor.ex
+    │   │   │       ├── ast_processor_behavior.ex
+    │   │   │       ├── ast_utilities.ex
+    │   │   │       ├── ast_utilities_behavior.ex
+    │   │   │       ├── complexity_calculator.ex
+    │   │   │       ├── control_flow_processors.ex
+    │   │   │       ├── expression_processors
+    │   │   │       │   ├── assignment_processors.ex
+    │   │   │       │   ├── basic_processors.ex
+    │   │   │       │   ├── control_flow_processors.ex
+    │   │   │       │   ├── data_structure_processors.ex
+    │   │   │       │   └── function_processors.ex
+    │   │   │       ├── expression_processors.ex
+    │   │   │       ├── integration_test.ex
+    │   │   │       ├── path_analyzer.ex
+    │   │   │       ├── state.ex
+    │   │   │       ├── state_manager.ex
+    │   │   │       ├── state_manager_behaviour.ex
+    │   │   │       └── validators.ex
+    │   │   ├── cfg.ex
+    │   │   ├── core
+    │   │   │   ├── complexity_analyzer.ex
+    │   │   │   ├── core.ex
+    │   │   │   ├── graph_merger.ex
+    │   │   │   ├── helpers.ex
+    │   │   │   ├── pattern_detector.ex
+    │   │   │   ├── performance_analyzer.ex
+    │   │   │   ├── quality_analyzer.ex
+    │   │   │   ├── query_processor.ex
+    │   │   │   ├── security_analyzer.ex
+    │   │   │   └── validator.ex
+    │   │   ├── dfg
+    │   │   │   ├── dfg_generator
+    │   │   │   │   ├── ast_analyzer.ex
+    │   │   │   │   ├── dependency_analyzer.ex
+    │   │   │   │   ├── edge_creator.ex
+    │   │   │   │   ├── node_creator.ex
+    │   │   │   │   ├── optimization_analyzer.ex
+    │   │   │   │   ├── pattern_analyzer.ex
+    │   │   │   │   ├── state_manager.ex
+    │   │   │   │   ├── structure_builder.ex
+    │   │   │   │   └── variable_tracker.ex
+    │   │   │   └── minimal.ex
+    │   │   ├── dfg.ex
+    │   │   ├── project_analysis
+    │   │   │   ├── ast_extractor.ex
+    │   │   │   ├── complexity_analyzer.ex
+    │   │   │   ├── dependency_analyzer.ex
+    │   │   │   ├── file_discovery.ex
+    │   │   │   ├── file_parser.ex
+    │   │   │   ├── module_analyzer.ex
+    │   │   │   ├── optimization_hints.ex
+    │   │   │   ├── performance_metrics.ex
+    │   │   │   ├── quality_analyzer.ex
+    │   │   │   └── security_analyzer.ex
+    │   │   └── project_populator.ex
+    │   ├── builder.ex
+    │   ├── data
+    │   │   ├── cfg_data.ex
+    │   │   ├── cpg_data.ex
+    │   │   ├── dfg_data.ex
+    │   │   ├── shared_structures.ex
+    │   │   ├── supporting_structures.ex
+    │   │   └── variable_data.ex
+    │   ├── data.ex
+    │   ├── enhanced
+    │   │   ├── analysis
+    │   │   │   ├── dependency_impact.ex
+    │   │   │   ├── performance_hotspots.ex
+    │   │   │   └── security_vulnerabilities.ex
+    │   │   ├── builder
+    │   │   │   ├── ai_enhanced_builder.ex
+    │   │   │   ├── incremental_builder.ex
+    │   │   │   └── parallel_builder.ex
+    │   │   ├── builder.ex
+    │   │   ├── data
+    │   │   │   ├── advanced_cpg_data.ex
+    │   │   │   ├── semantic_annotations.ex
+    │   │   │   └── temporal_cpg_data.ex
+    │   │   ├── optimization.ex
+    │   │   └── semantics.ex
+    │   ├── file_watcher.ex
+    │   ├── optimization.ex
+    │   ├── semantics.ex
+    │   └── synchronizer.ex
+    ├── cpg.ex
+    ├── debugger
+    │   ├── ai_assistant.ex
+    │   ├── breakpoints.ex
+    │   ├── core.ex
+    │   ├── enhanced
+    │   │   ├── breakpoints.ex
+    │   │   ├── instrumentation
+    │   │   │   ├── ast_correlator.ex
+    │   │   │   ├── breakpoint_manager.ex
+    │   │   │   ├── debugger_interface.ex
+    │   │   │   ├── event_handler.ex
+    │   │   │   ├── storage.ex
+    │   │   │   ├── utils.ex
+    │   │   │   └── watchpoint_manager.ex
+    │   │   ├── session.ex
+    │   │   └── visualization.ex
+    │   ├── interface.ex
+    │   ├── session.ex
+    │   ├── time_travel.ex
+    │   └── visualization.ex
+    ├── debugger.ex
+    ├── elixir_scope.ex
+    ├── foundation
+    │   ├── README.md
+    │   ├── application.ex
+    │   ├── config.ex
+    │   ├── core
+    │   │   ├── ai_manager.ex
+    │   │   ├── event_manager.ex
+    │   │   ├── message_tracker.ex
+    │   │   └── state_manager.ex
+    │   ├── distributed
+    │   │   ├── event_synchronizer.ex
+    │   │   ├── global_clock.ex
+    │   │   └── node_coordinator.ex
+    │   ├── error.ex
+    │   ├── error_context.ex
+    │   ├── event_store.ex
+    │   ├── events.ex
+    │   ├── telemetry
+    │   │   └── extra.ex
+    │   ├── telemetry.ex
+    │   ├── test_helpers.ex
+    │   ├── types
+    │   │   └── extra.ex
+    │   ├── types.ex
+    │   ├── utils
+    │   │   └── extra.ex
+    │   └── utils.ex
+    ├── foundation.ex
+    ├── graph
+    │   ├── algorithms
+    │   │   ├── advanced_centrality.ex
+    │   │   ├── centrality.ex
+    │   │   ├── community.ex
+    │   │   ├── connectivity.ex
+    │   │   ├── extracted_from_cpg.md
+    │   │   ├── machine_learning.ex
+    │   │   ├── pathfinding.ex
+    │   │   └── temporal_analysis.ex
+    │   ├── data_structures.ex
+    │   ├── math.ex
+    │   └── utils.ex
+    ├── graph.ex
+    ├── integration
+    │   ├── analysis_intelligence.ex
+    │   ├── ast_cpg.ex
+    │   ├── capture_debugger.ex
+    │   ├── cpg_analysis.ex
+    │   └── phoenix
+    │       └── integration.ex
+    ├── intelligence
+    │   ├── ai
+    │   │   ├── analysis
+    │   │   │   └── intelligent_code_analyzer.ex
+    │   │   ├── code_analyzer.ex
+    │   │   ├── complexity_analyzer.ex
+    │   │   ├── llm
+    │   │   │   ├── client.ex
+    │   │   │   ├── config.ex
+    │   │   │   ├── provider.ex
+    │   │   │   ├── providers
+    │   │   │   │   ├── gemini.ex
+    │   │   │   │   ├── mock.ex
+    │   │   │   │   └── vertex.ex
+    │   │   │   └── response.ex
+    │   │   ├── orchestrator.ex
+    │   │   ├── pattern_recognizer.ex
+    │   │   └── predictive
+    │   │       └── execution_predictor.ex
+    │   ├── features.ex
+    │   ├── insights.ex
+    │   ├── models
+    │   │   ├── bug_predictor.ex
+    │   │   ├── complexity_predictor.ex
+    │   │   └── performance_predictor.ex
+    │   ├── models.ex
+    │   ├── orchestration.ex
+    │   └── predictions.ex
+    ├── intelligence.ex
+    ├── layer_integration.ex
+    ├── query
+    │   ├── builder.ex
+    │   ├── cache.ex
+    │   ├── dsl.ex
+    │   ├── executor.ex
+    │   ├── extensions
+    │   │   ├── analysis.ex
+    │   │   ├── cpg.ex
+    │   │   ├── ml_queries.ex
+    │   │   ├── pattern_queries.ex
+    │   │   ├── security_queries.ex
+    │   │   └── temporal.ex
+    │   ├── legacy
+    │   │   └── engine.ex
+    │   └── optimizer.ex
+    ├── query.ex
+    ├── quick_test.exs
+    ├── shared
+    │   ├── behaviours.ex
+    │   ├── constants.ex
+    │   ├── protocols.ex
+    │   └── types.ex
+    └── testing
+        ├── fixtures.ex
+        ├── helpers.ex
+        └── mocks.ex
+test
+├── contract
+│   ├── behaviour_compliance
+│   │   └── behaviour_implementations_test.exs
+│   ├── data_contracts
+│   │   └── data_structure_contracts_test.exs
+│   ├── external_apis
+│   │   └── llm_provider_contracts_test.exs
+│   ├── foundation_api_test.exs
+│   ├── layer_apis
+│   │   ├── ast_api_test.exs
+│   │   ├── cpg_api_test.exs
+│   │   ├── foundation_api_test.exs
+│   │   └── graph_api_test.exs
+│   └── protocol_compliance
+│       └── protocol_implementations_test.exs
+├── end_to_end
+│   ├── ai_assisted_debugging
+│   │   └── ai_debug_workflow_test.exs
+│   ├── distributed_system_analysis
+│   │   └── multi_node_analysis_test.exs
+│   ├── genserver_debugging
+│   │   └── genserver_debug_session_test.exs
+│   ├── otp_supervision_analysis
+│   │   └── supervisor_tree_analysis_test.exs
+│   ├── phoenix_project_analysis
+│   │   └── phoenix_app_full_analysis_test.exs
+│   ├── real_world_projects
+│   │   └── existing_project_analysis_test.exs
+│   └── time_travel_debugging
+│       └── time_travel_workflow_test.exs
+├── fixtures
+│   ├── ai_responses
+│   │   └── sample_responses.ex
+│   ├── ast_data
+│   │   └── sample_asts.ex
+│   ├── cpg_data
+│   │   └── sample_cpgs.ex
+│   └── sample_projects
+│       ├── genserver_app
+│       │   └── worker.ex
+│       ├── phoenix_app
+│       │   └── user_controller.ex
+│       └── simple_module
+│           └── simple_module.ex
+├── functional
+│   ├── ai_integration
+│   │   └── llm_analysis_test.exs
+│   ├── ast_parsing
+│   │   └── full_project_parsing_test.exs
+│   ├── code_quality_assessment
+│   │   └── quality_metrics_test.exs
+│   ├── cpg_construction
+│   │   └── incremental_cpg_test.exs
+│   ├── debugging_workflow
+│   │   └── debug_session_test.exs
+│   ├── graph_analysis
+│   │   └── centrality_analysis_test.exs
+│   ├── pattern_detection
+│   │   └── architectural_smells_test.exs
+│   ├── performance_optimization
+│   │   └── optimization_pipeline_test.exs
+│   ├── query_execution
+│   │   └── complex_queries_test.exs
+│   └── runtime_correlation
+│       └── event_correlation_test.exs
+├── integration
+│   ├── analysis_intelligence
+│   │   └── ai_enhanced_analysis_test.exs
+│   ├── ast_cpg
+│   │   └── ast_to_cpg_pipeline_test.exs
+│   ├── capture_debugger
+│   │   └── runtime_debug_integration_test.exs
+│   ├── cpg_analysis
+│   │   └── cpg_to_analysis_test.exs
+│   ├── data_flow
+│   │   └── data_flow_validation_test.exs
+│   ├── end_to_end_workflows
+│   │   └── complete_analysis_workflow_test.exs
+│   ├── layer_dependencies
+│   │   └── dependency_validation_test.exs
+│   └── query_cross_layer
+│       └── cross_layer_queries_test.exs
+├── mocks
+│   ├── ai_providers
+│   │   ├── mock_anthropic.ex
+│   │   ├── mock_llm_provider.ex
+│   │   └── mock_openai.ex
+│   ├── external_services
+│   │   └── mock_http_client.ex
+│   ├── file_system
+│   │   └── mock_file_system.ex
+│   └── instrumentation
+│       └── mock_tracer.ex
+├── orig
+│   ├── elixir_scope
+│   │   ├── ai
+│   │   │   ├── analysis
+│   │   │   │   └── intelligent_code_analyzer_test.exs
+│   │   │   ├── code_analyzer_test.exs
+│   │   │   ├── llm
+│   │   │   │   ├── client_test.exs
+│   │   │   │   ├── config_test.exs
+│   │   │   │   ├── provider_compliance_test.exs
+│   │   │   │   ├── providers
+│   │   │   │   │   ├── gemini_live_test.exs
+│   │   │   │   │   ├── mock_test.exs
+│   │   │   │   │   ├── vertex_live_test.exs
+│   │   │   │   │   └── vertex_test.exs
+│   │   │   │   └── response_test.exs
+│   │   │   └── predictive
+│   │   │       └── execution_predictor_test.exs
+│   │   ├── ast
+│   │   │   ├── enhanced_transformer_test.exs
+│   │   │   └── transformer_test.exs
+│   │   ├── ast_repository
+│   │   │   ├── cfg_generator_enhanced_test.exs
+│   │   │   ├── cfg_generator_test.exs
+│   │   │   ├── cpg_builder_enhanced_test.exs
+│   │   │   ├── cpg_builder_test.exs
+│   │   │   ├── dfg_generator_enhanced_test.exs
+│   │   │   ├── dfg_generator_test.exs
+│   │   │   ├── enhanced
+│   │   │   │   └── cfg_generator
+│   │   │   │       ├── expression_processors_test.exs
+│   │   │   │       └── integration_test.exs
+│   │   │   ├── enhanced_repository_integration_test.exs
+│   │   │   ├── enhanced_repository_test.exs
+│   │   │   ├── file_watcher_test.exs
+│   │   │   ├── instrumentation_mapper_test.exs
+│   │   │   ├── memory_manager_test.exs
+│   │   │   ├── module_data_integration_test.exs
+│   │   │   ├── parser_enhanced_test.exs
+│   │   │   ├── parser_test.exs
+│   │   │   ├── pattern_matcher
+│   │   │   │   ├── config_test.exs
+│   │   │   │   ├── types_test.exs
+│   │   │   │   └── validators_test.exs
+│   │   │   ├── pattern_matcher_old_test.exs
+│   │   │   ├── pattern_matcher_test.exs
+│   │   │   ├── performance_test.exs
+│   │   │   ├── project_populator_test.exs
+│   │   │   ├── query_builder_test.exs
+│   │   │   ├── repository_test.exs
+│   │   │   ├── runtime_correlator_test.exs
+│   │   │   ├── synchronizer_test.exs
+│   │   │   └── test_support
+│   │   │       ├── cfg_validation_helpers.ex
+│   │   │       ├── dfg_validation_helpers.ex
+│   │   │       ├── fixtures
+│   │   │       │   └── sample_asts.ex
+│   │   │       └── helpers.ex
+│   │   ├── capture
+│   │   │   ├── async_writer_pool_test.exs
+│   │   │   ├── async_writer_test.exs
+│   │   │   ├── event_correlator_test.exs
+│   │   │   ├── ingestor_test.exs
+│   │   │   ├── instrumentation_runtime_enhanced_test.exs
+│   │   │   ├── instrumentation_runtime_integration_test.exs
+│   │   │   ├── instrumentation_runtime_temporal_integration_test.exs
+│   │   │   ├── pipeline_manager_test.exs
+│   │   │   ├── ring_buffer_test.exs
+│   │   │   ├── temporal_bridge_test.exs
+│   │   │   └── temporal_storage_test.exs
+│   │   ├── compiler
+│   │   │   └── mix_task_test.exs
+│   │   ├── config_test.exs
+│   │   ├── distributed
+│   │   │   └── multi_node_test.exs
+│   │   ├── events_test.exs
+│   │   ├── integration
+│   │   │   ├── api_completion_test.exs
+│   │   │   ├── ast_runtime_integration_test.exs
+│   │   │   └── end_to_end_hybrid_test.exs
+│   │   ├── llm
+│   │   │   ├── context_builder_test.exs
+│   │   │   └── hybrid_analyzer_test.exs
+│   │   ├── performance
+│   │   │   └── hybrid_benchmarks_test.exs
+│   │   ├── phoenix
+│   │   │   └── integration_test.exs
+│   │   ├── query
+│   │   │   └── engine_test.exs
+│   │   ├── storage
+│   │   │   ├── data_access_test.exs
+│   │   │   └── event_store_test.exs
+│   │   └── utils_test.exs
+│   ├── elixir_scope_test.exs
+│   ├── fixtures
+│   │   ├── sample_elixir_project
+│   │   │   └── lib
+│   │   │       ├── genserver_module.ex
+│   │   │       ├── phoenix_controller.ex
+│   │   │       └── supervisor.ex
+│   │   └── sample_project
+│   │       ├── _build
+│   │       │   └── dev
+│   │       │       └── lib
+│   │       │           └── test_project
+│   │       │               ├── consolidated
+│   │       │               │   ├── Elixir.Collectable.beam
+│   │       │               │   ├── Elixir.Enumerable.beam
+│   │       │               │   ├── Elixir.IEx.Info.beam
+│   │       │               │   ├── Elixir.Inspect.beam
+│   │       │               │   ├── Elixir.JSON.Encoder.beam
+│   │       │               │   ├── Elixir.List.Chars.beam
+│   │       │               │   └── Elixir.String.Chars.beam
+│   │       │               └── ebin
+│   │       │                   ├── Elixir.TestModule.beam
+│   │       │                   └── test_project.app
+│   │       ├── lib
+│   │       │   └── test_module.ex
+│   │       └── mix.exs
+│   ├── integration
+│   │   └── production_phoenix_test.exs
+│   ├── support
+│   │   ├── ai_test_helpers.ex
+│   │   └── test_phoenix_app.ex
+│   └── test_helper.exs
+├── performance
+│   ├── benchmarks
+│   │   ├── cpg_construction
+│   │   │   └── cpg_build_benchmarks_test.exs
+│   │   ├── graph_algorithms
+│   │   │   └── centrality_benchmarks_test.exs
+│   │   └── query_execution
+│   │       └── query_performance_test.exs
+│   ├── memory_usage
+│   │   └── memory_profiling_test.exs
+│   ├── regression_tests
+│   │   └── performance_regression_test.exs
+│   ├── scalability
+│   │   └── large_project_scalability_test.exs
+│   └── stress_tests
+│       └── concurrent_operations_test.exs
+├── property
+│   ├── ast_operations
+│   │   └── ast_properties_test.exs
+│   ├── cpg_construction
+│   │   └── cpg_properties_test.exs
+│   ├── data_transformations
+│   │   └── transformation_properties_test.exs
+│   ├── graph_algorithms
+│   │   └── graph_properties_test.exs
+│   ├── invariants
+│   │   └── system_invariants_test.exs
+│   └── query_operations
+│       └── query_properties_test.exs
+├── scenarios
+│   ├── ai_assisted_development
+│   │   └── code_review_assistance_test.exs
+│   ├── code_analysis_workflows
+│   │   └── legacy_code_analysis_test.exs
+│   ├── continuous_integration
+│   │   └── ci_integration_test.exs
+│   ├── debugging_workflows
+│   │   └── production_bug_hunt_test.exs
+│   ├── performance_optimization
+│   │   └── hotspot_identification_test.exs
+│   └── team_collaboration
+│       └── shared_analysis_test.exs
+├── smoke
+│   └── foundation_smoke_test.exs
+├── support
+│   ├── assertions
+│   │   ├── cpg_assertions.ex
+│   │   ├── graph_assertions.ex
+│   │   └── performance_assertions.ex
+│   ├── benchmarking
+│   │   └── benchmark_helpers.ex
+│   ├── error_test_helpers.ex
+│   ├── generators
+│   │   ├── ast_generators.ex
+│   │   ├── cpg_generators.ex
+│   │   ├── graph_generators.ex
+│   │   └── project_generators.ex
+│   ├── helpers.ex
+│   ├── profiling
+│   │   ├── memory_profiler.ex
+│   │   └── performance_profiler.ex
+│   ├── setup
+│   │   ├── ai_setup.ex
+│   │   ├── database_setup.ex
+│   │   └── test_environment.ex
+│   └── validation
+│       ├── data_validators.ex
+│       └── structure_validators.ex
+├── test_helper.exs
+└── unit
+    ├── analysis
+    │   ├── metrics_test.exs
+    │   ├── patterns_test.exs
+    │   └── quality_test.exs
+    ├── ast
+    │   ├── data_test.exs
+    │   ├── enhanced
+    │   │   └── repository_test.exs
+    │   ├── parser_test.exs
+    │   └── repository_test.exs
+    ├── capture
+    │   ├── correlation_test.exs
+    │   ├── instrumentation_test.exs
+    │   └── storage_test.exs
+    ├── cpg
+    │   ├── builder
+    │   │   ├── cfg_test.exs
+    │   │   └── dfg_test.exs
+    │   ├── builder_test.exs
+    │   └── semantics_test.exs
+    ├── debugger
+    │   ├── breakpoints_test.exs
+    │   ├── core_test.exs
+    │   └── session_test.exs
+    ├── foundation
+    │   ├── config_test.exs
+    │   ├── events_test.exs
+    │   ├── telemetry_test.exs
+    │   └── utils_test.exs
+    ├── graph
+    │   └── algorithms
+    │       ├── centrality_test.exs
+    │       ├── community_test.exs
+    │       ├── connectivity_test.exs
+    │       └── pathfinding_test.exs
+    ├── intelligence
+    │   ├── ai
+    │   │   └── llm_test.exs
+    │   ├── features_test.exs
+    │   └── models_test.exs
+    └── query
+        ├── builder_test.exs
+        ├── executor_test.exs
+        └── optimizer_test.exs
+scripts/
+├── benchmark.exs
+└── dev_workflow.exs
+
+199 directories, 508 files
+
+
 ### Layer Overview
 
 | Layer | Purpose | Key Components |
