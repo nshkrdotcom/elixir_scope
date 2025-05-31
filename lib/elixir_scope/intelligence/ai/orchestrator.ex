@@ -2,7 +2,7 @@
 defmodule ElixirScope.Intelligence.AI.Orchestrator do
   @moduledoc """
   AI orchestrator for ElixirScope instrumentation planning.
-  
+
   Coordinates between different AI components to analyze code and generate
   instrumentation plans. Acts as the central coordinator for AI-driven decisions.
   """
@@ -29,13 +29,13 @@ defmodule ElixirScope.Intelligence.AI.Orchestrator do
     try do
       # Step 1: Analyze the project structure and patterns
       project_analysis = CodeAnalyzer.analyze_project(project_path)
-      
+
       # Step 2: Generate instrumentation strategies
       instrumentation_plan = CodeAnalyzer.generate_instrumentation_plan(project_path)
-      
+
       # Step 3: Optimize and validate the plan
       optimized_plan = optimize_plan(instrumentation_plan, project_analysis)
-      
+
       # Step 4: Store the plan for future use
       case DataAccess.store_instrumentation_plan(optimized_plan) do
         :ok -> {:ok, optimized_plan}
@@ -55,11 +55,12 @@ defmodule ElixirScope.Intelligence.AI.Orchestrator do
         updated_plan = merge_plan_updates(current_plan, updates)
         DataAccess.store_instrumentation_plan(updated_plan)
         {:ok, updated_plan}
-      
+
       {:error, :no_plan} ->
         {:error, :no_existing_plan}
-      
-      error -> error
+
+      error ->
+        error
     end
   end
 
@@ -68,13 +69,14 @@ defmodule ElixirScope.Intelligence.AI.Orchestrator do
   """
   def analyze_runtime_feedback(performance_data) do
     suggestions = generate_adjustment_suggestions(performance_data)
-    
+
     case get_instrumentation_plan() do
       {:ok, current_plan} ->
         adjusted_plan = apply_suggestions(current_plan, suggestions)
         {:ok, adjusted_plan, suggestions}
-      
-      error -> error
+
+      error ->
+        error
     end
   end
 
@@ -84,15 +86,15 @@ defmodule ElixirScope.Intelligence.AI.Orchestrator do
   def plan_for_module(module_code) do
     try do
       {:ok, ast} = Code.string_to_quoted(module_code)
-      
+
       # Analyze the module
       module_type = PatternRecognizer.identify_module_type(ast)
       patterns = PatternRecognizer.extract_patterns(ast)
       analysis = CodeAnalyzer.analyze_code(module_code)
-      
+
       # Generate basic plan
       plan = generate_basic_module_plan(module_type, patterns, analysis)
-      
+
       {:ok, plan}
     rescue
       error -> {:error, {:module_analysis_failed, error}}
@@ -110,9 +112,11 @@ defmodule ElixirScope.Intelligence.AI.Orchestrator do
       conflicts: detect_conflicts(plan)
     }
 
-    overall_valid = validation_results.syntax_valid and
-                   validation_results.performance_impact < 0.05 and  # Less than 5% overhead
-                   length(validation_results.conflicts) == 0
+    # Less than 5% overhead
+    overall_valid =
+      validation_results.syntax_valid and
+        validation_results.performance_impact < 0.05 and
+        length(validation_results.conflicts) == 0
 
     {:ok, overall_valid, validation_results}
   end
@@ -168,7 +172,7 @@ defmodule ElixirScope.Intelligence.AI.Orchestrator do
   defp determine_instrumentation_level(analysis) do
     cond do
       analysis.performance_critical -> :detailed
-      analysis.complexity_score > 8 -> :moderate  
+      analysis.complexity_score > 8 -> :moderate
       analysis.complexity_score > 4 -> :basic
       true -> :minimal
     end
@@ -177,21 +181,26 @@ defmodule ElixirScope.Intelligence.AI.Orchestrator do
   defp generate_function_plans(patterns, analysis) do
     # Generate plans for specific functions based on patterns
     Map.new(patterns.callbacks || [], fn callback ->
-      {callback, %{
-        capture_args: analysis.complexity_score > 5,
-        capture_return: analysis.complexity_score > 7,
-        capture_exceptions: true,
-        sampling_rate: determine_callback_sampling_rate(callback, analysis)
-      }}
+      {callback,
+       %{
+         capture_args: analysis.complexity_score > 5,
+         capture_return: analysis.complexity_score > 7,
+         capture_exceptions: true,
+         sampling_rate: determine_callback_sampling_rate(callback, analysis)
+       }}
     end)
   end
 
   defp determine_sampling_rate(analysis) do
     cond do
-      analysis.performance_critical -> 0.1  # 10% for performance critical
-      analysis.complexity_score > 8 -> 0.5  # 50% for complex
-      analysis.complexity_score > 4 -> 0.8  # 80% for moderate
-      true -> 1.0  # 100% for simple
+      # 10% for performance critical
+      analysis.performance_critical -> 0.1
+      # 50% for complex
+      analysis.complexity_score > 8 -> 0.5
+      # 80% for moderate
+      analysis.complexity_score > 4 -> 0.8
+      # 100% for simple
+      true -> 1.0
     end
   end
 
@@ -206,67 +215,73 @@ defmodule ElixirScope.Intelligence.AI.Orchestrator do
 
     case module_type do
       :genserver ->
-        %{base_settings | 
-          capture_state: true,
-          capture_performance: analysis.performance_critical}
-      
+        %{base_settings | capture_state: true, capture_performance: analysis.performance_critical}
+
       :phoenix_controller ->
-        %{base_settings |
-          capture_args: true,
-          capture_return: true,
-          capture_performance: true}
-      
+        %{base_settings | capture_args: true, capture_return: true, capture_performance: true}
+
       :phoenix_liveview ->
-        %{base_settings |
-          capture_state: true,
-          capture_args: true,
-          capture_performance: analysis.performance_critical}
-      
-      _ -> base_settings
+        %{
+          base_settings
+          | capture_state: true,
+            capture_args: true,
+            capture_performance: analysis.performance_critical
+        }
+
+      _ ->
+        base_settings
     end
   end
 
   defp add_genserver_specific_plan(plan, patterns) do
     Map.merge(plan, %{
-      genserver_callbacks: Map.new(patterns.callbacks || [], fn callback ->
-        {callback, %{
-          capture_state_before: true,
-          capture_state_after: true,
-          capture_messages: callback in [:handle_call, :handle_cast, :handle_info]
-        }}
-      end)
+      genserver_callbacks:
+        Map.new(patterns.callbacks || [], fn callback ->
+          {callback,
+           %{
+             capture_state_before: true,
+             capture_state_after: true,
+             capture_messages: callback in [:handle_call, :handle_cast, :handle_info]
+           }}
+        end)
     })
   end
 
   defp add_phoenix_controller_plan(plan, patterns) do
     Map.merge(plan, %{
-      phoenix_controllers: Map.new(patterns.actions || [], fn action ->
-        {action, %{
-          capture_params: true,
-          capture_conn_state: true,
-          capture_response: true,
-          monitor_database: patterns.database_interactions
-        }}
-      end)
+      phoenix_controllers:
+        Map.new(patterns.actions || [], fn action ->
+          {action,
+           %{
+             capture_params: true,
+             capture_conn_state: true,
+             capture_response: true,
+             monitor_database: patterns.database_interactions
+           }}
+        end)
     })
   end
 
   defp add_liveview_plan(plan, patterns) do
     Map.merge(plan, %{
-      liveview_callbacks: Map.new(patterns.events || [], fn event ->
-        {event, %{
-          capture_socket_assigns: true,
-          capture_event_data: true,
-          track_state_changes: true
-        }}
-      end)
+      liveview_callbacks:
+        Map.new(patterns.events || [], fn event ->
+          {event,
+           %{
+             capture_socket_assigns: true,
+             capture_event_data: true,
+             track_state_changes: true
+           }}
+        end)
     })
   end
 
   defp determine_callback_sampling_rate(callback, analysis) do
     case callback do
-      :init -> 1.0  # Always capture init
-      :terminate -> 1.0  # Always capture terminate
+      # Always capture init
+      :init -> 1.0
+      # Always capture terminate
+      :terminate -> 1.0
       :handle_call when analysis.performance_critical -> 0.1
       :handle_cast when analysis.performance_critical -> 0.05
       :handle_info when analysis.performance_critical -> 0.02
@@ -300,12 +315,14 @@ defmodule ElixirScope.Intelligence.AI.Orchestrator do
 
   defp estimate_performance_impact(_plan) do
     # TODO: Implement performance impact estimation
-    0.02  # 2% estimated overhead
+    # 2% estimated overhead
+    0.02
   end
 
   defp calculate_coverage(_plan) do
     # TODO: Implement coverage calculation
-    0.85  # 85% estimated coverage
+    # 85% estimated coverage
+    0.85
   end
 
   defp detect_conflicts(_plan) do
@@ -346,4 +363,4 @@ defmodule ElixirScope.Intelligence.AI.Orchestrator do
     # TODO: Implement pattern optimizations
     plan
   end
-end 
+end

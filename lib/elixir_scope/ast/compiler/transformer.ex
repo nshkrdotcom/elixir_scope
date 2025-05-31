@@ -19,7 +19,8 @@ defmodule ElixirScope.AST.Transformer do
           transformed_body = transform_module_body(module_body, plan)
           {:defmodule, meta, [module_name, [do: transformed_body]]}
 
-        other -> other
+        other ->
+          other
       end
     end)
   end
@@ -45,14 +46,16 @@ defmodule ElixirScope.AST.Transformer do
   def transform_function({:__block__, meta, statements}, plan) do
     case statements do
       statements_list when is_list(statements_list) ->
-        transformed_statements = Enum.map(statements_list, fn
-          {:def, _, _} = function_ast -> transform_function(function_ast, plan)
-          {:defp, _, _} = function_ast -> transform_function(function_ast, plan) 
-          other -> other  # Keep attributes and other statements as-is
-        end)
-        
+        transformed_statements =
+          Enum.map(statements_list, fn
+            {:def, _, _} = function_ast -> transform_function(function_ast, plan)
+            {:defp, _, _} = function_ast -> transform_function(function_ast, plan)
+            # Keep attributes and other statements as-is
+            other -> other
+          end)
+
         {:__block__, meta, transformed_statements}
-      
+
       # If statements is not a list, return the block as-is
       _ ->
         {:__block__, meta, statements}
@@ -131,31 +134,46 @@ defmodule ElixirScope.AST.Transformer do
         Enum.map(statements, fn
           {:def, _, _} = function_ast -> transform_function(function_ast, plan)
           {:defp, _, _} = function_ast -> transform_function(function_ast, plan)
-          {:defmacro, _, _} = macro_ast -> macro_ast # Don't instrument macros directly
-          {:defmacrop, _, _} = macro_ast -> macro_ast # Don't instrument macros directly
-          {:defdelegate, _, _} = delegate_ast -> delegate_ast # Don't instrument delegates
-          {:defoverridable, _, _} = override_ast -> override_ast # Don't instrument overrides
-          {:defimpl, _, _} = impl_ast -> impl_ast # Don't instrument implementations
-          {:defprotocol, _, _} = protocol_ast -> protocol_ast # Don't instrument protocols
-          {:defrecord, _, _} = record_ast -> record_ast # Don't instrument records
-          {:defstruct, _, _} = struct_ast -> struct_ast # Don't instrument structs
-          {:defexception, _, _} = exception_ast -> exception_ast # Don't instrument exceptions
-          {:defcallback, _, _} = callback_ast -> callback_ast # Don't instrument callbacks
-          {:defmacrocallback, _, _} = macro_callback_ast -> macro_callback_ast # Don't instrument macro callbacks
-          {:defmodule, _, _} = nested_module_ast -> transform_module(nested_module_ast, plan) # Recurse into nested modules
+          # Don't instrument macros directly
+          {:defmacro, _, _} = macro_ast -> macro_ast
+          # Don't instrument macros directly
+          {:defmacrop, _, _} = macro_ast -> macro_ast
+          # Don't instrument delegates
+          {:defdelegate, _, _} = delegate_ast -> delegate_ast
+          # Don't instrument overrides
+          {:defoverridable, _, _} = override_ast -> override_ast
+          # Don't instrument implementations
+          {:defimpl, _, _} = impl_ast -> impl_ast
+          # Don't instrument protocols
+          {:defprotocol, _, _} = protocol_ast -> protocol_ast
+          # Don't instrument records
+          {:defrecord, _, _} = record_ast -> record_ast
+          # Don't instrument structs
+          {:defstruct, _, _} = struct_ast -> struct_ast
+          # Don't instrument exceptions
+          {:defexception, _, _} = exception_ast -> exception_ast
+          # Don't instrument callbacks
+          {:defcallback, _, _} = callback_ast -> callback_ast
+          # Don't instrument macro callbacks
+          {:defmacrocallback, _, _} = macro_callback_ast -> macro_callback_ast
+          # Recurse into nested modules
+          {:defmodule, _, _} = nested_module_ast -> transform_module(nested_module_ast, plan)
           other -> other
         end)
-      
+
       # Handle when body is a single statement (not a list)
-      {:def, _, _} = function_ast -> 
+      {:def, _, _} = function_ast ->
         transform_function(function_ast, plan)
-      {:defp, _, _} = function_ast -> 
+
+      {:defp, _, _} = function_ast ->
         transform_function(function_ast, plan)
-      {:defmodule, _, _} = nested_module_ast -> 
+
+      {:defmodule, _, _} = nested_module_ast ->
         transform_module(nested_module_ast, plan)
-      
+
       # For any other single statement, return as-is
-      other -> other
+      other ->
+        other
     end
   end
 
@@ -175,7 +193,8 @@ defmodule ElixirScope.AST.Transformer do
 
   defp instrument_genserver_callback_body(signature, body, callback_plan) do
     # Inject state capture before call
-    state_before_call = InjectorHelpers.capture_genserver_state_before_call(signature, callback_plan)
+    state_before_call =
+      InjectorHelpers.capture_genserver_state_before_call(signature, callback_plan)
 
     # Wrap original body
     wrapped_body = InjectorHelpers.wrap_genserver_callback_body(body, signature, callback_plan)
@@ -202,7 +221,8 @@ defmodule ElixirScope.AST.Transformer do
     wrapped_body = InjectorHelpers.wrap_phoenix_action_body(body, signature, action_plan)
 
     # Inject conn state capture after and response capture
-    conn_state_after_and_response = InjectorHelpers.capture_phoenix_conn_state_after_and_response(signature, action_plan)
+    conn_state_after_and_response =
+      InjectorHelpers.capture_phoenix_conn_state_after_and_response(signature, action_plan)
 
     quote do
       unquote(params_capture)
@@ -215,7 +235,8 @@ defmodule ElixirScope.AST.Transformer do
 
   defp instrument_liveview_callback_body(signature, body, callback_plan) do
     # Inject socket assigns capture
-    socket_assigns_capture = InjectorHelpers.capture_liveview_socket_assigns(signature, callback_plan)
+    socket_assigns_capture =
+      InjectorHelpers.capture_liveview_socket_assigns(signature, callback_plan)
 
     # Inject event capture
     event_capture = InjectorHelpers.capture_liveview_event(signature, callback_plan)
@@ -231,7 +252,9 @@ defmodule ElixirScope.AST.Transformer do
     end
   end
 
-  defp extract_function_name({:when, _, [name_and_args, _]}), do: extract_function_name(name_and_args)
+  defp extract_function_name({:when, _, [name_and_args, _]}),
+    do: extract_function_name(name_and_args)
+
   defp extract_function_name({name, _, _}), do: name
 
   defp extract_arity({:when, _, [name_and_args, _]}), do: extract_arity(name_and_args)
@@ -241,17 +264,17 @@ defmodule ElixirScope.AST.Transformer do
 
   defp get_function_plan(plan, function_name, arity) do
     functions_map = Map.get(plan, :functions, %{})
-    
+
     # Try multiple key formats for flexibility
     cond do
       # Try with current module context (most common for tests)
       Map.has_key?(functions_map, {TestModule, function_name, arity}) ->
         Map.get(functions_map, {TestModule, function_name, arity})
-      
+
       # Try with just function name and arity
       Map.has_key?(functions_map, {function_name, arity}) ->
         Map.get(functions_map, {function_name, arity})
-      
+
       # Try any key that matches function name and arity (regardless of module)
       true ->
         Enum.find_value(functions_map, fn

@@ -14,14 +14,14 @@ defmodule ElixirScope.AST.MemoryManager.Monitor do
   @memory_stats_table :ast_repo_memory_stats
 
   @type memory_stats :: %{
-    total_memory: non_neg_integer(),
-    repository_memory: non_neg_integer(),
-    cache_memory: non_neg_integer(),
-    ets_memory: non_neg_integer(),
-    process_memory: non_neg_integer(),
-    memory_usage_percent: float(),
-    available_memory: non_neg_integer()
-  }
+          total_memory: non_neg_integer(),
+          repository_memory: non_neg_integer(),
+          cache_memory: non_neg_integer(),
+          ets_memory: non_neg_integer(),
+          process_memory: non_neg_integer(),
+          memory_usage_percent: float(),
+          available_memory: non_neg_integer()
+        }
 
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
@@ -70,11 +70,13 @@ defmodule ElixirScope.AST.MemoryManager.Monitor do
 
       # Calculate available system memory
       available_memory = get_available_system_memory()
-      memory_usage_percent = if available_memory > 0 do
-        (total_memory / available_memory) * 100
-      else
-        0.0
-      end
+
+      memory_usage_percent =
+        if available_memory > 0 do
+          total_memory / available_memory * 100
+        else
+          0.0
+        end
 
       stats = %{
         total_memory: total_memory,
@@ -104,7 +106,9 @@ defmodule ElixirScope.AST.MemoryManager.Monitor do
   @spec get_historical_stats(non_neg_integer()) :: list(memory_stats())
   def get_historical_stats(limit \\ 100) do
     case :ets.lookup(@memory_stats_table, :memory_stats) do
-      [] -> []
+      [] ->
+        []
+
       records ->
         records
         |> Enum.sort_by(fn {_, _, timestamp} -> timestamp end, :desc)
@@ -152,10 +156,13 @@ defmodule ElixirScope.AST.MemoryManager.Monitor do
     case :os.type() do
       {:unix, :linux} ->
         get_linux_memory()
+
       {:unix, :darwin} ->
         get_macos_memory()
+
       {:win32, _} ->
         get_windows_memory()
+
       _ ->
         # Default fallback (8GB)
         8 * 1024 * 1024 * 1024
@@ -166,6 +173,7 @@ defmodule ElixirScope.AST.MemoryManager.Monitor do
     case File.read("/proc/meminfo") do
       {:ok, content} ->
         parse_meminfo(content)
+
       {:error, _} ->
         # Fallback to reasonable default
         8 * 1024 * 1024 * 1024
@@ -180,6 +188,7 @@ defmodule ElixirScope.AST.MemoryManager.Monitor do
           {bytes, _} -> bytes
           _ -> 8 * 1024 * 1024 * 1024
         end
+
       _ ->
         8 * 1024 * 1024 * 1024
     end
@@ -198,9 +207,12 @@ defmodule ElixirScope.AST.MemoryManager.Monitor do
     # Parse MemTotal from /proc/meminfo
     case Regex.run(~r/MemTotal:\s+(\d+)\s+kB/, content) do
       [_, kb_str] ->
-        String.to_integer(kb_str) * 1024  # Convert KB to bytes
+        # Convert KB to bytes
+        String.to_integer(kb_str) * 1024
+
       _ ->
-        8 * 1024 * 1024 * 1024  # Default 8GB
+        # Default 8GB
+        8 * 1024 * 1024 * 1024
     end
   end
 end

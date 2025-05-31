@@ -8,18 +8,27 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.ExpressionProcessors.BasicProces
 
   # Get dependencies from application config for testability
   defp state_manager do
-    Application.get_env(:elixir_scope, :state_manager,
-      ElixirScope.AST.Enhanced.CFGGenerator.StateManager)
+    Application.get_env(
+      :elixir_scope,
+      :state_manager,
+      ElixirScope.AST.Enhanced.CFGGenerator.StateManager
+    )
   end
 
   defp ast_utilities do
-    Application.get_env(:elixir_scope, :ast_utilities,
-      ElixirScope.AST.Enhanced.CFGGenerator.ASTUtilities)
+    Application.get_env(
+      :elixir_scope,
+      :ast_utilities,
+      ElixirScope.AST.Enhanced.CFGGenerator.ASTUtilities
+    )
   end
 
   defp ast_processor do
-    Application.get_env(:elixir_scope, :ast_processor,
-      ElixirScope.AST.Enhanced.CFGGenerator.ASTProcessor)
+    Application.get_env(
+      :elixir_scope,
+      :ast_processor,
+      ElixirScope.AST.Enhanced.CFGGenerator.ASTProcessor
+    )
   end
 
   @doc """
@@ -28,34 +37,38 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.ExpressionProcessors.BasicProces
   def process_statement_sequence(statements, _meta, state) do
     # Process statements sequentially, connecting them in order
     {all_nodes, all_edges, final_exits, all_scopes, final_state} =
-      Enum.reduce(statements, {%{}, [], [], %{}, state}, fn stmt, {nodes, edges, prev_exits, scopes, acc_state} ->
+      Enum.reduce(statements, {%{}, [], [], %{}, state}, fn stmt,
+                                                            {nodes, edges, prev_exits, scopes,
+                                                             acc_state} ->
         {stmt_nodes, stmt_edges, stmt_exits, stmt_scopes, new_state} =
           ast_processor().process_ast_node(stmt, acc_state)
 
         # Connect previous statement exits to current statement entries
-        connection_edges = if prev_exits == [] do
-          # For the first statement, we'll connect it later in process_function_body
-          []
-        else
-          stmt_entry_nodes = get_entry_nodes(stmt_nodes)
-          if stmt_entry_nodes == [] do
-            # If no entry nodes, create a direct connection from prev exits to stmt exits
+        connection_edges =
+          if prev_exits == [] do
+            # For the first statement, we'll connect it later in process_function_body
             []
           else
-            Enum.flat_map(prev_exits, fn prev_exit ->
-              Enum.map(stmt_entry_nodes, fn stmt_entry ->
-                %CFGEdge{
-                  from_node_id: prev_exit,
-                  to_node_id: stmt_entry,
-                  type: :sequential,
-                  condition: nil,
-                  probability: 1.0,
-                  metadata: %{}
-                }
+            stmt_entry_nodes = get_entry_nodes(stmt_nodes)
+
+            if stmt_entry_nodes == [] do
+              # If no entry nodes, create a direct connection from prev exits to stmt exits
+              []
+            else
+              Enum.flat_map(prev_exits, fn prev_exit ->
+                Enum.map(stmt_entry_nodes, fn stmt_entry ->
+                  %CFGEdge{
+                    from_node_id: prev_exit,
+                    to_node_id: stmt_entry,
+                    type: :sequential,
+                    condition: nil,
+                    probability: 1.0,
+                    metadata: %{}
+                  }
+                end)
               end)
-            end)
+            end
           end
-        end
 
         merged_nodes = Map.merge(nodes, stmt_nodes)
         merged_edges = edges ++ stmt_edges ++ connection_edges
@@ -98,29 +111,32 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.ExpressionProcessors.BasicProces
     }
 
     # Create edges from operands to operation
-    operand_edges = (Enum.map(left_exits, fn exit_id ->
-      %CFGEdge{
-        from_node_id: exit_id,
-        to_node_id: op_id,
-        type: :sequential,
-        condition: nil,
-        probability: 1.0,
-        metadata: %{operand: :left}
-      }
-    end) ++ Enum.map(right_exits, fn exit_id ->
-      %CFGEdge{
-        from_node_id: exit_id,
-        to_node_id: op_id,
-        type: :sequential,
-        condition: nil,
-        probability: 1.0,
-        metadata: %{operand: :right}
-      }
-    end))
+    operand_edges =
+      Enum.map(left_exits, fn exit_id ->
+        %CFGEdge{
+          from_node_id: exit_id,
+          to_node_id: op_id,
+          type: :sequential,
+          condition: nil,
+          probability: 1.0,
+          metadata: %{operand: :left}
+        }
+      end) ++
+        Enum.map(right_exits, fn exit_id ->
+          %CFGEdge{
+            from_node_id: exit_id,
+            to_node_id: op_id,
+            type: :sequential,
+            condition: nil,
+            probability: 1.0,
+            metadata: %{operand: :right}
+          }
+        end)
 
-    all_nodes = left_nodes
-    |> Map.merge(right_nodes)
-    |> Map.put(op_id, op_node)
+    all_nodes =
+      left_nodes
+      |> Map.merge(right_nodes)
+      |> Map.put(op_id, op_node)
 
     all_edges = left_edges ++ right_edges ++ operand_edges
     all_scopes = Map.merge(left_scopes, right_scopes)
@@ -201,12 +217,14 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.ExpressionProcessors.BasicProces
     {expr_id, updated_state} = state_manager().generate_node_id("expression", state)
 
     # Determine the expression type based on the AST structure
-    expr_type = case ast do
-      {:=, _, _} -> :assignment  # Assignment that didn't match the specific pattern
-      {op, _, _} when op in [:+, :-, :*, :/, :==, :!=, :<, :>, :<=, :>=] -> :binary_operation
-      {var, _, nil} when is_atom(var) -> :variable_reference
-      _ -> :expression
-    end
+    expr_type =
+      case ast do
+        # Assignment that didn't match the specific pattern
+        {:=, _, _} -> :assignment
+        {op, _, _} when op in [:+, :-, :*, :/, :==, :!=, :<, :>, :<=, :>=] -> :binary_operation
+        {var, _, nil} when is_atom(var) -> :variable_reference
+        _ -> :expression
+      end
 
     expr_node = %CFGNode{
       id: expr_id,
@@ -227,6 +245,7 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.ExpressionProcessors.BasicProces
   # Private helper functions
 
   defp get_entry_nodes(nodes) when map_size(nodes) == 0, do: []
+
   defp get_entry_nodes(nodes) do
     nodes
     |> Map.values()

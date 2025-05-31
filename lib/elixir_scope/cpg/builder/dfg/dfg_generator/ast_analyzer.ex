@@ -41,10 +41,12 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.ASTAnalyzer do
     state = analyze_function_parameters(head, line, state)
 
     # Extract the actual body from the keyword list
-    actual_body = case body do
-      [do: body_ast] -> body_ast
-      body_ast -> body_ast  # fallback for direct AST
-    end
+    actual_body =
+      case body do
+        [do: body_ast] -> body_ast
+        # fallback for direct AST
+        body_ast -> body_ast
+      end
 
     # Analyze function body
     state = analyze_expression_data_flow(actual_body, state)
@@ -77,6 +79,7 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.ASTAnalyzer do
         case Keyword.get(clauses, :do) do
           nil ->
             state
+
           do_clauses ->
             analyze_case_data_flow(expr, do_clauses, meta, state)
         end
@@ -117,7 +120,8 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.ASTAnalyzer do
 
       # Literals and other expressions
       literal when is_atom(literal) or is_number(literal) or is_binary(literal) or is_list(literal) ->
-        state  # Literals don't affect data flow
+        # Literals don't affect data flow
+        state
 
       # Default case
       _ ->
@@ -132,6 +136,7 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.ASTAnalyzer do
       PatternAnalyzer.analyze_parameter_pattern(arg, line, acc_state)
     end)
   end
+
   defp analyze_function_parameters(_, _, state), do: state
 
   defp analyze_assignment(left, right, meta, state) do
@@ -151,10 +156,11 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.ASTAnalyzer do
     state = analyze_expression_data_flow(left, state)
 
     # Create pipe data flow
-    {state, pipe_node_id} = NodeCreator.create_dfg_node(state, :pipe_operation, line, %{
-      left: left,
-      right: right
-    })
+    {state, pipe_node_id} =
+      NodeCreator.create_dfg_node(state, :pipe_operation, line, %{
+        left: left,
+        right: right
+      })
 
     # Analyze right side with pipe input
     state = analyze_expression_data_flow(right, state)
@@ -173,16 +179,18 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.ASTAnalyzer do
     line = Keyword.get(meta, :line, 1)
 
     # Analyze all arguments
-    state = Enum.reduce(args, state, fn arg, acc_state ->
-      analyze_expression_data_flow(arg, acc_state)
-    end)
+    state =
+      Enum.reduce(args, state, fn arg, acc_state ->
+        analyze_expression_data_flow(arg, acc_state)
+      end)
 
     # Create function call node
-    {state, _call_node_id} = NodeCreator.create_dfg_node(state, :call, line, %{
-      function: func,
-      arguments: args,
-      arity: length(args)
-    })
+    {state, _call_node_id} =
+      NodeCreator.create_dfg_node(state, :call, line, %{
+        function: func,
+        arguments: args,
+        arity: length(args)
+      })
 
     # Create data flow edges from arguments to call
     Enum.reduce(args, state, fn arg, acc_state ->
@@ -197,9 +205,10 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.ASTAnalyzer do
     state = VariableTracker.record_variable_use(var_name, line, state)
 
     # Create variable reference node
-    {state, _ref_node_id} = NodeCreator.create_dfg_node(state, :variable_reference, line, %{
-      variable: var_name
-    })
+    {state, _ref_node_id} =
+      NodeCreator.create_dfg_node(state, :variable_reference, line, %{
+        variable: var_name
+      })
 
     state
   end
@@ -211,32 +220,51 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.ASTAnalyzer do
     state = analyze_expression_data_flow(condition, state)
 
     # Create conditional node
-    {state, _cond_node_id} = NodeCreator.create_dfg_node(state, :conditional, line, %{
-      condition: condition
-    })
+    {state, _cond_node_id} =
+      NodeCreator.create_dfg_node(state, :conditional, line, %{
+        condition: condition
+      })
 
     # Analyze branches and create conditional flow edges
-    state = Enum.reduce(branches, state, fn
-      {:do, then_branch}, acc_state ->
-        # Enter separate scope for then branch
-        acc_state = StateManager.enter_scope(acc_state, :then_branch)
-        acc_state = analyze_expression_data_flow(then_branch, acc_state)
-        # Create conditional flow edge from condition to then branch
-        acc_state = EdgeCreator.create_data_flow_edge(condition, then_branch, :conditional_flow, line, acc_state)
-        # Exit then branch scope
-        StateManager.exit_scope(acc_state)
+    state =
+      Enum.reduce(branches, state, fn
+        {:do, then_branch}, acc_state ->
+          # Enter separate scope for then branch
+          acc_state = StateManager.enter_scope(acc_state, :then_branch)
+          acc_state = analyze_expression_data_flow(then_branch, acc_state)
+          # Create conditional flow edge from condition to then branch
+          acc_state =
+            EdgeCreator.create_data_flow_edge(
+              condition,
+              then_branch,
+              :conditional_flow,
+              line,
+              acc_state
+            )
 
-      {:else, else_branch}, acc_state ->
-        # Enter separate scope for else branch
-        acc_state = StateManager.enter_scope(acc_state, :else_branch)
-        acc_state = analyze_expression_data_flow(else_branch, acc_state)
-        # Create conditional flow edge from condition to else branch
-        acc_state = EdgeCreator.create_data_flow_edge(condition, else_branch, :conditional_flow, line, acc_state)
-        # Exit else branch scope
-        StateManager.exit_scope(acc_state)
+          # Exit then branch scope
+          StateManager.exit_scope(acc_state)
 
-      _, acc_state -> acc_state
-    end)
+        {:else, else_branch}, acc_state ->
+          # Enter separate scope for else branch
+          acc_state = StateManager.enter_scope(acc_state, :else_branch)
+          acc_state = analyze_expression_data_flow(else_branch, acc_state)
+          # Create conditional flow edge from condition to else branch
+          acc_state =
+            EdgeCreator.create_data_flow_edge(
+              condition,
+              else_branch,
+              :conditional_flow,
+              line,
+              acc_state
+            )
+
+          # Exit else branch scope
+          StateManager.exit_scope(acc_state)
+
+        _, acc_state ->
+          acc_state
+      end)
 
     state
   end
@@ -248,39 +276,47 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.ASTAnalyzer do
     state = analyze_expression_data_flow(expr, state)
 
     # Create case node
-    {state, _case_node_id} = NodeCreator.create_dfg_node(state, :case, line, %{
-      expression: expr,
-      branches: length(clauses)
-    })
+    {state, _case_node_id} =
+      NodeCreator.create_dfg_node(state, :case, line, %{
+        expression: expr,
+        branches: length(clauses)
+      })
 
     # Analyze each clause and create pattern nodes
     Enum.reduce(clauses, state, fn {:->, clause_meta, [pattern, body]}, acc_state ->
       clause_line = Keyword.get(clause_meta, :line, line)
 
       # Create pattern matching node
-      {acc_state, _pattern_node_id} = NodeCreator.create_dfg_node(acc_state, :pattern_match, clause_line, %{
-        pattern: pattern,
-        case_expression: expr
-      })
+      {acc_state, _pattern_node_id} =
+        NodeCreator.create_dfg_node(acc_state, :pattern_match, clause_line, %{
+          pattern: pattern,
+          case_expression: expr
+        })
 
       # Extract the actual pattern from the clause structure
       # Case patterns can be wrapped in lists and may have guards
-      actual_pattern = case pattern do
-        # Pattern with guard: {:when, [], [actual_pattern, guard]}
-        {:when, _, [actual_pattern, _guard]} -> actual_pattern
-        # Pattern wrapped in a list (common in case clauses)
-        [single_pattern] ->
-          case single_pattern do
-            {:when, _, [actual_pattern, _guard]} -> actual_pattern
-            other -> other
-          end
-        # Simple pattern
-        other -> other
-      end
+      actual_pattern =
+        case pattern do
+          # Pattern with guard: {:when, [], [actual_pattern, guard]}
+          {:when, _, [actual_pattern, _guard]} ->
+            actual_pattern
+
+          # Pattern wrapped in a list (common in case clauses)
+          [single_pattern] ->
+            case single_pattern do
+              {:when, _, [actual_pattern, _guard]} -> actual_pattern
+              other -> other
+            end
+
+          # Simple pattern
+          other ->
+            other
+        end
 
       # Analyze pattern in the current scope (don't create separate scope)
       # This allows pattern variables to be tracked in the main function scope
-      acc_state = PatternAnalyzer.analyze_assignment_pattern(actual_pattern, expr, clause_line, acc_state)
+      acc_state =
+        PatternAnalyzer.analyze_assignment_pattern(actual_pattern, expr, clause_line, acc_state)
 
       # Analyze body in a separate scope to avoid variable conflicts
       acc_state = StateManager.enter_scope(acc_state, :case_clause)
@@ -296,34 +332,47 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.ASTAnalyzer do
     {state, _try_node_id} = NodeCreator.create_dfg_node(state, :try_expression, line, %{})
 
     # Analyze try body
-    state = case Keyword.get(blocks, :do) do
-      nil -> state
-      try_body -> analyze_expression_data_flow(try_body, state)
-    end
+    state =
+      case Keyword.get(blocks, :do) do
+        nil -> state
+        try_body -> analyze_expression_data_flow(try_body, state)
+      end
 
     # Analyze rescue clauses
-    state = case Keyword.get(blocks, :rescue) do
-      nil -> state
-      rescue_clauses ->
-        Enum.reduce(rescue_clauses, state, fn {:->, _, [pattern, body]}, acc_state ->
-          acc_state = StateManager.enter_scope(acc_state, :rescue_clause)
-          acc_state = PatternAnalyzer.analyze_assignment_pattern(pattern, :exception, line, acc_state)
-          acc_state = analyze_expression_data_flow(body, acc_state)
-          StateManager.exit_scope(acc_state)
-        end)
-    end
+    state =
+      case Keyword.get(blocks, :rescue) do
+        nil ->
+          state
+
+        rescue_clauses ->
+          Enum.reduce(rescue_clauses, state, fn {:->, _, [pattern, body]}, acc_state ->
+            acc_state = StateManager.enter_scope(acc_state, :rescue_clause)
+
+            acc_state =
+              PatternAnalyzer.analyze_assignment_pattern(pattern, :exception, line, acc_state)
+
+            acc_state = analyze_expression_data_flow(body, acc_state)
+            StateManager.exit_scope(acc_state)
+          end)
+      end
 
     # Analyze catch clauses
-    state = case Keyword.get(blocks, :catch) do
-      nil -> state
-      catch_clauses ->
-        Enum.reduce(catch_clauses, state, fn {:->, _, [pattern, body]}, acc_state ->
-          acc_state = StateManager.enter_scope(acc_state, :catch_clause)
-          acc_state = PatternAnalyzer.analyze_assignment_pattern(pattern, :thrown_value, line, acc_state)
-          acc_state = analyze_expression_data_flow(body, acc_state)
-          StateManager.exit_scope(acc_state)
-        end)
-    end
+    state =
+      case Keyword.get(blocks, :catch) do
+        nil ->
+          state
+
+        catch_clauses ->
+          Enum.reduce(catch_clauses, state, fn {:->, _, [pattern, body]}, acc_state ->
+            acc_state = StateManager.enter_scope(acc_state, :catch_clause)
+
+            acc_state =
+              PatternAnalyzer.analyze_assignment_pattern(pattern, :thrown_value, line, acc_state)
+
+            acc_state = analyze_expression_data_flow(body, acc_state)
+            StateManager.exit_scope(acc_state)
+          end)
+      end
 
     # Analyze after clause
     case Keyword.get(blocks, :after) do
@@ -346,7 +395,10 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.ASTAnalyzer do
       {:else, else_clauses}, acc_state ->
         Enum.reduce(else_clauses, acc_state, fn {:->, _, [pattern, body]}, clause_state ->
           clause_state = StateManager.enter_scope(clause_state, :with_else)
-          clause_state = PatternAnalyzer.analyze_assignment_pattern(pattern, :with_mismatch, line, clause_state)
+
+          clause_state =
+            PatternAnalyzer.analyze_assignment_pattern(pattern, :with_mismatch, line, clause_state)
+
           clause_state = analyze_expression_data_flow(body, clause_state)
           StateManager.exit_scope(clause_state)
         end)
@@ -355,7 +407,8 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.ASTAnalyzer do
         acc_state = analyze_expression_data_flow(expr, acc_state)
         PatternAnalyzer.analyze_assignment_pattern(pattern, expr, line, acc_state)
 
-      _, acc_state -> acc_state
+      _, acc_state ->
+        acc_state
     end)
   end
 
@@ -372,93 +425,53 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.ASTAnalyzer do
     outer_variables = VariableTracker.extract_variable_names_list(state.variables)
 
     # Create comprehension node
-    {state, comp_node_id} = NodeCreator.create_dfg_node(state, :comprehension, line, %{
-      type: :for_comprehension
-    })
+    {state, comp_node_id} =
+      NodeCreator.create_dfg_node(state, :comprehension, line, %{
+        type: :for_comprehension
+      })
 
     # Enter comprehension scope
     state = StateManager.enter_scope(state, :comprehension)
 
     # Analyze comprehension clauses
-    state = Enum.reduce(clauses, state, fn
-      {:<-, pattern, enumerable}, acc_state ->
-        acc_state = analyze_expression_data_flow(enumerable, acc_state)
-        PatternAnalyzer.analyze_assignment_pattern(pattern, enumerable, line, acc_state)
+    state =
+      Enum.reduce(clauses, state, fn
+        {:<-, pattern, enumerable}, acc_state ->
+          acc_state = analyze_expression_data_flow(enumerable, acc_state)
+          PatternAnalyzer.analyze_assignment_pattern(pattern, enumerable, line, acc_state)
 
-      # Handle keyword list with do clause
-      keyword_list, acc_state when is_list(keyword_list) ->
-        case Keyword.get(keyword_list, :do) do
-          nil ->
-            acc_state
-          body ->
-            # Analyze the body and detect captured variables
-            acc_state = analyze_expression_data_flow(body, acc_state)
+        # Handle keyword list with do clause
+        keyword_list, acc_state when is_list(keyword_list) ->
+          case Keyword.get(keyword_list, :do) do
+            nil ->
+              acc_state
 
-            # Find variables used in body that are from outer scope
-            body_variables = extract_variables_from_expression(body)
+            body ->
+              # Analyze the body and detect captured variables
+              acc_state = analyze_expression_data_flow(body, acc_state)
 
-            captured = Enum.filter(body_variables, fn var -> var in outer_variables end)
+              # Find variables used in body that are from outer scope
+              body_variables = extract_variables_from_expression(body)
 
-            # Add captured variables to state
-            acc_state = %{acc_state | captures: acc_state.captures ++ captured}
+              captured = Enum.filter(body_variables, fn var -> var in outer_variables end)
 
-            # Create capture edges for each captured variable
-            Enum.reduce(captured, acc_state, fn captured_var, edge_state ->
-              EdgeCreator.create_data_flow_edge({:captured_variable, captured_var}, comp_node_id, :capture, line, edge_state)
-            end)
-        end
+              # Add captured variables to state
+              acc_state = %{acc_state | captures: acc_state.captures ++ captured}
 
-      {:do, body}, acc_state ->
-        # Analyze the body and detect captured variables
-        acc_state = analyze_expression_data_flow(body, acc_state)
+              # Create capture edges for each captured variable
+              Enum.reduce(captured, acc_state, fn captured_var, edge_state ->
+                EdgeCreator.create_data_flow_edge(
+                  {:captured_variable, captured_var},
+                  comp_node_id,
+                  :capture,
+                  line,
+                  edge_state
+                )
+              end)
+          end
 
-        # Find variables used in body that are from outer scope
-        body_variables = extract_variables_from_expression(body)
-
-        captured = Enum.filter(body_variables, fn var -> var in outer_variables end)
-
-        # Add captured variables to state
-        acc_state = %{acc_state | captures: acc_state.captures ++ captured}
-
-        # Create capture edges for each captured variable
-        Enum.reduce(captured, acc_state, fn captured_var, edge_state ->
-          EdgeCreator.create_data_flow_edge({:captured_variable, captured_var}, comp_node_id, :capture, line, edge_state)
-        end)
-
-      filter_expr, acc_state ->
-        analyze_expression_data_flow(filter_expr, acc_state)
-    end)
-
-    # Exit scope
-    StateManager.exit_scope(state)
-  end
-
-  defp analyze_anonymous_function_data_flow(clauses, meta, state) do
-    line = Keyword.get(meta, :line, 1)
-
-    # Create anonymous function node
-    {state, fn_node_id} = NodeCreator.create_dfg_node(state, :anonymous_function, line, %{
-      clauses: length(clauses)
-    })
-
-    # Track variables from outer scope that might be captured
-    outer_variables = VariableTracker.extract_variable_names_list(state.variables)
-
-    # Analyze each clause
-    state = Enum.reduce(clauses, state, fn clause, acc_state ->
-      case clause do
-        {:->, clause_meta, [args, body]} ->
-          clause_line = Keyword.get(clause_meta, :line, line)
-
-          # Enter function clause scope
-          acc_state = StateManager.enter_scope(acc_state, :function_clause)
-
-          # Analyze parameters
-          acc_state = Enum.reduce(args, acc_state, fn arg, param_state ->
-            PatternAnalyzer.analyze_parameter_pattern(arg, clause_line, param_state)
-          end)
-
-          # Analyze body and detect captured variables
+        {:do, body}, acc_state ->
+          # Analyze the body and detect captured variables
           acc_state = analyze_expression_data_flow(body, acc_state)
 
           # Find variables used in body that are from outer scope
@@ -470,17 +483,82 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.ASTAnalyzer do
           acc_state = %{acc_state | captures: acc_state.captures ++ captured}
 
           # Create capture edges for each captured variable
-          acc_state = Enum.reduce(captured, acc_state, fn captured_var, edge_state ->
-            EdgeCreator.create_data_flow_edge({:captured_variable, captured_var}, fn_node_id, :capture, clause_line, edge_state)
+          Enum.reduce(captured, acc_state, fn captured_var, edge_state ->
+            EdgeCreator.create_data_flow_edge(
+              {:captured_variable, captured_var},
+              comp_node_id,
+              :capture,
+              line,
+              edge_state
+            )
           end)
 
-          # Exit scope
-          StateManager.exit_scope(acc_state)
+        filter_expr, acc_state ->
+          analyze_expression_data_flow(filter_expr, acc_state)
+      end)
 
-        _other ->
-          acc_state
-      end
-    end)
+    # Exit scope
+    StateManager.exit_scope(state)
+  end
+
+  defp analyze_anonymous_function_data_flow(clauses, meta, state) do
+    line = Keyword.get(meta, :line, 1)
+
+    # Create anonymous function node
+    {state, fn_node_id} =
+      NodeCreator.create_dfg_node(state, :anonymous_function, line, %{
+        clauses: length(clauses)
+      })
+
+    # Track variables from outer scope that might be captured
+    outer_variables = VariableTracker.extract_variable_names_list(state.variables)
+
+    # Analyze each clause
+    state =
+      Enum.reduce(clauses, state, fn clause, acc_state ->
+        case clause do
+          {:->, clause_meta, [args, body]} ->
+            clause_line = Keyword.get(clause_meta, :line, line)
+
+            # Enter function clause scope
+            acc_state = StateManager.enter_scope(acc_state, :function_clause)
+
+            # Analyze parameters
+            acc_state =
+              Enum.reduce(args, acc_state, fn arg, param_state ->
+                PatternAnalyzer.analyze_parameter_pattern(arg, clause_line, param_state)
+              end)
+
+            # Analyze body and detect captured variables
+            acc_state = analyze_expression_data_flow(body, acc_state)
+
+            # Find variables used in body that are from outer scope
+            body_variables = extract_variables_from_expression(body)
+
+            captured = Enum.filter(body_variables, fn var -> var in outer_variables end)
+
+            # Add captured variables to state
+            acc_state = %{acc_state | captures: acc_state.captures ++ captured}
+
+            # Create capture edges for each captured variable
+            acc_state =
+              Enum.reduce(captured, acc_state, fn captured_var, edge_state ->
+                EdgeCreator.create_data_flow_edge(
+                  {:captured_variable, captured_var},
+                  fn_node_id,
+                  :capture,
+                  clause_line,
+                  edge_state
+                )
+              end)
+
+            # Exit scope
+            StateManager.exit_scope(acc_state)
+
+          _other ->
+            acc_state
+        end
+      end)
 
     state
   end
@@ -523,22 +601,61 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.ASTAnalyzer do
     # Variables typically start with lowercase or underscore
     # Single letter variables like a, b, c, x, y, z are almost always variables
     atom_str = to_string(atom)
+
     case atom_str do
-      "_" <> _ -> true  # underscore variables
+      # underscore variables
+      "_" <> _ ->
+        true
+
       <<first::utf8>> when first >= ?a and first <= ?z ->
         # Single letter - almost always a variable
         true
+
       <<first::utf8, _rest::binary>> when first >= ?a and first <= ?z ->
         # Multi-letter lowercase - could be variable, but exclude known functions
         not is_known_function?(atom)
-      _ -> false
+
+      _ ->
+        false
     end
   end
 
   # Helper to identify known function names that should not be treated as variables
   defp is_known_function?(atom) do
-    atom in [:combine, :process, :transform, :input, :output, :expensive_computation,
-             :+, :-, :*, :/, :==, :!=, :<, :>, :<=, :>=, :and, :or, :not, :++, :--, :|>, :=,
-             :def, :defp, :if, :case, :cond, :try, :receive, :for, :with, :fn]
+    atom in [
+      :combine,
+      :process,
+      :transform,
+      :input,
+      :output,
+      :expensive_computation,
+      :+,
+      :-,
+      :*,
+      :/,
+      :==,
+      :!=,
+      :<,
+      :>,
+      :<=,
+      :>=,
+      :and,
+      :or,
+      :not,
+      :++,
+      :--,
+      :|>,
+      :=,
+      :def,
+      :defp,
+      :if,
+      :case,
+      :cond,
+      :try,
+      :receive,
+      :for,
+      :with,
+      :fn
+    ]
   end
 end

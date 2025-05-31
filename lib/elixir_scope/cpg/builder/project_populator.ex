@@ -33,13 +33,15 @@ defmodule ElixirScope.AST.Enhanced.ProjectPopulator do
   @default_opts [
     include_patterns: ["**/*.ex", "**/*.exs"],
     exclude_patterns: ["**/deps/**", "**/build/**", "**/_build/**", "**/node_modules/**"],
-    max_file_size: 1_000_000,  # 1MB
+    # 1MB
+    max_file_size: 1_000_000,
     parallel_processing: true,
     max_concurrency: System.schedulers_online(),
     timeout: 30_000,
     generate_cfg: true,
     generate_dfg: true,
-    generate_cpg: false,  # CPG is expensive, opt-in
+    # CPG is expensive, opt-in
+    generate_cpg: false,
     validate_syntax: true,
     track_dependencies: true
   ]
@@ -59,8 +61,8 @@ defmodule ElixirScope.AST.Enhanced.ProjectPopulator do
       with {:ok, files} <- FileDiscovery.discover_elixir_files(project_path, opts),
            {:ok, parsed_files} <- FileParser.parse_files(files, opts),
            {:ok, analyzed_modules} <- ModuleAnalyzer.analyze_modules(parsed_files, opts),
-           {:ok, dependency_graph} <- DependencyAnalyzer.build_dependency_graph(analyzed_modules, opts) do
-
+           {:ok, dependency_graph} <-
+             DependencyAnalyzer.build_dependency_graph(analyzed_modules, opts) do
         # Store modules in repository
         try do
           Enum.each(analyzed_modules, fn {_module_name, module_data} ->
@@ -92,10 +94,18 @@ defmodule ElixirScope.AST.Enhanced.ProjectPopulator do
           total_functions: count_total_functions(analyzed_modules),
           dependency_graph: dependency_graph,
           duration_microseconds: duration,
-          performance_metrics: PerformanceMetrics.calculate_performance_metrics(parsed_files, analyzed_modules, duration)
+          performance_metrics:
+            PerformanceMetrics.calculate_performance_metrics(
+              parsed_files,
+              analyzed_modules,
+              duration
+            )
         }
 
-        Logger.info("Project population completed: #{length(analyzed_modules)} modules, #{results.total_functions} functions in #{duration / 1000}ms")
+        Logger.info(
+          "Project population completed: #{length(analyzed_modules)} modules, #{results.total_functions} functions in #{duration / 1000}ms"
+        )
+
         {:ok, results}
       else
         {:error, reason} = error ->
@@ -109,6 +119,7 @@ defmodule ElixirScope.AST.Enhanced.ProjectPopulator do
     catch
       {:repository_storage_failed, message} ->
         {:error, {:repository_storage_failed, message}}
+
       {:repository_unavailable, reason} ->
         {:error, {:repository_unavailable, reason}}
     end
@@ -120,7 +131,8 @@ defmodule ElixirScope.AST.Enhanced.ProjectPopulator do
   def parse_and_analyze_file(file_path) do
     try do
       with {:ok, parsed_file} <- FileParser.parse_single_file(file_path, true, 30_000),
-           {:ok, {_module_name, module_data}} <- ModuleAnalyzer.analyze_single_module(parsed_file, true, true, false, 30_000) do
+           {:ok, {_module_name, module_data}} <-
+             ModuleAnalyzer.analyze_single_module(parsed_file, true, true, false, 30_000) do
         {:ok, module_data}
       else
         {:error, reason} -> {:error, reason}

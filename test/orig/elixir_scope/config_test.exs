@@ -1,5 +1,6 @@
 defmodule ElixirScope.ConfigTest do
-  use ExUnit.Case, async: false  # Config tests must be synchronous due to shared GenServer
+  # Config tests must be synchronous due to shared GenServer
+  use ExUnit.Case, async: false
 
   alias ElixirScope.Config
   alias ElixirScope.TestHelpers
@@ -29,7 +30,7 @@ defmodule ElixirScope.ConfigTest do
           }
         }
       }
-      
+
       assert {:ok, ^config} = Config.validate(config)
     end
 
@@ -37,7 +38,7 @@ defmodule ElixirScope.ConfigTest do
       config = %Config{
         ai: %{provider: :invalid_provider}
       }
-      
+
       assert {:error, _} = Config.validate(config)
     end
 
@@ -49,11 +50,12 @@ defmodule ElixirScope.ConfigTest do
           planning: %{
             default_strategy: :balanced,
             performance_target: 0.01,
-            sampling_rate: 1.5  # Invalid: > 1.0
+            # Invalid: > 1.0
+            sampling_rate: 1.5
           }
         }
       }
-      
+
       assert {:error, _} = Config.validate(config)
     end
 
@@ -64,12 +66,13 @@ defmodule ElixirScope.ConfigTest do
           analysis: %{max_file_size: 1000, timeout: 1000, cache_ttl: 1000},
           planning: %{
             default_strategy: :balanced,
-            performance_target: -0.1,  # Invalid: negative
+            # Invalid: negative
+            performance_target: -0.1,
             sampling_rate: 1.0
           }
         }
       }
-      
+
       assert {:error, _} = Config.validate(config)
     end
 
@@ -95,7 +98,7 @@ defmodule ElixirScope.ConfigTest do
           }
         }
       }
-      
+
       assert {:ok, ^config} = Config.validate(config)
     end
 
@@ -117,7 +120,7 @@ defmodule ElixirScope.ConfigTest do
           }
         }
       }
-      
+
       assert {:error, _} = Config.validate(config)
     end
 
@@ -138,7 +141,7 @@ defmodule ElixirScope.ConfigTest do
           cold: %{enable: false}
         }
       }
-      
+
       assert {:ok, ^config} = Config.validate(config)
     end
 
@@ -146,7 +149,8 @@ defmodule ElixirScope.ConfigTest do
       config = %Config{
         storage: %{
           hot: %{
-            max_events: 0,  # Invalid: must be positive
+            # Invalid: must be positive
+            max_events: 0,
             max_age_seconds: 3600,
             prune_interval: 60_000
           },
@@ -154,7 +158,7 @@ defmodule ElixirScope.ConfigTest do
           cold: %{enable: false}
         }
       }
-      
+
       assert {:error, _} = Config.validate(config)
     end
   end
@@ -172,7 +176,7 @@ defmodule ElixirScope.ConfigTest do
           }
         }
       }
-      
+
       _app_config = [
         ai: [
           planning: [
@@ -180,7 +184,7 @@ defmodule ElixirScope.ConfigTest do
           ]
         ]
       ]
-      
+
       # Test internal merge function (we'd need to expose it or test integration)
       # This is a placeholder for the actual merge functionality
       assert true
@@ -191,21 +195,24 @@ defmodule ElixirScope.ConfigTest do
     setup do
       # Ensure Config GenServer is available with better error handling
       case ElixirScope.TestHelpers.ensure_config_available() do
-        :ok -> :ok
-        {:error, reason} -> 
+        :ok ->
+          :ok
+
+        {:error, reason} ->
           flunk("Failed to ensure Config GenServer availability: #{inspect(reason)}")
       end
-      
+
       # Use the already running Config GenServer from the application
       # Store the current state to restore later with timeout
-      current_config = try do
-        Config.get()
-      catch
-        :exit, reason ->
-          flunk("Failed to get current config in setup: #{inspect(reason)}")
-      end
-      
-      on_exit(fn -> 
+      current_config =
+        try do
+          Config.get()
+        catch
+          :exit, reason ->
+            flunk("Failed to get current config in setup: #{inspect(reason)}")
+        end
+
+      on_exit(fn ->
         # Restore original sampling rate if it was changed and Config is still running
         # Use try/catch to handle cases where GenServer stops between check and call
         try do
@@ -223,7 +230,7 @@ defmodule ElixirScope.ConfigTest do
             :ok
         end
       end)
-      
+
       %{original_config: current_config}
     end
 
@@ -236,7 +243,7 @@ defmodule ElixirScope.ConfigTest do
     test "gets configuration by path", %{original_config: _config} do
       provider = Config.get([:ai, :provider])
       assert provider == :mock
-      
+
       sampling_rate = Config.get([:ai, :planning, :sampling_rate])
       assert is_number(sampling_rate)
     end
@@ -249,7 +256,7 @@ defmodule ElixirScope.ConfigTest do
     test "updates allowed configuration paths", %{original_config: _config} do
       # Test updating sampling rate (should be allowed)
       assert :ok = Config.update([:ai, :planning, :sampling_rate], 0.8)
-      
+
       updated_rate = Config.get([:ai, :planning, :sampling_rate])
       assert updated_rate == 0.8
     end
@@ -258,7 +265,7 @@ defmodule ElixirScope.ConfigTest do
       # Test updating provider (should be rejected)
       result = Config.update([:ai, :provider], :openai)
       assert {:error, :not_updatable} = result
-      
+
       # Verify the original value is unchanged
       provider = Config.get([:ai, :provider])
       assert provider == :mock
@@ -268,7 +275,7 @@ defmodule ElixirScope.ConfigTest do
       # Test updating sampling rate to invalid value
       result = Config.update([:ai, :planning, :sampling_rate], 1.5)
       assert {:error, _} = result
-      
+
       # Verify the original value is unchanged
       sampling_rate = Config.get([:ai, :planning, :sampling_rate])
       assert sampling_rate != 1.5
@@ -276,21 +283,21 @@ defmodule ElixirScope.ConfigTest do
 
     test "updates batch size (allowed path)", %{original_config: _config} do
       assert :ok = Config.update([:capture, :processing, :batch_size], 2000)
-      
+
       batch_size = Config.get([:capture, :processing, :batch_size])
       assert batch_size == 2000
     end
 
     test "updates flush interval (allowed path)", %{original_config: _config} do
       assert :ok = Config.update([:capture, :processing, :flush_interval], 200)
-      
+
       flush_interval = Config.get([:capture, :processing, :flush_interval])
       assert flush_interval == 200
     end
 
     test "updates query timeout (allowed path)", %{original_config: _config} do
       assert :ok = Config.update([:interface, :query_timeout], 15_000)
-      
+
       query_timeout = Config.get([:interface, :query_timeout])
       assert query_timeout == 15_000
     end
@@ -309,7 +316,7 @@ defmodule ElixirScope.ConfigTest do
           }
         }
       }
-      
+
       # Convert to struct format for validation
       config = struct(Config, incomplete_config)
       assert {:error, _} = Config.validate(config)
@@ -319,7 +326,8 @@ defmodule ElixirScope.ConfigTest do
       config = %Config{
         capture: %{
           ring_buffer: %{
-            size: "not_an_integer",  # Invalid type
+            # Invalid type
+            size: "not_an_integer",
             max_events: 1000,
             overflow_strategy: :drop_oldest,
             num_buffers: :schedulers
@@ -333,7 +341,7 @@ defmodule ElixirScope.ConfigTest do
           }
         }
       }
-      
+
       assert {:error, _} = Config.validate(config)
     end
 
@@ -344,12 +352,13 @@ defmodule ElixirScope.ConfigTest do
           analysis: %{max_file_size: 1000, timeout: 1000, cache_ttl: 1000},
           planning: %{
             default_strategy: :balanced,
-            performance_target: "not_a_number",  # Invalid type
+            # Invalid type
+            performance_target: "not_a_number",
             sampling_rate: 1.0
           }
         }
       }
-      
+
       assert {:error, _} = Config.validate(config)
     end
   end
@@ -368,27 +377,29 @@ defmodule ElixirScope.ConfigTest do
       :ok = TestHelpers.ensure_config_available()
       :ok
     end
-    
+
     test "configuration validation is functional" do
       config = %Config{}
-      
-      {duration, result} = :timer.tc(fn ->
-        Config.validate(config)
-      end)
-      
+
+      {duration, result} =
+        :timer.tc(fn ->
+          Config.validate(config)
+        end)
+
       # Validation should complete successfully and in reasonable time (< 500ms)
       assert {:ok, _} = result
       assert duration < 500_000
     end
 
     test "configuration access is functional" do
-      {duration, result} = :timer.tc(fn ->
-        Config.get()
-      end)
-      
+      {duration, result} =
+        :timer.tc(fn ->
+          Config.get()
+        end)
+
       # Configuration access should work and complete in reasonable time (< 100ms)
       assert %Config{} = result
       assert duration < 100_000
     end
   end
-end 
+end

@@ -11,11 +11,11 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.Context do
 
   @type correlation_id :: term()
   @type t :: %{
-    buffer: RingBuffer.t() | nil,
-    correlation_id: correlation_id(),
-    call_stack: [correlation_id()],
-    enabled: boolean()
-  }
+          buffer: RingBuffer.t() | nil,
+          correlation_id: correlation_id(),
+          call_stack: [correlation_id()],
+          enabled: boolean()
+        }
 
   # Process dictionary keys for fast access
   @context_key :elixir_scope_context
@@ -34,7 +34,8 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.Context do
           buffer: buffer,
           correlation_id: nil,
           call_stack: [],
-          enabled: true  # For now, always enabled when buffer is available
+          # For now, always enabled when buffer is available
+          enabled: true
         }
 
         Process.put(@context_key, context)
@@ -102,7 +103,7 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.Context do
 
   Useful for avoiding recursive instrumentation in ElixirScope's own code.
   """
-  @spec with_instrumentation_disabled((() -> term())) :: term()
+  @spec with_instrumentation_disabled((-> term())) :: term()
   def with_instrumentation_disabled(fun) do
     old_context = Process.get(@context_key)
 
@@ -112,7 +113,12 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.Context do
         Process.put(@context_key, %{context | enabled: false})
 
       _ ->
-        Process.put(@context_key, %{enabled: false, buffer: nil, correlation_id: nil, call_stack: []})
+        Process.put(@context_key, %{
+          enabled: false,
+          buffer: nil,
+          correlation_id: nil,
+          call_stack: []
+        })
     end
 
     try do
@@ -155,6 +161,7 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.Context do
       [_ | rest] -> Process.put(@call_stack_key, rest)
       [] -> :ok
     end
+
     :ok
   end
 
@@ -169,6 +176,7 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.Context do
       buffer_name when is_atom(buffer_name) ->
         try do
           buffer_key = :"elixir_scope_buffer_#{buffer_name}"
+
           case :persistent_term.get(buffer_key, nil) do
             nil -> {:error, :buffer_not_found}
             buffer -> {:ok, buffer}

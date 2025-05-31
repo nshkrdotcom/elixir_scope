@@ -15,12 +15,13 @@ defmodule ElixirScope.ASTRepository.TestSupport.Helpers do
   """
   def setup_test_repository(opts \\ []) do
     # Start the repository as a GenServer process
-    {:ok, repo_pid} = Repository.start_link(name: :"test_repo_#{:erlang.unique_integer([:positive])}")
-    
+    {:ok, repo_pid} =
+      Repository.start_link(name: :"test_repo_#{:erlang.unique_integer([:positive])}")
+
     if Keyword.get(opts, :with_samples, false) do
       load_sample_data(repo_pid)
     end
-    
+
     repo_pid
   end
 
@@ -29,20 +30,19 @@ defmodule ElixirScope.ASTRepository.TestSupport.Helpers do
   """
   def load_sample_data(repo) do
     alias ElixirScope.ASTRepository.ModuleData
-    
+
     SampleASTs.all_sample_asts()
     |> Enum.each(fn sample ->
       # Extract module name from AST
       module_name = extract_module_name_from_ast(sample.ast)
-      
+
       # Create ModuleData struct
-      module_data = ModuleData.new(module_name, sample.ast, [
-        instrumentation_points: sample.expected_points
-      ])
-      
+      module_data =
+        ModuleData.new(module_name, sample.ast, instrumentation_points: sample.expected_points)
+
       Repository.store_module(repo, module_data)
     end)
-    
+
     repo
   end
 
@@ -90,14 +90,17 @@ defmodule ElixirScope.ASTRepository.TestSupport.Helpers do
   def create_temporal_event_sequence(count, opts \\ []) do
     base_time = Keyword.get(opts, :base_time, DateTime.utc_now())
     interval_ms = Keyword.get(opts, :interval_ms, 100)
-    
+
     1..count
     |> Enum.map(fn i ->
       timestamp = DateTime.add(base_time, (i - 1) * interval_ms, :millisecond)
-      create_test_event([
-        timestamp: timestamp,
-        correlation_id: "seq_#{i}_#{generate_correlation_id()}"
-      ] ++ opts)
+
+      create_test_event(
+        [
+          timestamp: timestamp,
+          correlation_id: "seq_#{i}_#{generate_correlation_id()}"
+        ] ++ opts
+      )
     end)
   end
 
@@ -105,19 +108,20 @@ defmodule ElixirScope.ASTRepository.TestSupport.Helpers do
   Extracts function definitions from an AST.
   """
   def extract_function_definitions(ast) do
-    {_ast, functions} = Macro.prewalk(ast, [], fn
-      {:def, _meta, [{name, _meta2, args} | _]} = node, acc when is_list(args) ->
-        arity = length(args)
-        {node, [{name, arity} | acc]}
-      
-      {:defp, _meta, [{name, _meta2, args} | _]} = node, acc when is_list(args) ->
-        arity = length(args)
-        {node, [{name, arity} | acc]}
-      
-      node, acc ->
-        {node, acc}
-    end)
-    
+    {_ast, functions} =
+      Macro.prewalk(ast, [], fn
+        {:def, _meta, [{name, _meta2, args} | _]} = node, acc when is_list(args) ->
+          arity = length(args)
+          {node, [{name, arity} | acc]}
+
+        {:defp, _meta, [{name, _meta2, args} | _]} = node, acc when is_list(args) ->
+          arity = length(args)
+          {node, [{name, arity} | acc]}
+
+        node, acc ->
+          {node, acc}
+      end)
+
     Enum.reverse(functions)
   end
 
@@ -125,14 +129,17 @@ defmodule ElixirScope.ASTRepository.TestSupport.Helpers do
   Counts instrumentable nodes in an AST.
   """
   def count_instrumentable_nodes(ast) do
-    {_ast, count} = Macro.prewalk(ast, 0, fn
-      {:def, _meta, _args} = node, acc -> {node, acc + 1}
-      {:defp, _meta, _args} = node, acc -> {node, acc + 1}
-      {:|>, _meta, _args} = node, acc -> {node, acc + 1}  # Pipe operations
-      {:case, _meta, _args} = node, acc -> {node, acc + 1}  # Case statements
-      node, acc -> {node, acc}
-    end)
-    
+    {_ast, count} =
+      Macro.prewalk(ast, 0, fn
+        {:def, _meta, _args} = node, acc -> {node, acc + 1}
+        {:defp, _meta, _args} = node, acc -> {node, acc + 1}
+        # Pipe operations
+        {:|>, _meta, _args} = node, acc -> {node, acc + 1}
+        # Case statements
+        {:case, _meta, _args} = node, acc -> {node, acc + 1}
+        node, acc -> {node, acc}
+      end)
+
     count
   end
 
@@ -140,16 +147,18 @@ defmodule ElixirScope.ASTRepository.TestSupport.Helpers do
   Validates that an AST has been enhanced with node IDs.
   """
   def validate_ast_enhancement(ast) do
-    {_ast, node_ids} = Macro.prewalk(ast, [], fn
-      {_form, meta, _args} = node, acc ->
-        case Keyword.get(meta, :ast_node_id) do
-          nil -> {node, acc}
-          node_id -> {node, [node_id | acc]}
-        end
-      
-      node, acc -> {node, acc}
-    end)
-    
+    {_ast, node_ids} =
+      Macro.prewalk(ast, [], fn
+        {_form, meta, _args} = node, acc ->
+          case Keyword.get(meta, :ast_node_id) do
+            nil -> {node, acc}
+            node_id -> {node, [node_id | acc]}
+          end
+
+        node, acc ->
+          {node, acc}
+      end)
+
     %{
       has_node_ids: length(node_ids) > 0,
       node_id_count: length(node_ids),
@@ -203,11 +212,12 @@ defmodule ElixirScope.ASTRepository.TestSupport.Helpers do
     case RuntimeCorrelator.correlate_event(correlator, event) do
       {:ok, ast_node_id} ->
         if expected_ast_node_id do
-          assert ast_node_id == expected_ast_node_id, 
-            "Expected correlation to AST node #{expected_ast_node_id}, got #{ast_node_id}"
+          assert ast_node_id == expected_ast_node_id,
+                 "Expected correlation to AST node #{expected_ast_node_id}, got #{ast_node_id}"
         end
+
         {:ok, ast_node_id}
-      
+
       {:error, reason} ->
         flunk("Expected correlation to exist, but got error: #{inspect(reason)}")
     end
@@ -217,7 +227,7 @@ defmodule ElixirScope.ASTRepository.TestSupport.Helpers do
   Asserts that correlation accuracy is above threshold.
   """
   def assert_correlation_accuracy(correlator, events, threshold \\ 0.95) do
-    successful_correlations = 
+    successful_correlations =
       events
       |> Enum.count(fn event ->
         case RuntimeCorrelator.correlate_event(correlator, event) do
@@ -225,13 +235,13 @@ defmodule ElixirScope.ASTRepository.TestSupport.Helpers do
           {:error, _} -> false
         end
       end)
-    
+
     total_events = length(events)
     accuracy = successful_correlations / total_events
-    
+
     assert accuracy >= threshold,
-      "Correlation accuracy #{accuracy} below threshold #{threshold} (#{successful_correlations}/#{total_events})"
-    
+           "Correlation accuracy #{accuracy} below threshold #{threshold} (#{successful_correlations}/#{total_events})"
+
     accuracy
   end
 
@@ -253,13 +263,13 @@ defmodule ElixirScope.ASTRepository.TestSupport.Helpers do
     case ast do
       {:defmodule, _meta, [{:__aliases__, _meta2, name_parts} | _]} ->
         Module.concat(name_parts)
-      
+
       {:defmodule, _meta, [name | _]} when is_atom(name) ->
         name
-      
+
       _ ->
         # Default fallback for test modules
         :"TestModule#{:erlang.unique_integer([:positive])}"
     end
   end
-end 
+end

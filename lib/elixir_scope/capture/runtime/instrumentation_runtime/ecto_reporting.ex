@@ -19,19 +19,31 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.EctoReporting do
     case Context.get_context() do
       %{enabled: true, buffer: buffer} when not is_nil(buffer) ->
         Ingestor.ingest_ecto_query_start(buffer, correlation_id, query, params, metadata, repo)
-      _ -> :ok
+
+      _ ->
+        :ok
     end
   end
 
   @doc """
   Reports Ecto query completion.
   """
-  @spec report_ecto_query_complete(correlation_id(), String.t(), list(), term(), non_neg_integer()) :: :ok
+  @spec report_ecto_query_complete(correlation_id(), String.t(), list(), term(), non_neg_integer()) ::
+          :ok
   def report_ecto_query_complete(correlation_id, query, params, result, duration_us) do
     case Context.get_context() do
       %{enabled: true, buffer: buffer} when not is_nil(buffer) ->
-        Ingestor.ingest_ecto_query_complete(buffer, correlation_id, query, params, result, duration_us)
-      _ -> :ok
+        Ingestor.ingest_ecto_query_complete(
+          buffer,
+          correlation_id,
+          query,
+          params,
+          result,
+          duration_us
+        )
+
+      _ ->
+        :ok
     end
   end
 end

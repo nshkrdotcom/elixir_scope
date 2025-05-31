@@ -2,13 +2,13 @@
 defmodule ElixirScope.Distributed.GlobalClock do
   @moduledoc """
   Distributed global clock for ElixirScope event synchronization.
-  
+
   Provides logical timestamps and clock synchronization across distributed nodes.
   Uses hybrid logical clocks for ordering events across the cluster.
   """
 
   use GenServer
-  
+
   defstruct [
     :logical_time,
     :wall_time_offset,
@@ -17,7 +17,8 @@ defmodule ElixirScope.Distributed.GlobalClock do
     :sync_interval
   ]
 
-  @sync_interval 30_000  # 30 seconds
+  # 30 seconds
+  @sync_interval 30_000
 
   ## Public API
 
@@ -74,7 +75,7 @@ defmodule ElixirScope.Distributed.GlobalClock do
   def init(opts) do
     node_id = Keyword.get(opts, :node_id, node())
     sync_interval = Keyword.get(opts, :sync_interval, @sync_interval)
-    
+
     state = %__MODULE__{
       logical_time: 0,
       wall_time_offset: calculate_wall_time_offset(),
@@ -93,7 +94,7 @@ defmodule ElixirScope.Distributed.GlobalClock do
   def handle_call(:now, _from, state) do
     new_logical_time = state.logical_time + 1
     timestamp = generate_timestamp(new_logical_time, state)
-    
+
     new_state = %{state | logical_time: new_logical_time}
     {:reply, {:ok, timestamp}, new_state}
   end
@@ -106,18 +107,15 @@ defmodule ElixirScope.Distributed.GlobalClock do
   @impl true
   def handle_cast({:update_from_remote, remote_timestamp, _remote_node}, state) do
     {remote_logical, remote_wall, _remote_node} = parse_timestamp(remote_timestamp)
-    
+
     # Update logical time to max(local, remote) + 1
     new_logical_time = max(state.logical_time, remote_logical) + 1
-    
+
     # Adjust wall time offset if needed
     new_wall_time_offset = adjust_wall_time_offset(state.wall_time_offset, remote_wall)
-    
-    new_state = %{state | 
-      logical_time: new_logical_time,
-      wall_time_offset: new_wall_time_offset
-    }
-    
+
+    new_state = %{state | logical_time: new_logical_time, wall_time_offset: new_wall_time_offset}
+
     {:noreply, new_state}
   end
 
@@ -144,7 +142,7 @@ defmodule ElixirScope.Distributed.GlobalClock do
 
   defp generate_timestamp(logical_time, state) do
     wall_time = :os.system_time(:microsecond) + state.wall_time_offset
-    
+
     # Format: {logical_time, wall_time, node_id}
     {logical_time, wall_time, state.node_id}
   end
@@ -152,6 +150,7 @@ defmodule ElixirScope.Distributed.GlobalClock do
   defp parse_timestamp({logical_time, wall_time, node_id}) do
     {logical_time, wall_time, node_id}
   end
+
   defp parse_timestamp(timestamp) when is_integer(timestamp) do
     # Fallback for simple timestamps
     {timestamp, :os.system_time(:microsecond), node()}
@@ -165,10 +164,12 @@ defmodule ElixirScope.Distributed.GlobalClock do
   defp adjust_wall_time_offset(current_offset, remote_wall_time) do
     local_wall_time = :os.system_time(:microsecond)
     time_diff = remote_wall_time - local_wall_time
-    
+
     # Gradual adjustment to avoid clock jumps
-    if abs(time_diff) > 1_000_000 do  # More than 1 second difference
-      current_offset + div(time_diff, 10)  # Adjust by 10%
+    # More than 1 second difference
+    if abs(time_diff) > 1_000_000 do
+      # Adjust by 10%
+      current_offset + div(time_diff, 10)
     else
       current_offset
     end
@@ -176,12 +177,13 @@ defmodule ElixirScope.Distributed.GlobalClock do
 
   defp perform_cluster_sync(state) do
     current_timestamp = generate_timestamp(state.logical_time, state)
-    
+
     for node <- state.cluster_nodes, node != state.node_id do
       try do
         :rpc.cast(node, __MODULE__, :update_from_remote, [current_timestamp, state.node_id])
       catch
-        _, _ -> :ok  # Ignore failed sync attempts
+        # Ignore failed sync attempts
+        _, _ -> :ok
       end
     end
   end
@@ -194,4 +196,4 @@ defmodule ElixirScope.Distributed.GlobalClock do
     # Fallback when GenServer is not available
     :os.system_time(:microsecond)
   end
-end 
+end

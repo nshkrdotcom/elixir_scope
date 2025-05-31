@@ -5,25 +5,43 @@ ExUnit.start()
 # Configure ExUnit
 ExUnit.configure(
   exclude: [
-    :slow,        # Exclude slow tests by default
-    :integration, # Exclude integration tests in unit test runs
-    :end_to_end,  # Exclude end-to-end tests in unit test runs
-    :ai,          # Exclude AI tests (may require API keys)
-    :capture,     # Exclude capture tests (may require instrumentation)
-    :phoenix,     # Exclude Phoenix tests (may require Phoenix setup)
-    :distributed, # Exclude distributed tests (require multiple nodes)
-    :real_world,  # Exclude real-world tests (require external projects)
-    :benchmark,   # Exclude benchmarks in regular test runs
-    :stress,      # Exclude stress tests
-    :memory,      # Exclude memory tests
-    :scalability, # Exclude scalability tests
-    :regression,  # Exclude regression tests
-    :scenario     # Exclude scenario tests
+    # Exclude slow tests by default
+    :slow,
+    # Exclude integration tests in unit test runs
+    :integration,
+    # Exclude end-to-end tests in unit test runs
+    :end_to_end,
+    # Exclude AI tests (may require API keys)
+    :ai,
+    # Exclude capture tests (may require instrumentation)
+    :capture,
+    # Exclude Phoenix tests (may require Phoenix setup)
+    :phoenix,
+    # Exclude distributed tests (require multiple nodes)
+    :distributed,
+    # Exclude real-world tests (require external projects)
+    :real_world,
+    # Exclude benchmarks in regular test runs
+    :benchmark,
+    # Exclude stress tests
+    :stress,
+    # Exclude memory tests
+    :memory,
+    # Exclude scalability tests
+    :scalability,
+    # Exclude regression tests
+    :regression,
+    # Exclude scenario tests
+    :scenario
   ],
-  timeout: 30_000,    # 30 seconds timeout
-  max_failures: 10,   # Stop after 10 failures
-  trace: false,       # Set to true for detailed output
-  capture_log: true   # Capture log output during tests
+  # 30 seconds timeout
+  timeout: 30_000,
+  # Stop after 10 failures
+  max_failures: 10,
+  # Set to true for detailed output
+  trace: false,
+  # Capture log output during tests
+  capture_log: true
 )
 
 # Load all support modules
@@ -34,30 +52,30 @@ defmodule ElixirScope.TestCase do
   @moduledoc """
   Base test case with common setup for all ElixirScope tests.
   """
-  
+
   use ExUnit.CaseTemplate
-  
+
   using do
     quote do
       alias ElixirScope.Test.Support.Helpers
       alias ElixirScope.Test.Fixtures
       alias ElixirScope.Test.Mocks
-      
+
       import ElixirScope.Test.Support.Assertions.CPGAssertions
       import ElixirScope.Test.Support.Assertions.GraphAssertions
       import ElixirScope.Test.Support.Assertions.PerformanceAssertions
     end
   end
-  
+
   setup do
     # Global test setup
     ElixirScope.Test.Support.Helpers.setup_test_environment()
-    
+
     on_exit(fn ->
       # Global test cleanup
       :ok
     end)
-    
+
     :ok
   end
 end

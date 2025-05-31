@@ -1,7 +1,7 @@
 # test/elixir_scope/llm/context_builder_test.exs
 defmodule ElixirScope.LLM.ContextBuilderTest do
   use ExUnit.Case
-  
+
   @moduletag :skip
 
   # TODO: Add aliases when implementing actual tests
@@ -29,7 +29,8 @@ defmodule ElixirScope.LLM.ContextBuilderTest do
       # assert context.runtime_context != nil
       # assert context.correlation_context != nil
       # assert context.performance_context != nil
-      assert true # Placeholder
+      # Placeholder
+      assert true
     end
 
     test "context quality improves with runtime correlation data" do
@@ -46,7 +47,8 @@ defmodule ElixirScope.LLM.ContextBuilderTest do
       # hybrid_insights = count_insights(hybrid_context)
       # improvement_ratio = hybrid_insights / static_insights
       # assert improvement_ratio >= 1.4, "Expected 40%+ improvement, got #{improvement_ratio}"
-      assert true # Placeholder
+      # Placeholder
+      assert true
     end
   end
 
@@ -68,7 +70,8 @@ defmodule ElixirScope.LLM.ContextBuilderTest do
       # assert has_execution_data_for_function?(context.runtime_context, :problematic_function)
       # Should include correlation mapping
       # assert context.correlation_context.static_to_runtime_mapping != nil
-      assert true # Placeholder
+      # Placeholder
+      assert true
     end
   end
 end

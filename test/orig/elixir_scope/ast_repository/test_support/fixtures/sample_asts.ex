@@ -56,10 +56,11 @@ defmodule ElixirScope.ASTRepository.TestSupport.Fixtures.SampleASTs do
 
         def create(conn, params) do
           case create_item(params) do
-            {:ok, item} -> 
+            {:ok, item} ->
               conn
               |> put_status(:created)
               |> render("show.html", item: item)
+
             {:error, changeset} ->
               conn
               |> put_status(:unprocessable_entity)
@@ -116,6 +117,7 @@ defmodule ElixirScope.ASTRepository.TestSupport.Fixtures.SampleASTs do
         defp validate_map(map) when map_size(map) > 0 do
           {:ok, map}
         end
+
         defp validate_map(_), do: {:error, :empty_map}
       end
     end
@@ -155,6 +157,7 @@ defmodule ElixirScope.ASTRepository.TestSupport.Fixtures.SampleASTs do
 
         # Function with multiple clauses
         def multi_clause_function([]), do: :empty
+
         def multi_clause_function([head | tail]) do
           [process_head(head) | multi_clause_function(tail)]
         end
@@ -280,4 +283,4 @@ defmodule ElixirScope.ASTRepository.TestSupport.Fixtures.SampleASTs do
     all_sample_asts()
     |> Enum.find(&(&1.name == name))
   end
-end 
+end

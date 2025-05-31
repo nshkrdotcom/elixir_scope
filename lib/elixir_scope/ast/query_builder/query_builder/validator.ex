@@ -39,7 +39,8 @@ defmodule ElixirScope.AST.QueryBuilder.Validator do
   @doc """
   Validates WHERE conditions.
   """
-  @spec validate_where_clause(list(Types.filter_condition())) :: :ok | {:error, :invalid_where_condition}
+  @spec validate_where_clause(list(Types.filter_condition())) ::
+          :ok | {:error, :invalid_where_condition}
   def validate_where_clause(conditions) when is_list(conditions) do
     if Enum.all?(conditions, &valid_condition?/1) do
       :ok
@@ -53,28 +54,51 @@ defmodule ElixirScope.AST.QueryBuilder.Validator do
   """
   @spec validate_order_by_clause(term()) :: :ok | {:error, :invalid_order_by_clause}
   def validate_order_by_clause(nil), do: :ok
-  def validate_order_by_clause({field, direction}) when is_atom(field) and direction in [:asc, :desc], do: :ok
-  def validate_order_by_clause({direction, field}) when is_atom(field) and direction in [:asc, :desc], do: :ok
+
+  def validate_order_by_clause({field, direction})
+      when is_atom(field) and direction in [:asc, :desc],
+      do: :ok
+
+  def validate_order_by_clause({direction, field})
+      when is_atom(field) and direction in [:asc, :desc],
+      do: :ok
+
   def validate_order_by_clause(list) when is_list(list) do
     if Enum.all?(list, fn
-      {field, direction} when is_atom(field) and direction in [:asc, :desc] -> true
-      {direction, field} when is_atom(field) and direction in [:asc, :desc] -> true
-      _ -> false
-    end) do
+         {field, direction} when is_atom(field) and direction in [:asc, :desc] -> true
+         {direction, field} when is_atom(field) and direction in [:asc, :desc] -> true
+         _ -> false
+       end) do
       :ok
     else
       {:error, :invalid_order_by_clause}
     end
   end
+
   def validate_order_by_clause(_), do: {:error, :invalid_order_by_clause}
 
   # Private validation helpers
 
   defp valid_condition?({field, op, _value}) when is_atom(field) do
-    op in [:eq, :ne, :gt, :lt, :gte, :lte, :in, :not_in, :contains, :not_contains, :matches, :similar_to, :not_nil, :nil]
+    op in [
+      :eq,
+      :ne,
+      :gt,
+      :lt,
+      :gte,
+      :lte,
+      :in,
+      :not_in,
+      :contains,
+      :not_contains,
+      :matches,
+      :similar_to,
+      :not_nil,
+      nil
+    ]
   end
 
-  defp valid_condition?({field, op}) when is_atom(field) and op in [:not_nil, :nil] do
+  defp valid_condition?({field, op}) when is_atom(field) and op in [:not_nil, nil] do
     true
   end
 

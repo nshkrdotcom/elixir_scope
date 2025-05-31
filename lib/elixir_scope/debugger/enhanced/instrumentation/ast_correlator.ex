@@ -10,7 +10,8 @@ defmodule ElixirScope.Capture.Runtime.EnhancedInstrumentation.ASTCorrelator do
   require Logger
   alias ElixirScope.AST.RuntimeCorrelator
 
-  @correlation_timeout 50  # microseconds
+  # microseconds
+  @correlation_timeout 50
 
   @doc """
   Asynchronously correlates an event with AST repository data.
@@ -93,6 +94,8 @@ defmodule ElixirScope.Capture.Runtime.EnhancedInstrumentation.ASTCorrelator do
     }
 
     # Could store in ETS or send to monitoring system
-    Logger.debug("Stored correlation failure for #{event.correlation_id || "unknown"}: #{inspect(reason)}")
+    Logger.debug(
+      "Stored correlation failure for #{event.correlation_id || "unknown"}: #{inspect(reason)}"
+    )
   end
 end

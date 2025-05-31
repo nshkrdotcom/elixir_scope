@@ -8,6 +8,7 @@ defmodule ElixirScope.Capture.Runtime.TemporalBridgeEnhancement.StateManager do
   """
 
   alias ElixirScope.Capture.Runtime.TemporalBridge
+
   alias ElixirScope.Capture.Runtime.TemporalBridgeEnhancement.{
     CacheManager,
     EventProcessor,
@@ -21,7 +22,7 @@ defmodule ElixirScope.Capture.Runtime.TemporalBridgeEnhancement.StateManager do
   Reconstructs state at a specific timestamp with AST context.
   """
   @spec reconstruct_state_with_ast(String.t(), non_neg_integer(), pid() | nil, map()) ::
-    {:ok, ast_enhanced_state()} | {:error, term()}
+          {:ok, ast_enhanced_state()} | {:error, term()}
   def reconstruct_state_with_ast(session_id, timestamp, ast_repo, state) do
     if not state.enabled do
       # Fall back to standard reconstruction without AST
@@ -42,7 +43,7 @@ defmodule ElixirScope.Capture.Runtime.TemporalBridgeEnhancement.StateManager do
   Gets all states associated with a specific AST node.
   """
   @spec get_states_for_ast_node(String.t(), String.t(), map()) ::
-    {:ok, list(ast_enhanced_state())} | {:error, term()}
+          {:ok, list(ast_enhanced_state())} | {:error, term()}
   def get_states_for_ast_node(session_id, ast_node_id, state) do
     with {:ok, events} <- EventProcessor.get_events_for_ast_node(session_id, ast_node_id, state),
          {:ok, states} <- reconstruct_states_for_events(session_id, events, state) do
@@ -56,19 +57,21 @@ defmodule ElixirScope.Capture.Runtime.TemporalBridgeEnhancement.StateManager do
   Reconstructs states for a list of events.
   """
   @spec reconstruct_states_for_events(String.t(), list(map()), map()) ::
-    {:ok, list(ast_enhanced_state())} | {:error, term()}
+          {:ok, list(ast_enhanced_state())} | {:error, term()}
   def reconstruct_states_for_events(session_id, events, state) do
-    timestamps = events
-    |> Enum.map(fn event -> Map.get(event, :timestamp) end)
-    |> Enum.uniq()
+    timestamps =
+      events
+      |> Enum.map(fn event -> Map.get(event, :timestamp) end)
+      |> Enum.uniq()
 
-    states = Enum.map(timestamps, fn timestamp ->
-      case reconstruct_state_with_ast(session_id, timestamp, state.ast_repo, state) do
-        {:ok, enhanced_state} -> enhanced_state
-        {:error, _} -> nil
-      end
-    end)
-    |> Enum.filter(& &1)
+    states =
+      Enum.map(timestamps, fn timestamp ->
+        case reconstruct_state_with_ast(session_id, timestamp, state.ast_repo, state) do
+          {:ok, enhanced_state} -> enhanced_state
+          {:error, _} -> nil
+        end
+      end)
+      |> Enum.filter(& &1)
 
     {:ok, states}
   end
@@ -76,15 +79,16 @@ defmodule ElixirScope.Capture.Runtime.TemporalBridgeEnhancement.StateManager do
   # Private functions
 
   defp fallback_reconstruction(session_id, timestamp, state) do
-    original_state_result = case state.temporal_bridge do
-      nil ->
-        # No TemporalBridge available, create a mock state
-        {:ok, %{session_id: session_id, timestamp: timestamp, mock: true}}
+    original_state_result =
+      case state.temporal_bridge do
+        nil ->
+          # No TemporalBridge available, create a mock state
+          {:ok, %{session_id: session_id, timestamp: timestamp, mock: true}}
 
-      bridge_ref ->
-        # Use the actual TemporalBridge
-        TemporalBridge.reconstruct_state_at(bridge_ref, timestamp)
-    end
+        bridge_ref ->
+          # Use the actual TemporalBridge
+          TemporalBridge.reconstruct_state_at(bridge_ref, timestamp)
+      end
 
     case original_state_result do
       {:ok, original_state} ->
@@ -96,31 +100,35 @@ defmodule ElixirScope.Capture.Runtime.TemporalBridgeEnhancement.StateManager do
           variable_flow: %{},
           timestamp: timestamp
         }
+
         {:ok, enhanced_state}
 
-      error -> error
+      error ->
+        error
     end
   end
 
   defp reconstruct_state_fresh(session_id, timestamp, ast_repo, state) do
     # Try to reconstruct state using TemporalBridge if available
-    original_state_result = case state.temporal_bridge do
-      nil ->
-        # No TemporalBridge available, create a mock state
-        {:ok, %{session_id: session_id, timestamp: timestamp, mock: true}}
+    original_state_result =
+      case state.temporal_bridge do
+        nil ->
+          # No TemporalBridge available, create a mock state
+          {:ok, %{session_id: session_id, timestamp: timestamp, mock: true}}
 
-      bridge_ref ->
-        # Use the actual TemporalBridge
-        TemporalBridge.reconstruct_state_at(bridge_ref, timestamp)
-    end
+        bridge_ref ->
+          # Use the actual TemporalBridge
+          TemporalBridge.reconstruct_state_at(bridge_ref, timestamp)
+      end
 
     with {:ok, original_state} <- original_state_result,
-         {:ok, events} <- EventProcessor.get_events_for_reconstruction(session_id, timestamp, state),
+         {:ok, events} <-
+           EventProcessor.get_events_for_reconstruction(session_id, timestamp, state),
          {:ok, ast_context} <- ASTContextBuilder.build_ast_context_for_state(events, ast_repo),
-         {:ok, structural_info} <- ASTContextBuilder.extract_structural_info_for_state(ast_context, events),
+         {:ok, structural_info} <-
+           ASTContextBuilder.extract_structural_info_for_state(ast_context, events),
          {:ok, execution_path} <- ASTContextBuilder.build_execution_path(events, ast_repo),
          {:ok, variable_flow} <- ASTContextBuilder.build_variable_flow_for_state(events) do
-
       enhanced_state = %{
         original_state: original_state,
         ast_context: ast_context,

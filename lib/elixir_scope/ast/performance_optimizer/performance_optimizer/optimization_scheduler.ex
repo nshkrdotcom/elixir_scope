@@ -13,7 +13,8 @@ defmodule ElixirScope.AST.PerformanceOptimizer.OptimizationScheduler do
 
   alias ElixirScope.AST.MemoryManager
 
-  @optimization_interval 600_000   # 10 minutes
+  # 10 minutes
+  @optimization_interval 600_000
 
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)

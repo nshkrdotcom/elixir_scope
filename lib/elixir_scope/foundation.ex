@@ -33,21 +33,24 @@ defmodule ElixirScope.Foundation do
   def initialize(opts \\ []) do
     context = ErrorContext.new(__MODULE__, :initialize, metadata: %{opts: opts})
 
-    with :ok <- add_operation_context(
-          ElixirScope.Foundation.Config.initialize(opts),
-          context,
-          :config_initialization
-        ),
-        :ok <- add_operation_context(
-          ElixirScope.Foundation.Events.initialize(),
-          context,
-          :events_initialization
-        ),
-        :ok <- add_operation_context(
-          ElixirScope.Foundation.Telemetry.initialize(),
-          context,
-          :telemetry_initialization
-        ) do
+    with :ok <-
+           add_operation_context(
+             ElixirScope.Foundation.Config.initialize(opts),
+             context,
+             :config_initialization
+           ),
+         :ok <-
+           add_operation_context(
+             ElixirScope.Foundation.Events.initialize(),
+             context,
+             :events_initialization
+           ),
+         :ok <-
+           add_operation_context(
+             ElixirScope.Foundation.Telemetry.initialize(),
+             context,
+             :telemetry_initialization
+           ) do
       :ok
     else
       {:error, _} = error -> error
@@ -58,11 +61,11 @@ defmodule ElixirScope.Foundation do
   Get Foundation layer status and health information.
   """
   @spec status() :: %{
-    config: :ok | {:error, term()},
-    events: :ok | {:error, term()},
-    telemetry: :ok | {:error, term()},
-    uptime_ms: non_neg_integer()
-  }
+          config: :ok | {:error, term()},
+          events: :ok | {:error, term()},
+          telemetry: :ok | {:error, term()},
+          uptime_ms: non_neg_integer()
+        }
   def status do
     %{
       config: ElixirScope.Foundation.Config.status(),
@@ -74,10 +77,10 @@ defmodule ElixirScope.Foundation do
 
   # Helper that adds operation context to errors, normalizes success values
   @spec add_operation_context(
-    :ok | {:ok, term()} | {:error, Error.t()} | {:error, term()},
-    ErrorContext.context(),
-    atom()
-  ) :: :ok | {:ok, term()} | {:error, Error.t()}
+          :ok | {:ok, term()} | {:error, Error.t()} | {:error, term()},
+          ErrorContext.context(),
+          atom()
+        ) :: :ok | {:ok, term()} | {:error, Error.t()}
   defp add_operation_context(result, context, operation) do
     ErrorContext.add_context(result, context, %{operation: operation})
   end

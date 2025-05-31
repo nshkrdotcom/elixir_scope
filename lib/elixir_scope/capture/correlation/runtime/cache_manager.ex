@@ -141,11 +141,10 @@ defmodule ElixirScope.AST.RuntimeCorrelator.CacheManager do
 
   defp cleanup_table(table_name, current_time) do
     # Get all keys that are expired
-    expired_keys = :ets.select(table_name, [
-      {{:"$1", {:"$2", :"$3"}},
-       [{:<, {:+, :"$3", @cache_ttl}, current_time}],
-       [:"$1"]}
-    ])
+    expired_keys =
+      :ets.select(table_name, [
+        {{:"$1", {:"$2", :"$3"}}, [{:<, {:+, :"$3", @cache_ttl}, current_time}], [:"$1"]}
+      ])
 
     # Delete expired entries
     Enum.each(expired_keys, fn key ->

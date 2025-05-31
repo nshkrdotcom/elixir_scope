@@ -68,14 +68,15 @@ defmodule ElixirScope.AST.PerformanceOptimizer.BatchProcessor do
     modules
     |> Enum.chunk_every(@batch_size)
     |> Enum.flat_map(fn batch ->
-      tasks = Enum.map(batch, fn {module_name, ast} ->
-        Task.async(fn ->
-          case store_module_optimized(module_name, ast) do
-            {:ok, data} -> data
-            {:error, _} -> nil
-          end
+      tasks =
+        Enum.map(batch, fn {module_name, ast} ->
+          Task.async(fn ->
+            case store_module_optimized(module_name, ast) do
+              {:ok, data} -> data
+              {:error, _} -> nil
+            end
+          end)
         end)
-      end)
 
       Task.await_many(tasks, 30_000)
       |> Enum.filter(& &1)

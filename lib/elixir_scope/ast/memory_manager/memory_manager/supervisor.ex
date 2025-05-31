@@ -20,7 +20,9 @@ defmodule ElixirScope.AST.MemoryManager.Supervisor do
     monitoring_enabled = Keyword.get(opts, :monitoring_enabled, true)
     cache_enabled = Keyword.get(opts, :cache_enabled, true)
 
-    Logger.info("Starting Memory Manager Supervisor with monitoring=#{monitoring_enabled}, cache=#{cache_enabled}")
+    Logger.info(
+      "Starting Memory Manager Supervisor with monitoring=#{monitoring_enabled}, cache=#{cache_enabled}"
+    )
 
     children = build_children(monitoring_enabled, cache_enabled, opts)
 
@@ -36,20 +38,22 @@ defmodule ElixirScope.AST.MemoryManager.Supervisor do
   def get_status() do
     children = Supervisor.which_children(__MODULE__)
 
-    status = Enum.reduce(children, %{}, fn {id, pid, type, modules}, acc ->
-      child_status = if is_pid(pid) and Process.alive?(pid) do
-        :running
-      else
-        :stopped
-      end
+    status =
+      Enum.reduce(children, %{}, fn {id, pid, type, modules}, acc ->
+        child_status =
+          if is_pid(pid) and Process.alive?(pid) do
+            :running
+          else
+            :stopped
+          end
 
-      Map.put(acc, id, %{
-        pid: pid,
-        type: type,
-        modules: modules,
-        status: child_status
-      })
-    end)
+        Map.put(acc, id, %{
+          pid: pid,
+          type: type,
+          modules: modules,
+          status: child_status
+        })
+      end)
 
     %{
       supervisor_pid: self(),
@@ -68,9 +72,11 @@ defmodule ElixirScope.AST.MemoryManager.Supervisor do
       {:ok, _pid} ->
         Logger.info("Successfully restarted #{child_id}")
         :ok
+
       {:ok, _pid, _info} ->
         Logger.info("Successfully restarted #{child_id}")
         :ok
+
       {:error, reason} ->
         Logger.error("Failed to restart #{child_id}: #{inspect(reason)}")
         {:error, reason}
@@ -86,6 +92,7 @@ defmodule ElixirScope.AST.MemoryManager.Supervisor do
       :ok ->
         Logger.info("Successfully stopped #{child_id}")
         :ok
+
       {:error, reason} ->
         Logger.error("Failed to stop #{child_id}: #{inspect(reason)}")
         {:error, reason}
@@ -99,23 +106,24 @@ defmodule ElixirScope.AST.MemoryManager.Supervisor do
     children = []
 
     # Add Cache Manager first if caching is enabled (MemoryManager depends on it)
-    children = if cache_enabled do
-      [{ElixirScope.AST.MemoryManager.CacheManager, []} | children]
-    else
-      children
-    end
+    children =
+      if cache_enabled do
+        [{ElixirScope.AST.MemoryManager.CacheManager, []} | children]
+      else
+        children
+      end
 
     # Add Monitor if monitoring is enabled
-    children = if monitoring_enabled do
-      [{ElixirScope.AST.MemoryManager.Monitor, []} | children]
-    else
-      children
-    end
+    children =
+      if monitoring_enabled do
+        [{ElixirScope.AST.MemoryManager.Monitor, []} | children]
+      else
+        children
+      end
 
     # Add main Memory Manager last (depends on others)
     children = [
-      {ElixirScope.AST.MemoryManager,
-      [monitoring_enabled: monitoring_enabled] ++ opts} | children
+      {ElixirScope.AST.MemoryManager, [monitoring_enabled: monitoring_enabled] ++ opts} | children
     ]
 
     # Return in correct startup order (dependencies first)

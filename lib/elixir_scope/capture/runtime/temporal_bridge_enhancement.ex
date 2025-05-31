@@ -45,6 +45,7 @@ defmodule ElixirScope.Capture.Runtime.TemporalBridgeEnhancement do
   require Logger
 
   alias ElixirScope.Capture.Runtime.TemporalBridge
+
   alias ElixirScope.Capture.Runtime.TemporalBridgeEnhancement.{
     StateManager,
     TraceBuilder,
@@ -56,8 +57,10 @@ defmodule ElixirScope.Capture.Runtime.TemporalBridgeEnhancement do
   @table_name :temporal_bridge_enhancement_main
 
   # Performance targets
-  @reconstruction_timeout 100  # milliseconds
-  @context_lookup_timeout 10   # milliseconds
+  # milliseconds
+  @reconstruction_timeout 100
+  # milliseconds
+  @context_lookup_timeout 10
 
   defstruct [
     :temporal_bridge,
@@ -130,9 +133,13 @@ defmodule ElixirScope.Capture.Runtime.TemporalBridgeEnhancement do
   - `{:error, reason}` - Reconstruction failed
   """
   @spec reconstruct_state_with_ast(String.t(), non_neg_integer(), pid() | nil) ::
-    {:ok, ast_enhanced_state()} | {:error, term()}
+          {:ok, ast_enhanced_state()} | {:error, term()}
   def reconstruct_state_with_ast(session_id, timestamp, ast_repo \\ nil) do
-    GenServer.call(__MODULE__, {:reconstruct_state_with_ast, session_id, timestamp, ast_repo}, @reconstruction_timeout)
+    GenServer.call(
+      __MODULE__,
+      {:reconstruct_state_with_ast, session_id, timestamp, ast_repo},
+      @reconstruction_timeout
+    )
   end
 
   @doc """
@@ -153,9 +160,13 @@ defmodule ElixirScope.Capture.Runtime.TemporalBridgeEnhancement do
   - `{:error, reason}` - Trace creation failed
   """
   @spec get_ast_execution_trace(String.t(), non_neg_integer(), non_neg_integer()) ::
-    {:ok, ast_execution_trace()} | {:error, term()}
+          {:ok, ast_execution_trace()} | {:error, term()}
   def get_ast_execution_trace(session_id, start_time, end_time) do
-    GenServer.call(__MODULE__, {:get_ast_execution_trace, session_id, start_time, end_time}, @reconstruction_timeout)
+    GenServer.call(
+      __MODULE__,
+      {:get_ast_execution_trace, session_id, start_time, end_time},
+      @reconstruction_timeout
+    )
   end
 
   @doc """
@@ -175,7 +186,7 @@ defmodule ElixirScope.Capture.Runtime.TemporalBridgeEnhancement do
   - `{:error, reason}` - Query failed
   """
   @spec get_states_for_ast_node(String.t(), String.t()) ::
-    {:ok, list(ast_enhanced_state())} | {:error, term()}
+          {:ok, list(ast_enhanced_state())} | {:error, term()}
   def get_states_for_ast_node(session_id, ast_node_id) do
     GenServer.call(__MODULE__, {:get_states_for_ast_node, session_id, ast_node_id})
   end
@@ -199,9 +210,17 @@ defmodule ElixirScope.Capture.Runtime.TemporalBridgeEnhancement do
   - `{:error, reason}` - Query failed
   """
   @spec get_execution_flow_between_nodes(String.t(), String.t(), String.t(), tuple() | nil) ::
-    {:ok, map()} | {:error, term()}
-  def get_execution_flow_between_nodes(session_id, from_ast_node_id, to_ast_node_id, time_range \\ nil) do
-    GenServer.call(__MODULE__, {:get_execution_flow_between_nodes, session_id, from_ast_node_id, to_ast_node_id, time_range})
+          {:ok, map()} | {:error, term()}
+  def get_execution_flow_between_nodes(
+        session_id,
+        from_ast_node_id,
+        to_ast_node_id,
+        time_range \\ nil
+      ) do
+    GenServer.call(
+      __MODULE__,
+      {:get_execution_flow_between_nodes, session_id, from_ast_node_id, to_ast_node_id, time_range}
+    )
   end
 
   @doc """
@@ -233,7 +252,12 @@ defmodule ElixirScope.Capture.Runtime.TemporalBridgeEnhancement do
   def handle_call({:reconstruct_state_with_ast, session_id, timestamp, ast_repo}, _from, state) do
     start_time = System.monotonic_time(:millisecond)
 
-    case StateManager.reconstruct_state_with_ast(session_id, timestamp, ast_repo || state.ast_repo, state) do
+    case StateManager.reconstruct_state_with_ast(
+           session_id,
+           timestamp,
+           ast_repo || state.ast_repo,
+           state
+         ) do
       {:ok, enhanced_state} ->
         end_time = System.monotonic_time(:millisecond)
         duration = end_time - start_time
@@ -269,8 +293,18 @@ defmodule ElixirScope.Capture.Runtime.TemporalBridgeEnhancement do
     end
   end
 
-  def handle_call({:get_execution_flow_between_nodes, session_id, from_node, to_node, time_range}, _from, state) do
-    case TraceBuilder.get_execution_flow_between_nodes(session_id, from_node, to_node, time_range, state) do
+  def handle_call(
+        {:get_execution_flow_between_nodes, session_id, from_node, to_node, time_range},
+        _from,
+        state
+      ) do
+    case TraceBuilder.get_execution_flow_between_nodes(
+           session_id,
+           from_node,
+           to_node,
+           time_range,
+           state
+         ) do
       {:ok, flow} ->
         {:reply, {:ok, flow}, state}
 
@@ -316,10 +350,7 @@ defmodule ElixirScope.Capture.Runtime.TemporalBridgeEnhancement do
         new_count = stats.states_reconstructed + 1
         new_avg = (stats.avg_reconstruction_time * (new_count - 1) + duration) / new_count
 
-        %{stats |
-          states_reconstructed: new_count,
-          avg_reconstruction_time: new_avg
-        }
+        %{stats | states_reconstructed: new_count, avg_reconstruction_time: new_avg}
 
       :ast_context ->
         %{stats | ast_contexts_added: stats.ast_contexts_added + 1}

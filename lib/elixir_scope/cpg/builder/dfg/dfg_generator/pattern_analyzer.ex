@@ -26,8 +26,16 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.PatternAnalyzer do
         # Map destructuring
         Enum.reduce(fields, state, fn
           {key, {var_name, _, nil}}, acc_state when is_atom(var_name) ->
-            VariableTracker.create_variable_definition(var_name, line, :destructured_parameter, {key, var_name}, acc_state)
-          _, acc_state -> acc_state
+            VariableTracker.create_variable_definition(
+              var_name,
+              line,
+              :destructured_parameter,
+              {key, var_name},
+              acc_state
+            )
+
+          _, acc_state ->
+            acc_state
         end)
 
       {:{}, _, elements} ->
@@ -36,8 +44,16 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.PatternAnalyzer do
         |> Enum.with_index()
         |> Enum.reduce(state, fn
           {{var_name, _, nil}, index}, acc_state when is_atom(var_name) ->
-            VariableTracker.create_variable_definition(var_name, line, :destructured_parameter, {index, var_name}, acc_state)
-          _, acc_state -> acc_state
+            VariableTracker.create_variable_definition(
+              var_name,
+              line,
+              :destructured_parameter,
+              {index, var_name},
+              acc_state
+            )
+
+          _, acc_state ->
+            acc_state
         end)
 
       [head | tail] ->
@@ -57,12 +73,28 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.PatternAnalyzer do
     case pattern do
       {var_name, _, nil} when is_atom(var_name) ->
         # Simple variable assignment
-        state = VariableTracker.create_variable_definition(var_name, line, :assignment, source_expr, state)
+        state =
+          VariableTracker.create_variable_definition(
+            var_name,
+            line,
+            :assignment,
+            source_expr,
+            state
+          )
+
         EdgeCreator.create_data_flow_edge(source_expr, var_name, :assignment, line, state)
 
       {var_name, _, _context} when is_atom(var_name) ->
         # Variable with context
-        state = VariableTracker.create_variable_definition(var_name, line, :assignment, source_expr, state)
+        state =
+          VariableTracker.create_variable_definition(
+            var_name,
+            line,
+            :assignment,
+            source_expr,
+            state
+          )
+
         EdgeCreator.create_data_flow_edge(source_expr, var_name, :assignment, line, state)
 
       # Two-element tuple pattern like {:ok, x} or {a, b}
@@ -75,15 +107,31 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.PatternAnalyzer do
         Enum.reduce(keyword_list, state, fn
           {key, value}, acc_state when is_atom(key) ->
             analyze_assignment_pattern(value, {:keyword_access, source_expr, key}, line, acc_state)
-          _, acc_state -> acc_state
+
+          _, acc_state ->
+            acc_state
         end)
 
       {:%{}, _, fields} ->
         # Map pattern matching
         Enum.reduce(fields, state, fn
           {key, {var_name, _, nil}}, acc_state when is_atom(var_name) ->
-            acc_state = VariableTracker.create_variable_definition(var_name, line, :pattern_match, {key, source_expr}, acc_state)
-            EdgeCreator.create_data_flow_edge(source_expr, var_name, :destructuring, line, acc_state)
+            acc_state =
+              VariableTracker.create_variable_definition(
+                var_name,
+                line,
+                :pattern_match,
+                {key, source_expr},
+                acc_state
+              )
+
+            EdgeCreator.create_data_flow_edge(
+              source_expr,
+              var_name,
+              :destructuring,
+              line,
+              acc_state
+            )
 
           {key, value}, acc_state ->
             analyze_assignment_pattern(value, {:map_access, source_expr, key}, line, acc_state)
@@ -113,7 +161,8 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.PatternAnalyzer do
   def extract_pattern_variables_from_case(expr) do
     case expr do
       {var_name, _, nil} when is_atom(var_name) -> [to_string(var_name)]
-      _ -> ["result"]  # Default phi variable for case results
+      # Default phi variable for case results
+      _ -> ["result"]
     end
   end
 
@@ -152,10 +201,12 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.PatternAnalyzer do
   @doc """
   Analyzes pin operator patterns (^var).
   """
-  def analyze_pin_pattern({:^, _meta, [{var_name, _, nil}]}, source_expr, line, state) when is_atom(var_name) do
+  def analyze_pin_pattern({:^, _meta, [{var_name, _, nil}]}, source_expr, line, state)
+      when is_atom(var_name) do
     # Pin operator creates a dependency on the existing variable
     EdgeCreator.create_data_flow_edge(var_name, source_expr, :pin_match, line, state)
   end
+
   def analyze_pin_pattern(pattern, source_expr, line, state) do
     # Not a pin pattern, analyze normally
     analyze_assignment_pattern(pattern, source_expr, line, state)

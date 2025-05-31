@@ -5,16 +5,16 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.State do
   """
 
   @type t :: %{
-    entry_node: String.t(),
-    next_node_id: non_neg_integer(),
-    nodes: %{String.t() => CFGNode.t()},
-    edges: [CFGEdge.t()],
-    scopes: %{String.t() => ScopeInfo.t()},
-    current_scope: String.t(),
-    scope_counter: non_neg_integer(),
-    options: keyword(),
-    function_key: {module() | :unknown_module_placeholder, atom(), non_neg_integer()}
-  }
+          entry_node: String.t(),
+          next_node_id: non_neg_integer(),
+          nodes: %{String.t() => CFGNode.t()},
+          edges: [CFGEdge.t()],
+          scopes: %{String.t() => ScopeInfo.t()},
+          current_scope: String.t(),
+          scope_counter: non_neg_integer(),
+          options: keyword(),
+          function_key: {module() | :unknown_module_placeholder, atom(), non_neg_integer()}
+        }
 
   alias ElixirScope.AST.Enhanced.{CFGNode, CFGEdge, ScopeInfo}
 end

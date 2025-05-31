@@ -16,7 +16,7 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.StateManagerBehaviour do
   Returns either just the ID (when state is nil) or a tuple {id, new_state}.
   """
   @callback generate_node_id(prefix :: String.t(), state :: State.t() | nil) ::
-    String.t() | {String.t(), State.t()}
+              String.t() | {String.t(), State.t()}
 
   @doc """
   Generates a unique scope ID.

@@ -41,10 +41,14 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.ASTUtilities do
   @impl ElixirScope.AST.Enhanced.CFGGenerator.ASTUtilitiesBehaviour
   def extract_pattern_variables(pattern) do
     case pattern do
-      {var, _meta, nil} when is_atom(var) -> [Atom.to_string(var)]
+      {var, _meta, nil} when is_atom(var) ->
+        [Atom.to_string(var)]
+
       {_constructor, _meta, args} when is_list(args) ->
         Enum.flat_map(args, &extract_pattern_variables/1)
-      _ -> []
+
+      _ ->
+        []
     end
   end
 
@@ -81,9 +85,11 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.ASTUtilities do
         {:<-, _, [_pattern, _enumerable]} ->
           # Generator clause
           {[clause | generators], filters}
+
         [do: _body] ->
           # Body clause - not a decision point
           {generators, filters}
+
         _ ->
           # Filter clause (any other expression)
           {generators, [clause | filters]}

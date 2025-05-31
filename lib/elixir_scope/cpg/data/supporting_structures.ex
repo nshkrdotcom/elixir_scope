@@ -2,16 +2,16 @@
 defmodule ElixirScope.AST.Enhanced.SupportingStructures do
   @moduledoc """
   Supporting data structures for the Enhanced AST Repository.
-  
+
   This module defines all the supporting structs used by EnhancedModuleData
   and EnhancedFunctionData for comprehensive AST analysis.
   """
-  
+
   # Module dependency structures
-  
+
   defmodule MacroData do
     @moduledoc "Macro definition data"
-    
+
     defstruct [
       :name,
       :arity,
@@ -21,21 +21,21 @@ defmodule ElixirScope.AST.Enhanced.SupportingStructures do
       :documentation,
       :metadata
     ]
-    
+
     @type t :: %__MODULE__{
-      name: atom(),
-      arity: non_neg_integer(),
-      ast: Macro.t(),
-      visibility: :public | :private,
-      line: pos_integer(),
-      documentation: String.t() | nil,
-      metadata: map()
-    }
+            name: atom(),
+            arity: non_neg_integer(),
+            ast: Macro.t(),
+            visibility: :public | :private,
+            line: pos_integer(),
+            documentation: String.t() | nil,
+            metadata: map()
+          }
   end
-  
+
   defmodule TypespecData do
     @moduledoc "Type specification data"
-    
+
     defstruct [
       :name,
       :arity,
@@ -44,20 +44,20 @@ defmodule ElixirScope.AST.Enhanced.SupportingStructures do
       :line,
       :metadata
     ]
-    
+
     @type t :: %__MODULE__{
-      name: atom(),
-      arity: non_neg_integer(),
-      type: :spec | :type | :opaque | :callback,
-      spec_ast: Macro.t(),
-      line: pos_integer(),
-      metadata: map()
-    }
+            name: atom(),
+            arity: non_neg_integer(),
+            type: :spec | :type | :opaque | :callback,
+            spec_ast: Macro.t(),
+            line: pos_integer(),
+            metadata: map()
+          }
   end
-  
+
   defmodule ModuleDependency do
     @moduledoc "Module dependency information"
-    
+
     defstruct [
       :module,
       :type,
@@ -66,38 +66,38 @@ defmodule ElixirScope.AST.Enhanced.SupportingStructures do
       :line,
       :metadata
     ]
-    
+
     @type t :: %__MODULE__{
-      module: atom(),
-      type: :import | :alias | :require,
-      alias_name: atom() | nil,
-      functions: [atom()] | :all,
-      line: pos_integer(),
-      metadata: map()
-    }
+            module: atom(),
+            type: :import | :alias | :require,
+            alias_name: atom() | nil,
+            functions: [atom()] | :all,
+            line: pos_integer(),
+            metadata: map()
+          }
   end
-  
+
   defmodule BehaviourUsage do
     @moduledoc "Behaviour usage information"
-    
+
     defstruct [
       :behaviour,
       :callbacks_implemented,
       :line,
       :metadata
     ]
-    
+
     @type t :: %__MODULE__{
-      behaviour: atom(),
-      callbacks_implemented: [atom()],
-      line: pos_integer(),
-      metadata: map()
-    }
+            behaviour: atom(),
+            callbacks_implemented: [atom()],
+            line: pos_integer(),
+            metadata: map()
+          }
   end
-  
+
   defmodule CallbackData do
     @moduledoc "Callback implementation data"
-    
+
     defstruct [
       :name,
       :arity,
@@ -106,20 +106,20 @@ defmodule ElixirScope.AST.Enhanced.SupportingStructures do
       :line,
       :metadata
     ]
-    
+
     @type t :: %__MODULE__{
-      name: atom(),
-      arity: non_neg_integer(),
-      behaviour: atom(),
-      ast: Macro.t(),
-      line: pos_integer(),
-      metadata: map()
-    }
+            name: atom(),
+            arity: non_neg_integer(),
+            behaviour: atom(),
+            ast: Macro.t(),
+            line: pos_integer(),
+            metadata: map()
+          }
   end
-  
+
   defmodule ChildSpecData do
     @moduledoc "Child specification data for supervisors"
-    
+
     defstruct [
       :id,
       :start,
@@ -130,22 +130,22 @@ defmodule ElixirScope.AST.Enhanced.SupportingStructures do
       :line,
       :metadata
     ]
-    
+
     @type t :: %__MODULE__{
-      id: term(),
-      start: {module(), atom(), [term()]},
-      restart: :permanent | :temporary | :transient,
-      shutdown: non_neg_integer() | :infinity | :brutal_kill,
-      type: :worker | :supervisor,
-      modules: [module()] | :dynamic,
-      line: pos_integer(),
-      metadata: map()
-    }
+            id: term(),
+            start: {module(), atom(), [term()]},
+            restart: :permanent | :temporary | :transient,
+            shutdown: non_neg_integer() | :infinity | :brutal_kill,
+            type: :worker | :supervisor,
+            modules: [module()] | :dynamic,
+            line: pos_integer(),
+            metadata: map()
+          }
   end
-  
+
   defmodule CodeSmell do
     @moduledoc "Code smell detection result"
-    
+
     defstruct [
       :type,
       :severity,
@@ -154,20 +154,20 @@ defmodule ElixirScope.AST.Enhanced.SupportingStructures do
       :suggestion,
       :metadata
     ]
-    
+
     @type t :: %__MODULE__{
-      type: atom(),
-      severity: :low | :medium | :high | :critical,
-      description: String.t(),
-      location: ASTLocation.t(),
-      suggestion: String.t() | nil,
-      metadata: map()
-    }
+            type: atom(),
+            severity: :low | :medium | :high | :critical,
+            description: String.t(),
+            location: ASTLocation.t(),
+            suggestion: String.t() | nil,
+            metadata: map()
+          }
   end
-  
+
   defmodule SecurityRisk do
     @moduledoc "Security risk assessment result"
-    
+
     defstruct [
       :type,
       :severity,
@@ -177,23 +177,23 @@ defmodule ElixirScope.AST.Enhanced.SupportingStructures do
       :mitigation,
       :metadata
     ]
-    
+
     @type t :: %__MODULE__{
-      type: atom(),
-      severity: :low | :medium | :high | :critical,
-      description: String.t(),
-      location: ASTLocation.t(),
-      cwe_id: String.t() | nil,
-      mitigation: String.t() | nil,
-      metadata: map()
-    }
+            type: atom(),
+            severity: :low | :medium | :high | :critical,
+            description: String.t(),
+            location: ASTLocation.t(),
+            cwe_id: String.t() | nil,
+            mitigation: String.t() | nil,
+            metadata: map()
+          }
   end
-  
+
   # Function-level structures
-  
+
   defmodule ClauseData do
     @moduledoc "Function clause data"
-    
+
     defstruct [
       :index,
       :patterns,
@@ -203,21 +203,21 @@ defmodule ElixirScope.AST.Enhanced.SupportingStructures do
       :line,
       :metadata
     ]
-    
+
     @type t :: %__MODULE__{
-      index: non_neg_integer(),
-      patterns: [PatternData.t()],
-      guards: [Macro.t()],
-      body: Macro.t(),
-      ast: Macro.t(),
-      line: pos_integer(),
-      metadata: map()
-    }
+            index: non_neg_integer(),
+            patterns: [PatternData.t()],
+            guards: [Macro.t()],
+            body: Macro.t(),
+            ast: Macro.t(),
+            line: pos_integer(),
+            metadata: map()
+          }
   end
-  
+
   defmodule PatternData do
     @moduledoc "Pattern matching data"
-    
+
     defstruct [
       :type,
       :pattern_ast,
@@ -226,20 +226,20 @@ defmodule ElixirScope.AST.Enhanced.SupportingStructures do
       :line,
       :metadata
     ]
-    
+
     @type t :: %__MODULE__{
-      type: :literal | :variable | :tuple | :list | :map | :struct | :binary | :complex,
-      pattern_ast: Macro.t(),
-      variables_bound: [atom()],
-      complexity: non_neg_integer(),
-      line: pos_integer(),
-      metadata: map()
-    }
+            type: :literal | :variable | :tuple | :list | :map | :struct | :binary | :complex,
+            pattern_ast: Macro.t(),
+            variables_bound: [atom()],
+            complexity: non_neg_integer(),
+            line: pos_integer(),
+            metadata: map()
+          }
   end
-  
+
   defmodule ParameterData do
     @moduledoc "Function parameter data"
-    
+
     defstruct [
       :name,
       :position,
@@ -248,20 +248,20 @@ defmodule ElixirScope.AST.Enhanced.SupportingStructures do
       :pattern,
       :metadata
     ]
-    
+
     @type t :: %__MODULE__{
-      name: atom(),
-      position: non_neg_integer(),
-      type: :required | :optional | :keyword | :rest,
-      default_value: term() | nil,
-      pattern: PatternData.t() | nil,
-      metadata: map()
-    }
+            name: atom(),
+            position: non_neg_integer(),
+            type: :required | :optional | :keyword | :rest,
+            default_value: term() | nil,
+            pattern: PatternData.t() | nil,
+            metadata: map()
+          }
   end
-  
+
   defmodule CaptureData do
     @moduledoc "Variable capture data for closures"
-    
+
     defstruct [
       :variable_name,
       :capture_type,
@@ -269,19 +269,19 @@ defmodule ElixirScope.AST.Enhanced.SupportingStructures do
       :line,
       :metadata
     ]
-    
+
     @type t :: %__MODULE__{
-      variable_name: atom(),
-      capture_type: :read | :write | :read_write,
-      source_scope: String.t(),
-      line: pos_integer(),
-      metadata: map()
-    }
+            variable_name: atom(),
+            capture_type: :read | :write | :read_write,
+            source_scope: String.t(),
+            line: pos_integer(),
+            metadata: map()
+          }
   end
-  
+
   defmodule VariableMutation do
     @moduledoc "Variable mutation tracking"
-    
+
     defstruct [
       :variable_name,
       :mutation_type,
@@ -290,20 +290,20 @@ defmodule ElixirScope.AST.Enhanced.SupportingStructures do
       :new_value_ast,
       :metadata
     ]
-    
+
     @type t :: %__MODULE__{
-      variable_name: atom(),
-      mutation_type: :assignment | :pattern_match | :update,
-      location: ASTLocation.t(),
-      old_value_ast: Macro.t() | nil,
-      new_value_ast: Macro.t(),
-      metadata: map()
-    }
+            variable_name: atom(),
+            mutation_type: :assignment | :pattern_match | :update,
+            location: ASTLocation.t(),
+            old_value_ast: Macro.t() | nil,
+            new_value_ast: Macro.t(),
+            metadata: map()
+          }
   end
-  
+
   defmodule ReturnPoint do
     @moduledoc "Function return point data"
-    
+
     defstruct [
       :type,
       :location,
@@ -311,19 +311,19 @@ defmodule ElixirScope.AST.Enhanced.SupportingStructures do
       :is_explicit,
       :metadata
     ]
-    
+
     @type t :: %__MODULE__{
-      type: :normal | :early | :exception | :throw,
-      location: ASTLocation.t(),
-      return_ast: Macro.t(),
-      is_explicit: boolean(),
-      metadata: map()
-    }
+            type: :normal | :early | :exception | :throw,
+            location: ASTLocation.t(),
+            return_ast: Macro.t(),
+            is_explicit: boolean(),
+            metadata: map()
+          }
   end
-  
+
   defmodule FunctionCall do
     @moduledoc "Function call data"
-    
+
     defstruct [
       :target_module,
       :target_function,
@@ -334,22 +334,22 @@ defmodule ElixirScope.AST.Enhanced.SupportingStructures do
       :arguments,
       :metadata
     ]
-    
+
     @type t :: %__MODULE__{
-      target_module: atom(),
-      target_function: atom(),
-      target_arity: non_neg_integer(),
-      call_type: :local | :remote | :dynamic | :pipe,
-      ast_node_id: String.t(),
-      line: pos_integer(),
-      arguments: [Macro.t()],
-      metadata: map()
-    }
+            target_module: atom(),
+            target_function: atom(),
+            target_arity: non_neg_integer(),
+            call_type: :local | :remote | :dynamic | :pipe,
+            ast_node_id: String.t(),
+            line: pos_integer(),
+            arguments: [Macro.t()],
+            metadata: map()
+          }
   end
-  
+
   defmodule FunctionReference do
     @moduledoc "Function reference for reverse indexing"
-    
+
     defstruct [
       :caller_module,
       :caller_function,
@@ -358,20 +358,20 @@ defmodule ElixirScope.AST.Enhanced.SupportingStructures do
       :call_frequency,
       :metadata
     ]
-    
+
     @type t :: %__MODULE__{
-      caller_module: atom(),
-      caller_function: atom(),
-      caller_arity: non_neg_integer(),
-      call_site_id: String.t(),
-      call_frequency: non_neg_integer(),
-      metadata: map()
-    }
+            caller_module: atom(),
+            caller_function: atom(),
+            caller_arity: non_neg_integer(),
+            call_site_id: String.t(),
+            call_frequency: non_neg_integer(),
+            metadata: map()
+          }
   end
-  
+
   defmodule ExternalCall do
     @moduledoc "External function call data"
-    
+
     defstruct [
       :target_module,
       :target_function,
@@ -382,22 +382,22 @@ defmodule ElixirScope.AST.Enhanced.SupportingStructures do
       :line,
       :metadata
     ]
-    
+
     @type t :: %__MODULE__{
-      target_module: atom(),
-      target_function: atom(),
-      target_arity: non_neg_integer(),
-      call_type: :erlang | :external | :nif | :port,
-      is_safe: boolean(),
-      side_effects: [atom()],
-      line: pos_integer(),
-      metadata: map()
-    }
+            target_module: atom(),
+            target_function: atom(),
+            target_arity: non_neg_integer(),
+            call_type: :erlang | :external | :nif | :port,
+            is_safe: boolean(),
+            side_effects: [atom()],
+            line: pos_integer(),
+            metadata: map()
+          }
   end
-  
+
   defmodule PerformanceProfile do
     @moduledoc "Performance profiling data"
-    
+
     defstruct [
       :average_duration_ms,
       :min_duration_ms,
@@ -411,25 +411,25 @@ defmodule ElixirScope.AST.Enhanced.SupportingStructures do
       :last_updated,
       :metadata
     ]
-    
+
     @type t :: %__MODULE__{
-      average_duration_ms: float(),
-      min_duration_ms: float(),
-      max_duration_ms: float(),
-      p95_duration_ms: float(),
-      p99_duration_ms: float(),
-      memory_usage: map(),
-      cpu_usage: map(),
-      call_count: non_neg_integer(),
-      error_count: non_neg_integer(),
-      last_updated: DateTime.t(),
-      metadata: map()
-    }
+            average_duration_ms: float(),
+            min_duration_ms: float(),
+            max_duration_ms: float(),
+            p95_duration_ms: float(),
+            p99_duration_ms: float(),
+            memory_usage: map(),
+            cpu_usage: map(),
+            call_count: non_neg_integer(),
+            error_count: non_neg_integer(),
+            last_updated: DateTime.t(),
+            metadata: map()
+          }
   end
-  
+
   defmodule Example do
     @moduledoc "Documentation example data"
-    
+
     defstruct [
       :title,
       :code,
@@ -437,19 +437,19 @@ defmodule ElixirScope.AST.Enhanced.SupportingStructures do
       :tags,
       :metadata
     ]
-    
+
     @type t :: %__MODULE__{
-      title: String.t() | nil,
-      code: String.t(),
-      expected_output: term() | nil,
-      tags: [String.t()],
-      metadata: map()
-    }
+            title: String.t() | nil,
+            code: String.t(),
+            expected_output: term() | nil,
+            tags: [String.t()],
+            metadata: map()
+          }
   end
-  
+
   defmodule ASTLocation do
     @moduledoc "AST location information"
-    
+
     defstruct [
       :file,
       :line,
@@ -457,22 +457,23 @@ defmodule ElixirScope.AST.Enhanced.SupportingStructures do
       :ast_node_id,
       :metadata
     ]
-    
+
     @type t :: %__MODULE__{
-      file: String.t(),
-      line: pos_integer(),
-      column: pos_integer() | nil,
-      ast_node_id: String.t() | nil,
-      metadata: map()
-    }
+            file: String.t(),
+            line: pos_integer(),
+            column: pos_integer() | nil,
+            ast_node_id: String.t() | nil,
+            metadata: map()
+          }
   end
-  
+
   # Helper functions for creating common structures
-  
+
   @doc """
   Creates a new ASTLocation from line information.
   """
-  @spec new_location(String.t(), pos_integer(), pos_integer() | nil, String.t() | nil) :: ASTLocation.t()
+  @spec new_location(String.t(), pos_integer(), pos_integer() | nil, String.t() | nil) ::
+          ASTLocation.t()
   def new_location(file, line, column \\ nil, ast_node_id \\ nil) do
     %ASTLocation{
       file: file,
@@ -482,11 +483,12 @@ defmodule ElixirScope.AST.Enhanced.SupportingStructures do
       metadata: %{}
     }
   end
-  
+
   @doc """
   Creates a new FunctionCall from call information.
   """
-  @spec new_function_call(atom(), atom(), non_neg_integer(), atom(), String.t(), pos_integer()) :: FunctionCall.t()
+  @spec new_function_call(atom(), atom(), non_neg_integer(), atom(), String.t(), pos_integer()) ::
+          FunctionCall.t()
   def new_function_call(target_module, target_function, target_arity, call_type, ast_node_id, line) do
     %FunctionCall{
       target_module: target_module,
@@ -499,11 +501,12 @@ defmodule ElixirScope.AST.Enhanced.SupportingStructures do
       metadata: %{}
     }
   end
-  
+
   @doc """
   Creates a new CodeSmell from detection information.
   """
-  @spec new_code_smell(atom(), atom(), String.t(), ASTLocation.t(), String.t() | nil) :: CodeSmell.t()
+  @spec new_code_smell(atom(), atom(), String.t(), ASTLocation.t(), String.t() | nil) ::
+          CodeSmell.t()
   def new_code_smell(type, severity, description, location, suggestion \\ nil) do
     %CodeSmell{
       type: type,
@@ -514,11 +517,18 @@ defmodule ElixirScope.AST.Enhanced.SupportingStructures do
       metadata: %{}
     }
   end
-  
+
   @doc """
   Creates a new SecurityRisk from assessment information.
   """
-  @spec new_security_risk(atom(), atom(), String.t(), ASTLocation.t(), String.t() | nil, String.t() | nil) :: SecurityRisk.t()
+  @spec new_security_risk(
+          atom(),
+          atom(),
+          String.t(),
+          ASTLocation.t(),
+          String.t() | nil,
+          String.t() | nil
+        ) :: SecurityRisk.t()
   def new_security_risk(type, severity, description, location, cwe_id \\ nil, mitigation \\ nil) do
     %SecurityRisk{
       type: type,
@@ -530,7 +540,7 @@ defmodule ElixirScope.AST.Enhanced.SupportingStructures do
       metadata: %{}
     }
   end
-  
+
   @doc """
   Creates a new PerformanceProfile with default values.
   """
@@ -550,4 +560,4 @@ defmodule ElixirScope.AST.Enhanced.SupportingStructures do
       metadata: %{}
     }
   end
-end 
+end

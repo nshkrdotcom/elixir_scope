@@ -11,21 +11,22 @@ defmodule ElixirScope.Foundation.Error do
   @type stacktrace_info :: [map()]
 
   @type t :: %__MODULE__{
-    code: error_code(),
-    message: String.t(),
-    context: error_context(),
-    module: module() | nil,
-    function: atom() | nil,
-    line: non_neg_integer() | nil,
-    stacktrace: stacktrace_info() | nil,
-    timestamp: DateTime.t(),
-    correlation_id: String.t() | nil
-  }
+          code: error_code(),
+          message: String.t(),
+          context: error_context(),
+          module: module() | nil,
+          function: atom() | nil,
+          line: non_neg_integer() | nil,
+          stacktrace: stacktrace_info() | nil,
+          timestamp: DateTime.t(),
+          correlation_id: String.t() | nil
+        }
 
   defstruct [
     :code,
     :message,
-    :context, # : %{},  # Always initialize as map
+    # : %{},  # Always initialize as map
+    :context,
     :module,
     :function,
     :line,
@@ -102,46 +103,61 @@ defmodule ElixirScope.Foundation.Error do
   ## Convenience Constructors
 
   @spec config_error(
-    :config_not_found | :config_update_forbidden | :config_validation_failed |
-    :invalid_config_structure | :invalid_config_value | :missing_required_config,
-    String.t(),
-    keyword()
-  ) :: t()
+          :config_not_found
+          | :config_update_forbidden
+          | :config_validation_failed
+          | :invalid_config_structure
+          | :invalid_config_value
+          | :missing_required_config,
+          String.t(),
+          keyword()
+        ) :: t()
   def config_error(subcode, message, opts \\ [])
-    when subcode in @config_errors do
+      when subcode in @config_errors do
     new(subcode, message, opts)
   end
 
   @spec validation_error(
-    :constraint_violation | :format_error | :invalid_input |
-    :range_error | :type_mismatch | :validation_failed,
-    String.t(),
-    keyword()
-  ) :: t()
+          :constraint_violation
+          | :format_error
+          | :invalid_input
+          | :range_error
+          | :type_mismatch
+          | :validation_failed,
+          String.t(),
+          keyword()
+        ) :: t()
   def validation_error(subcode, message, opts \\ [])
-    when subcode in @validation_errors do
+      when subcode in @validation_errors do
     new(subcode, message, opts)
   end
 
   @spec system_error(
-    :dependency_failed | :initialization_failed | :internal_error |
-    :resource_exhausted | :service_unavailable | :timeout,
-    String.t(),
-    keyword()
-  ) :: t()
+          :dependency_failed
+          | :initialization_failed
+          | :internal_error
+          | :resource_exhausted
+          | :service_unavailable
+          | :timeout,
+          String.t(),
+          keyword()
+        ) :: t()
   def system_error(subcode, message, opts \\ [])
-    when subcode in @system_errors do
+      when subcode in @system_errors do
     new(subcode, message, opts)
   end
 
   @spec data_error(
-    :data_conflict | :data_corruption | :data_not_found |
-    :deserialization_failed | :serialization_failed,
-    String.t(),
-    keyword()
-  ) :: t()
+          :data_conflict
+          | :data_corruption
+          | :data_not_found
+          | :deserialization_failed
+          | :serialization_failed,
+          String.t(),
+          keyword()
+        ) :: t()
   def data_error(subcode, message, opts \\ [])
-    when subcode in @data_errors do
+      when subcode in @data_errors do
     new(subcode, message, opts)
   end
 
@@ -170,6 +186,7 @@ defmodule ElixirScope.Foundation.Error do
       context when map_size(context) > 0 ->
         context_str = inspect(context, pretty: true, limit: 3)
         "#{base} (context: #{context_str})"
+
       _ ->
         base
     end
@@ -188,9 +205,11 @@ defmodule ElixirScope.Foundation.Error do
   ## Private Helpers
 
   defp format_stacktrace(nil), do: nil
+
   defp format_stacktrace(stacktrace) when is_list(stacktrace) do
     stacktrace
-    |> Enum.take(10)  # Limit stacktrace depth
+    # Limit stacktrace depth
+    |> Enum.take(10)
     |> Enum.map(&format_stacktrace_entry/1)
   end
 
@@ -203,5 +222,6 @@ defmodule ElixirScope.Foundation.Error do
       line: Keyword.get(location, :line)
     }
   end
+
   defp format_stacktrace_entry(entry), do: inspect(entry)
 end

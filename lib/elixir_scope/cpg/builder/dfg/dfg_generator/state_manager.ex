@@ -29,10 +29,11 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.StateManager do
   """
   def enter_scope(state, scope_type) do
     new_scope = {scope_type, System.unique_integer([:positive])}
+
     %{
-      state |
-      scope_stack: [state.current_scope | state.scope_stack],
-      current_scope: new_scope
+      state
+      | scope_stack: [state.current_scope | state.scope_stack],
+        current_scope: new_scope
     }
   end
 
@@ -43,6 +44,7 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.StateManager do
     case state.scope_stack do
       [parent_scope | rest] ->
         %{state | current_scope: parent_scope, scope_stack: rest}
+
       [] ->
         %{state | current_scope: :global}
     end
@@ -71,7 +73,8 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.StateManager do
   def scope_depth(scope) do
     case scope do
       :global -> 0
-      {_type, _id} -> 1  # Simplified
+      # Simplified
+      {_type, _id} -> 1
     end
   end
 end

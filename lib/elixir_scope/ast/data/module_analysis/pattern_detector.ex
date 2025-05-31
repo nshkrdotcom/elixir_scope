@@ -28,6 +28,7 @@ defmodule ElixirScope.AST.ModuleData.PatternDetector do
     case ast do
       {:defmodule, _, [_name, [do: body]]} ->
         has_singleton_indicators?(body)
+
       _ ->
         false
     end
@@ -37,6 +38,7 @@ defmodule ElixirScope.AST.ModuleData.PatternDetector do
     case ast do
       {:defmodule, _, [_name, [do: body]]} ->
         has_factory_indicators?(body)
+
       _ ->
         false
     end
@@ -46,6 +48,7 @@ defmodule ElixirScope.AST.ModuleData.PatternDetector do
     case ast do
       {:defmodule, _, [_name, [do: body]]} ->
         has_observer_indicators?(body)
+
       _ ->
         false
     end
@@ -55,6 +58,7 @@ defmodule ElixirScope.AST.ModuleData.PatternDetector do
     case ast do
       {:defmodule, _, [_name, [do: body]]} ->
         has_state_machine_indicators?(body)
+
       _ ->
         false
     end
@@ -68,7 +72,8 @@ defmodule ElixirScope.AST.ModuleData.PatternDetector do
     is_singleton_function?(statement)
   end
 
-  defp is_singleton_function?({:def, _, [{name, _, _} | _]}) when name in [:instance, :get_instance, :singleton] do
+  defp is_singleton_function?({:def, _, [{name, _, _} | _]})
+       when name in [:instance, :get_instance, :singleton] do
     true
   end
 
@@ -82,7 +87,8 @@ defmodule ElixirScope.AST.ModuleData.PatternDetector do
     is_factory_function?(statement)
   end
 
-  defp is_factory_function?({:def, _, [{name, _, _} | _]}) when name in [:create, :build, :make, :new] do
+  defp is_factory_function?({:def, _, [{name, _, _} | _]})
+       when name in [:create, :build, :make, :new] do
     true
   end
 
@@ -96,7 +102,8 @@ defmodule ElixirScope.AST.ModuleData.PatternDetector do
     is_observer_function?(statement)
   end
 
-  defp is_observer_function?({:def, _, [{name, _, _} | _]}) when name in [:notify, :subscribe, :unsubscribe, :add_observer, :remove_observer] do
+  defp is_observer_function?({:def, _, [{name, _, _} | _]})
+       when name in [:notify, :subscribe, :unsubscribe, :add_observer, :remove_observer] do
     true
   end
 
@@ -110,7 +117,8 @@ defmodule ElixirScope.AST.ModuleData.PatternDetector do
     is_state_machine_function?(statement)
   end
 
-  defp is_state_machine_function?({:def, _, [{name, _, _} | _]}) when name in [:transition, :change_state, :next_state, :current_state] do
+  defp is_state_machine_function?({:def, _, [{name, _, _} | _]})
+       when name in [:transition, :change_state, :next_state, :current_state] do
     true
   end
 

@@ -25,19 +25,19 @@ defmodule ElixirScope.Foundation.Types do
   @type column_number :: pos_integer()
 
   @type source_location :: %{
-    file: file_path(),
-    line: line_number(),
-    column: column_number() | nil
-  }
+          file: file_path(),
+          line: line_number(),
+          column: column_number() | nil
+        }
 
   # Process-related types
   @type process_info :: %{
-    pid: pid(),
-    registered_name: atom() | nil,
-    status: atom(),
-    memory: non_neg_integer(),
-    reductions: non_neg_integer()
-  }
+          pid: pid(),
+          registered_name: atom() | nil,
+          status: atom(),
+          memory: non_neg_integer(),
+          reductions: non_neg_integer()
+        }
 
   # Metrics types
   @type metric_name :: atom()
@@ -45,11 +45,11 @@ defmodule ElixirScope.Foundation.Types do
   @type metric_metadata :: map()
 
   @type performance_metric :: %{
-    name: metric_name(),
-    value: metric_value(),
-    timestamp: timestamp(),
-    metadata: metric_metadata()
-  }
+          name: metric_name(),
+          value: metric_value(),
+          timestamp: timestamp(),
+          metadata: metric_metadata()
+        }
 
   # Configuration types
   @type config_key :: atom()

@@ -1,88 +1,93 @@
 defmodule ElixirScope.AI.Analysis.IntelligentCodeAnalyzerTest do
   use ExUnit.Case, async: false
-  
+
   alias ElixirScope.AI.Analysis.IntelligentCodeAnalyzer
 
   setup do
     # Start the analyzer for each test
     {:ok, pid} = IntelligentCodeAnalyzer.start_link()
-    
+
     on_exit(fn ->
       try do
         if Process.alive?(pid) do
           GenServer.stop(pid)
         end
       rescue
-        _ -> :ok  # Process already dead or stopping
+        # Process already dead or stopping
+        _ -> :ok
       catch
-        :exit, _ -> :ok  # Process already dead or stopping
+        # Process already dead or stopping
+        :exit, _ -> :ok
       end
     end)
-    
+
     %{analyzer: pid}
   end
 
   describe "semantic analysis" do
     test "analyzes simple function semantics" do
-      code_ast = quote do
-        def hello(name) do
-          "Hello #{name}!"
+      code_ast =
+        quote do
+          def hello(name) do
+            "Hello #{name}!"
+          end
         end
-      end
-      
+
       {:ok, analysis} = IntelligentCodeAnalyzer.analyze_semantics(code_ast)
-      
+
       assert analysis.complexity.cyclomatic >= 1
       assert analysis.complexity.cognitive >= 1
       assert analysis.complexity.functions == 1
       assert :simple_function in analysis.patterns
-             # Note: string concatenation, not interpolation in this test
+      # Note: string concatenation, not interpolation in this test
       assert :greeting in analysis.semantic_tags
       assert :user_interaction in analysis.semantic_tags
       assert analysis.maintainability_score > 0.8
       assert %DateTime{} = analysis.analysis_time
     end
-    
+
     test "analyzes complex function with conditionals" do
-      code_ast = quote do
-        def process_data(data) do
-          if is_nil(data) do
-            {:error, :nil_data}
-          else
-            case data.type do
-              :user -> process_user(data)
-              :admin -> process_admin(data)
-              _ -> {:error, :unknown_type}
+      code_ast =
+        quote do
+          def process_data(data) do
+            if is_nil(data) do
+              {:error, :nil_data}
+            else
+              case data.type do
+                :user -> process_user(data)
+                :admin -> process_admin(data)
+                _ -> {:error, :unknown_type}
+              end
             end
           end
         end
-      end
-      
+
       {:ok, analysis} = IntelligentCodeAnalyzer.analyze_semantics(code_ast)
-      
-             assert analysis.complexity.cyclomatic >= 1
-             assert analysis.complexity.cognitive >= 1
+
+      assert analysis.complexity.cyclomatic >= 1
+      assert analysis.complexity.cognitive >= 1
       assert analysis.complexity.functions == 1
       refute :simple_function in analysis.patterns
       assert analysis.maintainability_score < 1.0
     end
-    
+
     test "handles empty AST" do
       {:ok, analysis} = IntelligentCodeAnalyzer.analyze_semantics(nil)
-      
+
       assert analysis.complexity.cyclomatic == 1
-             assert analysis.complexity.cognitive >= 1  # Minimum cognitive complexity is 1
+      # Minimum cognitive complexity is 1
+      assert analysis.complexity.cognitive >= 1
       assert analysis.complexity.functions == 0
       assert analysis.patterns == []
       assert analysis.semantic_tags == []
     end
-    
+
     test "handles analysis errors gracefully" do
       # Test with malformed AST that might cause errors
       malformed_ast = {:invalid, :ast, :structure}
-      
+
       result = IntelligentCodeAnalyzer.analyze_semantics(malformed_ast)
-      
+
       # Should either succeed with basic analysis or return error
       case result do
         {:ok, _analysis} -> :ok
@@ -114,18 +119,22 @@ defmodule ElixirScope.AI.Analysis.IntelligentCodeAnalyzerTest do
         defp save(data), do: {:ok, data}
       end
       """
-      
+
       {:ok, assessment} = IntelligentCodeAnalyzer.assess_quality(module_code)
-      
+
       assert assessment.overall_score > 0.7
-      assert assessment.dimensions.readability > 0.8  # Has @doc
-      assert assessment.dimensions.maintainability > 0.7  # Reasonable size
-      assert assessment.dimensions.testability > 0.6  # No major side effects
-             assert assessment.dimensions.performance >= 0.7
-      assert length(assessment.issues) <= 1  # Should have few issues
+      # Has @doc
+      assert assessment.dimensions.readability > 0.8
+      # Reasonable size
+      assert assessment.dimensions.maintainability > 0.7
+      # No major side effects
+      assert assessment.dimensions.testability > 0.6
+      assert assessment.dimensions.performance >= 0.7
+      # Should have few issues
+      assert length(assessment.issues) <= 1
       assert %DateTime{} = assessment.assessment_time
     end
-    
+
     test "identifies quality issues in poor code" do
       poor_code = """
       defmodule PoorQualityModule do
@@ -164,33 +173,37 @@ defmodule ElixirScope.AI.Analysis.IntelligentCodeAnalyzerTest do
         end
       end
       """
-      
+
       {:ok, assessment} = IntelligentCodeAnalyzer.assess_quality(poor_code)
-      
-             assert assessment.overall_score <= 0.7
-             assert assessment.dimensions.readability <= 0.8  # No @doc, long lines
-             assert assessment.dimensions.maintainability <= 0.8  # Large size
-      assert assessment.dimensions.testability < 0.7  # Side effects
+
+      assert assessment.overall_score <= 0.7
+      # No @doc, long lines
+      assert assessment.dimensions.readability <= 0.8
+      # Large size
+      assert assessment.dimensions.maintainability <= 0.8
+      # Side effects
+      assert assessment.dimensions.testability < 0.7
       assert length(assessment.issues) > 0
-      
-             # Check for specific issues - should have multiple issues detected
-       issue_messages = Enum.map(assessment.issues, & &1.message)
-       assert Enum.any?(issue_messages, fn msg -> 
-         String.contains?(msg, "Large module") or 
-         String.contains?(msg, "Side effects") or 
-         String.contains?(msg, "Poor maintainability")
-       end)
+
+      # Check for specific issues - should have multiple issues detected
+      issue_messages = Enum.map(assessment.issues, & &1.message)
+
+      assert Enum.any?(issue_messages, fn msg ->
+               String.contains?(msg, "Large module") or
+                 String.contains?(msg, "Side effects") or
+                 String.contains?(msg, "Poor maintainability")
+             end)
     end
-    
+
     test "handles empty module code" do
       {:ok, assessment} = IntelligentCodeAnalyzer.assess_quality("")
-      
+
       assert assessment.overall_score >= 0.0
       assert assessment.overall_score <= 1.0
       assert is_map(assessment.dimensions)
       assert is_list(assessment.issues)
     end
-    
+
     test "calculates weighted quality scores correctly" do
       medium_code = """
       defmodule MediumModule do
@@ -199,16 +212,16 @@ defmodule ElixirScope.AI.Analysis.IntelligentCodeAnalyzerTest do
         def function3(x), do: x - 1
       end
       """
-      
+
       {:ok, assessment} = IntelligentCodeAnalyzer.assess_quality(medium_code)
-      
+
       # Overall score should be weighted average of dimensions
-      expected_score = 
+      expected_score =
         assessment.dimensions.readability * 0.3 +
-        assessment.dimensions.maintainability * 0.3 +
-        assessment.dimensions.testability * 0.2 +
-        assessment.dimensions.performance * 0.2
-      
+          assessment.dimensions.maintainability * 0.3 +
+          assessment.dimensions.testability * 0.2 +
+          assessment.dimensions.performance * 0.2
+
       assert_in_delta assessment.overall_score, expected_score, 0.01
     end
   end
@@ -236,9 +249,9 @@ defmodule ElixirScope.AI.Analysis.IntelligentCodeAnalyzerTest do
         {:ok, %{name: normalized_name, email: normalized_email}}
       end
       """
-      
+
       {:ok, suggestions} = IntelligentCodeAnalyzer.suggest_refactoring(long_code)
-      
+
       assert length(suggestions) > 0
       extract_suggestion = Enum.find(suggestions, &(&1.type == :extract_function))
       assert extract_suggestion != nil
@@ -246,7 +259,7 @@ defmodule ElixirScope.AI.Analysis.IntelligentCodeAnalyzerTest do
       assert String.contains?(extract_suggestion.description, "Extract")
       assert extract_suggestion.estimated_effort in [:low, :medium, :high]
     end
-    
+
     test "suggests simplifying complex conditionals" do
       complex_conditional = """
       def check_permissions(user, resource) do
@@ -269,15 +282,15 @@ defmodule ElixirScope.AI.Analysis.IntelligentCodeAnalyzerTest do
         end
       end
       """
-      
+
       {:ok, suggestions} = IntelligentCodeAnalyzer.suggest_refactoring(complex_conditional)
-      
+
       simplify_suggestion = Enum.find(suggestions, &(&1.type == :simplify_conditional))
       assert simplify_suggestion != nil
       assert simplify_suggestion.confidence > 0.5
       assert String.contains?(simplify_suggestion.description, "Simplify")
     end
-    
+
     test "suggests removing duplication" do
       duplicated_code = """
       def process_admin(data) do
@@ -285,38 +298,38 @@ defmodule ElixirScope.AI.Analysis.IntelligentCodeAnalyzerTest do
         transform_data(data)
         save_data(data)
       end
-      
+
       def process_user(data) do
         validate_data(data)
         transform_data(data)
         save_data(data)
       end
       """
-      
+
       {:ok, suggestions} = IntelligentCodeAnalyzer.suggest_refactoring(duplicated_code)
-      
+
       duplication_suggestion = Enum.find(suggestions, &(&1.type == :remove_duplication))
       assert duplication_suggestion != nil
       assert duplication_suggestion.confidence > 0.5
       assert String.contains?(duplication_suggestion.description, "duplication")
     end
-    
+
     test "returns empty suggestions for clean code" do
-             clean_code = """
-       def greet(name) do
-         "Hello, " <> name <> "!"
-       end
-       """
-      
+      clean_code = """
+      def greet(name) do
+        "Hello, " <> name <> "!"
+      end
+      """
+
       {:ok, suggestions} = IntelligentCodeAnalyzer.suggest_refactoring(clean_code)
-      
+
       assert suggestions == []
     end
-    
+
     test "handles refactoring errors gracefully" do
       # Test with potentially problematic input
       result = IntelligentCodeAnalyzer.suggest_refactoring(nil)
-      
+
       case result do
         {:ok, _suggestions} -> :ok
         {:error, :suggestion_failed} -> :ok
@@ -326,114 +339,119 @@ defmodule ElixirScope.AI.Analysis.IntelligentCodeAnalyzerTest do
 
   describe "pattern identification" do
     test "identifies Observer pattern" do
-      observer_ast = quote do
-        defmodule EventManager do
-          def notify(event) do
-            subscribers = get_subscribers()
-            Enum.each(subscribers, &send(&1, event))
-          end
-          
-          def subscribe(pid) do
-            add_subscriber(pid)
-          end
-          
-          def unsubscribe(pid) do
-            remove_subscriber(pid)
+      observer_ast =
+        quote do
+          defmodule EventManager do
+            def notify(event) do
+              subscribers = get_subscribers()
+              Enum.each(subscribers, &send(&1, event))
+            end
+
+            def subscribe(pid) do
+              add_subscriber(pid)
+            end
+
+            def unsubscribe(pid) do
+              remove_subscriber(pid)
+            end
           end
         end
-      end
-      
+
       {:ok, patterns} = IntelligentCodeAnalyzer.identify_patterns(observer_ast)
-      
+
       observer_pattern = Enum.find(patterns.patterns, &(&1.type == :observer))
       assert observer_pattern != nil
       assert observer_pattern.confidence > 0.8
       assert observer_pattern.location == {:module, :root}
     end
-    
+
     test "identifies Factory pattern" do
-      factory_ast = quote do
-        defmodule UserFactory do
-          def create(:admin, attrs) do
-            %User{role: :admin, permissions: :all}
-            |> Map.merge(attrs)
-          end
-          
-          def create(:user, attrs) do
-            %User{role: :user, permissions: :limited}
-            |> Map.merge(attrs)
-          end
-          
-          def build(type, attrs \\ %{}) do
-            create(type, attrs)
+      factory_ast =
+        quote do
+          defmodule UserFactory do
+            def create(:admin, attrs) do
+              %User{role: :admin, permissions: :all}
+              |> Map.merge(attrs)
+            end
+
+            def create(:user, attrs) do
+              %User{role: :user, permissions: :limited}
+              |> Map.merge(attrs)
+            end
+
+            def build(type, attrs \\ %{}) do
+              create(type, attrs)
+            end
           end
         end
-      end
-      
+
       {:ok, patterns} = IntelligentCodeAnalyzer.identify_patterns(factory_ast)
-      
+
       factory_pattern = Enum.find(patterns.patterns, &(&1.type == :factory))
       assert factory_pattern != nil
       assert factory_pattern.confidence > 0.6
     end
-    
-         test "identifies God Object anti-pattern" do
-       # Create a large module with many functions
-       large_module_code = """
-       defmodule GodObject do
-         #{for i <- 1..25 do
-           "def func#{i}, do: :ok"
-         end |> Enum.join("\n  ")}
-       end
-       """
-       
-       god_object_ast = Code.string_to_quoted!(large_module_code)
-       
-       {:ok, patterns} = IntelligentCodeAnalyzer.identify_patterns(god_object_ast)
-       
-       god_object_pattern = Enum.find(patterns.anti_patterns, &(&1.type == :god_object))
-       assert god_object_pattern != nil
-       assert god_object_pattern.confidence > 0.5
-       assert god_object_pattern.severity in [:low, :medium, :high]
-     end
-    
+
+    test "identifies God Object anti-pattern" do
+      # Create a large module with many functions
+      large_module_code = """
+      defmodule GodObject do
+        #{for i <- 1..25 do
+        "def func#{i}, do: :ok"
+      end |> Enum.join("\n  ")}
+      end
+      """
+
+      god_object_ast = Code.string_to_quoted!(large_module_code)
+
+      {:ok, patterns} = IntelligentCodeAnalyzer.identify_patterns(god_object_ast)
+
+      god_object_pattern = Enum.find(patterns.anti_patterns, &(&1.type == :god_object))
+      assert god_object_pattern != nil
+      assert god_object_pattern.confidence > 0.5
+      assert god_object_pattern.severity in [:low, :medium, :high]
+    end
+
     test "identifies Long Method anti-pattern" do
       # Create a very long AST string to trigger long method detection
       long_method_code = String.duplicate("IO.puts(\"line\")\n", 250)
-      long_method_ast = Code.string_to_quoted!("""
-      defmodule LongMethodModule do
-        def very_long_method do
-          #{long_method_code}
+
+      long_method_ast =
+        Code.string_to_quoted!("""
+        defmodule LongMethodModule do
+          def very_long_method do
+            #{long_method_code}
+          end
         end
-      end
-      """)
-      
+        """)
+
       {:ok, patterns} = IntelligentCodeAnalyzer.identify_patterns(long_method_ast)
-      
+
       long_method_pattern = Enum.find(patterns.anti_patterns, &(&1.type == :long_method))
       assert long_method_pattern != nil
       assert long_method_pattern.confidence > 0.5
     end
-    
+
     test "returns empty patterns for simple code" do
-      simple_ast = quote do
-        defmodule SimpleModule do
-          def hello(name) do
-            "Hello #{name}"
+      simple_ast =
+        quote do
+          defmodule SimpleModule do
+            def hello(name) do
+              "Hello #{name}"
+            end
           end
         end
-      end
-      
+
       {:ok, patterns} = IntelligentCodeAnalyzer.identify_patterns(simple_ast)
-      
+
       assert patterns.patterns == []
       assert patterns.anti_patterns == []
       assert %DateTime{} = patterns.analysis_time
     end
-    
+
     test "handles pattern identification errors gracefully" do
       result = IntelligentCodeAnalyzer.identify_patterns(nil)
-      
+
       case result do
         {:ok, _patterns} -> :ok
         {:error, :identification_failed} -> :ok
@@ -444,33 +462,34 @@ defmodule ElixirScope.AI.Analysis.IntelligentCodeAnalyzerTest do
   describe "statistics tracking" do
     test "tracks analysis statistics" do
       # Perform various operations
-             code_ast = quote do: (def test, do: :ok)
-       module_code = "defmodule Test, do: def test, do: :ok"
-      
+      code_ast = quote do: def(test, do: :ok)
+      module_code = "defmodule Test, do: def test, do: :ok"
+
       {:ok, _} = IntelligentCodeAnalyzer.analyze_semantics(code_ast)
       {:ok, _} = IntelligentCodeAnalyzer.assess_quality(module_code)
       {:ok, _} = IntelligentCodeAnalyzer.suggest_refactoring(module_code)
       {:ok, _} = IntelligentCodeAnalyzer.identify_patterns(code_ast)
-      
+
       stats = IntelligentCodeAnalyzer.get_stats()
-      
-      assert stats.analyses_performed >= 2  # semantic + quality
+
+      # semantic + quality
+      assert stats.analyses_performed >= 2
       assert stats.patterns_identified >= 0
       assert stats.refactoring_suggestions >= 0
       assert stats.average_quality_score >= 0.0
       assert stats.average_quality_score <= 1.0
     end
-    
+
     test "updates average quality score correctly" do
       # Assess quality multiple times
       good_code = "defmodule Good, do: def test, do: :ok"
-             poor_code = Enum.map_join(1..20, "\n", fn i -> "def func#{i}, do: :ok" end)
-      
+      poor_code = Enum.map_join(1..20, "\n", fn i -> "def func#{i}, do: :ok" end)
+
       {:ok, assessment1} = IntelligentCodeAnalyzer.assess_quality(good_code)
       {:ok, assessment2} = IntelligentCodeAnalyzer.assess_quality(poor_code)
-      
+
       stats = IntelligentCodeAnalyzer.get_stats()
-      
+
       expected_avg = (assessment1.overall_score + assessment2.overall_score) / 2
       assert_in_delta stats.average_quality_score, expected_avg, 0.1
     end
@@ -510,76 +529,80 @@ defmodule ElixirScope.AI.Analysis.IntelligentCodeAnalyzerTest do
         end
       end
       """
-      
+
       module_ast = Code.string_to_quoted!(module_code)
-      
+
       # Perform all types of analysis
       {:ok, semantics} = IntelligentCodeAnalyzer.analyze_semantics(module_ast)
       {:ok, quality} = IntelligentCodeAnalyzer.assess_quality(module_code)
       {:ok, suggestions} = IntelligentCodeAnalyzer.suggest_refactoring(module_code)
       {:ok, patterns} = IntelligentCodeAnalyzer.identify_patterns(module_ast)
-      
-             # Verify comprehensive analysis
-       assert semantics.complexity.functions >= 0  # Module AST parsing may not count functions correctly
+
+      # Verify comprehensive analysis
+      # Module AST parsing may not count functions correctly
+      assert semantics.complexity.functions >= 0
       assert quality.overall_score > 0.0
       assert is_list(suggestions)
       assert is_list(patterns.patterns)
-      
+
       # Should identify factory pattern
       factory_pattern = Enum.find(patterns.patterns, &(&1.type == :factory))
       assert factory_pattern != nil
-      
+
       # Should suggest refactoring for long function
       extract_suggestion = Enum.find(suggestions, &(&1.type == :extract_function))
       assert extract_suggestion != nil
     end
-    
+
     @tag :performance
     test "handles large code analysis efficiently" do
       # Generate a large module
       large_module = """
       defmodule LargeModule do
         #{for i <- 1..50 do
-          "def function_#{i}(x), do: x + #{i}"
-        end |> Enum.join("\n  ")}
+        "def function_#{i}(x), do: x + #{i}"
+      end |> Enum.join("\n  ")}
       end
       """
-      
+
       large_ast = Code.string_to_quoted!(large_module)
-      
+
       start_time = System.monotonic_time(:millisecond)
-      
+
       {:ok, _semantics} = IntelligentCodeAnalyzer.analyze_semantics(large_ast)
       {:ok, _quality} = IntelligentCodeAnalyzer.assess_quality(large_module)
       {:ok, _patterns} = IntelligentCodeAnalyzer.identify_patterns(large_ast)
-      
+
       end_time = System.monotonic_time(:millisecond)
       analysis_time = end_time - start_time
-      
+
       # Should complete within reasonable time (adjust threshold as needed)
-      assert analysis_time < 5000  # 5 seconds
+      # 5 seconds
+      assert analysis_time < 5000
     end
-    
+
     test "maintains consistency across multiple analyses" do
-      code_ast = quote do
-        def consistent_function(x) do
-          if x > 0 do
-            x * 2
-          else
-            0
+      code_ast =
+        quote do
+          def consistent_function(x) do
+            if x > 0 do
+              x * 2
+            else
+              0
+            end
           end
         end
-      end
-      
+
       # Analyze the same code multiple times
-      results = for _i <- 1..5 do
-        {:ok, analysis} = IntelligentCodeAnalyzer.analyze_semantics(code_ast)
-        analysis
-      end
-      
+      results =
+        for _i <- 1..5 do
+          {:ok, analysis} = IntelligentCodeAnalyzer.analyze_semantics(code_ast)
+          analysis
+        end
+
       # Results should be consistent
       first_result = hd(results)
-      
+
       for result <- tl(results) do
         assert result.complexity == first_result.complexity
         assert result.patterns == first_result.patterns
@@ -598,45 +621,45 @@ defmodule ElixirScope.AI.Analysis.IntelligentCodeAnalyzerTest do
         {:def, nil, nil},
         "not an ast"
       ]
-      
-             for ast <- malformed_asts do
-         result = IntelligentCodeAnalyzer.analyze_semantics(ast)
-         assert match?({:ok, _}, result) or match?({:error, _}, result)
-       end
+
+      for ast <- malformed_asts do
+        result = IntelligentCodeAnalyzer.analyze_semantics(ast)
+        assert match?({:ok, _}, result) or match?({:error, _}, result)
+      end
     end
-    
+
     test "handles empty and whitespace-only code" do
       empty_codes = ["", "   ", "\n\n\n", "\t\t"]
-      
+
       for code <- empty_codes do
         {:ok, quality} = IntelligentCodeAnalyzer.assess_quality(code)
         assert quality.overall_score >= 0.0
         assert quality.overall_score <= 1.0
-        
+
         {:ok, suggestions} = IntelligentCodeAnalyzer.suggest_refactoring(code)
         assert is_list(suggestions)
       end
     end
-    
+
     test "handles very large code inputs" do
       # Test with code at the configured limit
       large_code = String.duplicate("def func, do: :ok\n", 1000)
-      
+
       {:ok, quality} = IntelligentCodeAnalyzer.assess_quality(large_code)
       assert is_map(quality)
-      
+
       {:ok, suggestions} = IntelligentCodeAnalyzer.suggest_refactoring(large_code)
       assert is_list(suggestions)
     end
-    
+
     test "recovers from analysis failures" do
       # Perform a failing operation followed by successful ones
       _result = IntelligentCodeAnalyzer.analyze_semantics(:invalid_ast)
-      
+
       # Should still work for valid operations
-             valid_ast = quote do: (def test, do: :ok)
+      valid_ast = quote do: def(test, do: :ok)
       {:ok, analysis} = IntelligentCodeAnalyzer.analyze_semantics(valid_ast)
       assert is_map(analysis)
     end
   end
-end 
+end

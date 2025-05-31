@@ -2,7 +2,7 @@
 defmodule ElixirScope.Intelligence.AI.LLM.Response do
   @moduledoc """
   Standardized response format for LLM providers.
-  
+
   This module defines a common response structure that all providers
   (Gemini, Mock, future providers) must return, ensuring consistent
   handling throughout ElixirScope.
@@ -30,9 +30,9 @@ defmodule ElixirScope.Intelligence.AI.LLM.Response do
 
   @doc """
   Creates a successful response.
-  
+
   ## Examples
-  
+
       iex> ElixirScope.Intelligence.AI.LLM.Response.success("Analysis complete", 0.95, :gemini)
       %ElixirScope.Intelligence.AI.LLM.Response{
         text: "Analysis complete",
@@ -57,9 +57,9 @@ defmodule ElixirScope.Intelligence.AI.LLM.Response do
 
   @doc """
   Creates an error response.
-  
+
   ## Examples
-  
+
       iex> ElixirScope.Intelligence.AI.LLM.Response.error("API timeout", :gemini)
       %ElixirScope.Intelligence.AI.LLM.Response{
         text: "",
@@ -101,4 +101,4 @@ defmodule ElixirScope.Intelligence.AI.LLM.Response do
   @spec get_error(t()) :: String.t() | nil
   def get_error(%__MODULE__{success: false, error: error}), do: error
   def get_error(%__MODULE__{success: true}), do: nil
-end 
+end

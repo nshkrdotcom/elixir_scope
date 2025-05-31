@@ -64,7 +64,8 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.CoreReporting do
         # Ingest the event
         Ingestor.ingest_function_call(
           buffer,
-          __MODULE__,  # Use a placeholder module since we don't have it here
+          # Use a placeholder module since we don't have it here
+          __MODULE__,
           function_name,
           if(capture_args, do: [], else: :no_capture),
           self(),
@@ -124,7 +125,8 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.CoreReporting do
         Ingestor.ingest_function_return(
           buffer,
           return_value,
-          0,  # Duration not available in this context
+          # Duration not available in this context
+          0,
           correlation_id
         )
 

@@ -1,7 +1,7 @@
 # test/elixir_scope/llm/hybrid_analyzer_test.exs
 defmodule ElixirScope.LLM.HybridAnalyzerTest do
   use ExUnit.Case
-  
+
   @moduletag :skip
 
   # TODO: Add alias when implementing actual tests
@@ -22,7 +22,8 @@ defmodule ElixirScope.LLM.HybridAnalyzerTest do
       # hybrid_accuracy = measure_analysis_accuracy(hybrid_analysis, code_sample)
       # improvement = (hybrid_accuracy - static_accuracy) / static_accuracy
       # assert improvement >= 0.40, "Expected 40%+ improvement, got #{improvement * 100}%"
-      assert true # Placeholder
+      # Placeholder
+      assert true
     end
 
     test "hybrid context enables performance-specific insights" do
@@ -39,7 +40,8 @@ defmodule ElixirScope.LLM.HybridAnalyzerTest do
       # bottleneck = List.first(analysis.insights.performance_bottlenecks)
       # assert bottleneck.ast_location != nil
       # assert bottleneck.runtime_evidence != nil
-      assert true # Placeholder
+      # Placeholder
+      assert true
     end
   end
 end

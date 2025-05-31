@@ -38,9 +38,9 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.ComplexityCalculator do
       bugs: 0.0033333333333333335
     }
 
-    maintainability_index = 100.0 - (cyclomatic * 2.0) - (cognitive * 1.5)
+    maintainability_index = 100.0 - cyclomatic * 2.0 - cognitive * 1.5
 
-    overall_score = cyclomatic + cognitive + (nesting_depth * 0.5)
+    overall_score = cyclomatic + cognitive + nesting_depth * 0.5
 
     %ComplexityMetrics{
       score: overall_score,
@@ -70,49 +70,57 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.ComplexityCalculator do
     nodes
     |> Map.values()
     |> Enum.reduce(0, fn node, acc ->
-      increment = case node.type do
-        :case ->  # Updated from :case_entry
-          # For case statements, count the number of branches minus 1
-          clause_count = Map.get(node.metadata, :clause_count, 1)
-          max(clause_count - 1, 1)
+      increment =
+        case node.type do
+          # Updated from :case_entry
+          :case ->
+            # For case statements, count the number of branches minus 1
+            clause_count = Map.get(node.metadata, :clause_count, 1)
+            max(clause_count - 1, 1)
 
-        :conditional ->  # Updated from :if_condition
-          # If statements have 2 branches (then/else), so 1 decision point
-          1
+          # Updated from :if_condition
+          :conditional ->
+            # If statements have 2 branches (then/else), so 1 decision point
+            1
 
-        :cond_entry ->
-          # Cond statements - count clauses minus 1
-          clause_count = Map.get(node.metadata, :clause_count, 1)
-          max(clause_count - 1, 1)
+          :cond_entry ->
+            # Cond statements - count clauses minus 1
+            clause_count = Map.get(node.metadata, :clause_count, 1)
+            max(clause_count - 1, 1)
 
-        :guard_check ->
-          1
+          :guard_check ->
+            1
 
-        :try ->  # Updated from :try_entry to match actual node type
-          1
+          # Updated from :try_entry to match actual node type
+          :try ->
+            1
 
-        :with_pattern ->
-          1
+          :with_pattern ->
+            1
 
-        :comprehension ->
-          # Comprehensions have filtering logic, so they add complexity
-          # Use the complexity contribution from metadata if available
-          complexity_contribution = Map.get(node.metadata, :complexity_contribution, 1)
-          max(complexity_contribution, 1)
+          :comprehension ->
+            # Comprehensions have filtering logic, so they add complexity
+            # Use the complexity contribution from metadata if available
+            complexity_contribution = Map.get(node.metadata, :complexity_contribution, 1)
+            max(complexity_contribution, 1)
 
-        :pipe_operation ->
-          # Pipe operations can add complexity, especially with filtering functions
-          # Check if the right side involves filtering or conditional logic
-          case node.metadata do
-            %{right: {{:., _, [Enum, func]}, _, _}} when func in [:filter, :reject, :find, :any?, :all?] ->
-              1  # Filtering operations add decision complexity
-            _ ->
-              0  # Simple transformations don't add complexity
-          end
+          :pipe_operation ->
+            # Pipe operations can add complexity, especially with filtering functions
+            # Check if the right side involves filtering or conditional logic
+            case node.metadata do
+              %{right: {{:., _, [Enum, func]}, _, _}}
+              when func in [:filter, :reject, :find, :any?, :all?] ->
+                # Filtering operations add decision complexity
+                1
 
-        _ ->
-          0
-      end
+              _ ->
+                # Simple transformations don't add complexity
+                0
+            end
+
+          _ ->
+            0
+        end
 
       acc + increment
     end)
@@ -122,35 +130,46 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.ComplexityCalculator do
   Calculates cognitive complexity considering nesting.
   """
   def calculate_cognitive_complexity(nodes, scopes) do
-    result = nodes
-    |> Map.values()
-    |> Enum.reduce(0, fn node, acc ->
-      base_increment = case node.type do
-        :case -> 1      # case adds cognitive load (updated from :case_entry)
-        :conditional -> 1    # if adds cognitive load (updated from :if_condition)
-        :cond_entry -> 1      # cond adds cognitive load
-        :guard_check -> 1     # guards add cognitive load
-        :try -> 1       # try-catch adds cognitive load (updated from :try_entry)
-        _ -> 0
-      end
+    result =
+      nodes
+      |> Map.values()
+      |> Enum.reduce(0, fn node, acc ->
+        base_increment =
+          case node.type do
+            # case adds cognitive load (updated from :case_entry)
+            :case -> 1
+            # if adds cognitive load (updated from :if_condition)
+            :conditional -> 1
+            # cond adds cognitive load
+            :cond_entry -> 1
+            # guards add cognitive load
+            :guard_check -> 1
+            # try-catch adds cognitive load (updated from :try_entry)
+            :try -> 1
+            _ -> 0
+          end
 
-      # Add nesting penalty based on scope depth
-      nesting_level = get_scope_nesting_level(node.scope_id, scopes)
-      nesting_penalty = nesting_level * 0.5
+        # Add nesting penalty based on scope depth
+        nesting_level = get_scope_nesting_level(node.scope_id, scopes)
+        nesting_penalty = nesting_level * 0.5
 
-      node_contribution = base_increment + nesting_penalty
+        node_contribution = base_increment + nesting_penalty
 
-      acc + node_contribution
-    end)
+        acc + node_contribution
+      end)
 
     # Safe rounding with validation
     cond do
       not is_number(result) ->
         0.0
+
       result == :infinity or result == :neg_infinity ->
         0.0
-      result != result ->  # NaN check
+
+      # NaN check
+      result != result ->
         0.0
+
       true ->
         Float.round(result, 1)
     end
@@ -180,9 +199,12 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.ComplexityCalculator do
 
   defp calculate_scope_depth(scope, all_scopes, current_depth) do
     case scope.parent_scope do
-      nil -> current_depth
+      nil ->
+        current_depth
+
       parent_id ->
         parent_scope = Map.get(all_scopes, parent_id)
+
         if parent_scope do
           calculate_scope_depth(parent_scope, all_scopes, current_depth + 1)
         else

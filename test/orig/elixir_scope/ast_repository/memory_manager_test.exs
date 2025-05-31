@@ -10,6 +10,7 @@ defmodule ElixirScope.ASTRepository.MemoryManagerTest do
   require Logger
 
   alias ElixirScope.ASTRepository.MemoryManager
+
   alias ElixirScope.ASTRepository.MemoryManager.{
     Monitor,
     CacheManager,
@@ -98,7 +99,8 @@ defmodule ElixirScope.ASTRepository.MemoryManagerTest do
 
   describe "CacheManager" do
     test "cache put and get operations" do
-      key = :test_key_#{:rand.uniform(10000)}
+      # {:rand.uniform(10000)}
+      key = :test_key_
       value = %{data: "test_value", timestamp: System.monotonic_time()}
 
       assert :ok == MemoryManager.cache_put(:query, key, value)
@@ -106,12 +108,14 @@ defmodule ElixirScope.ASTRepository.MemoryManagerTest do
     end
 
     test "cache miss for non-existent keys" do
-      non_existent_key = :non_existent_key_#{:rand.uniform(10000)}
+      # {:rand.uniform(10000)}
+      non_existent_key = :non_existent_key_
       assert :miss == MemoryManager.cache_get(:query, non_existent_key)
     end
 
     test "cache clear operation" do
-      key = :test_key_clear_#{:rand.uniform(10000)}
+      # {:rand.uniform(10000)}
+      key = :test_key_clear_
       value = "test_value"
 
       MemoryManager.cache_put(:query, key, value)
@@ -123,12 +127,16 @@ defmodule ElixirScope.ASTRepository.MemoryManagerTest do
 
     test "cache statistics tracking" do
       # Generate some unique cache activity
-      key1 = :key1_#{:rand.uniform(10000)}
-      key_missing = :key_missing_#{:rand.uniform(10000)}
+      # {:rand.uniform(10000)}
+      key1 = :key1_
+      # {:rand.uniform(10000)}
+      key_missing = :key_missing_
 
       MemoryManager.cache_put(:query, key1, "value1")
-      MemoryManager.cache_get(:query, key1)  # Hit
-      MemoryManager.cache_get(:query, key_missing)  # Miss
+      # Hit
+      MemoryManager.cache_get(:query, key1)
+      # Miss
+      MemoryManager.cache_get(:query, key_missing)
 
       {:ok, stats} = MemoryManager.get_stats()
       assert is_map(stats.cache)
@@ -156,6 +164,7 @@ defmodule ElixirScope.ASTRepository.MemoryManagerTest do
         {:ok, {last_access, access_count}} ->
           assert is_integer(last_access)
           assert access_count >= 1
+
         :not_found ->
           # Access tracking table might not be initialized yet, this is ok
           :ok
@@ -190,7 +199,8 @@ defmodule ElixirScope.ASTRepository.MemoryManagerTest do
       assert is_binary(compressed)
       assert original_size > 0
       assert compressed_size > 0
-      assert compressed_size <= original_size  # Should be smaller or equal
+      # Should be smaller or equal
+      assert compressed_size <= original_size
 
       {:ok, decompressed} = Compressor.decompress_data(compressed)
       assert decompressed == test_data
@@ -205,11 +215,12 @@ defmodule ElixirScope.ASTRepository.MemoryManagerTest do
     end
 
     test "performs compression with statistics" do
-      {:ok, stats} = Compressor.perform_compression(
-        access_threshold: 1,
-        age_threshold: 0,
-        compression_level: 1
-      )
+      {:ok, stats} =
+        Compressor.perform_compression(
+          access_threshold: 1,
+          age_threshold: 0,
+          compression_level: 1
+        )
 
       assert is_map(stats)
       assert Map.has_key?(stats, :modules_compressed)
@@ -309,7 +320,8 @@ defmodule ElixirScope.ASTRepository.MemoryManagerTest do
   describe "Integration tests" do
     test "full memory management workflow" do
       # 1. Generate some test data and cache it
-      test_data = generate_test_data(5)  # Reduced size for test reliability
+      # Reduced size for test reliability
+      test_data = generate_test_data(5)
 
       Enum.each(test_data, fn {module, data} ->
         cache_key = :"integration_test_#{module}"
@@ -330,37 +342,43 @@ defmodule ElixirScope.ASTRepository.MemoryManagerTest do
 
       # 5. Perform cleanup (with dry run to avoid interference)
       cleanup_result = MemoryManager.cleanup_unused_data(max_age: 0, dry_run: true)
+
       case cleanup_result do
         {:ok, result} -> assert is_map(result)
-        :ok -> :ok  # Handle case where cleanup returns :ok instead of {:ok, result}
+        # Handle case where cleanup returns :ok instead of {:ok, result}
+        :ok -> :ok
       end
 
       # 6. Perform compression
-      {:ok, compression_stats} = MemoryManager.compress_old_analysis(
-        access_threshold: 0,
-        age_threshold: 0
-      )
+      {:ok, compression_stats} =
+        MemoryManager.compress_old_analysis(
+          access_threshold: 0,
+          age_threshold: 0
+        )
+
       assert is_map(compression_stats)
     end
 
     test "stress test with many cache operations" do
       # Generate concurrent cache activity with unique keys
-      test_id = :rand.uniform(100000)
+      test_id = :rand.uniform(100_000)
 
-      tasks = for i <- 1..50 do  # Reduced concurrency for test stability
-        Task.async(fn ->
-          key = :"stress_key_#{test_id}_#{i}"
-          value = %{data: "stress_data_#{i}", index: i, test_id: test_id}
-          cache_type = Enum.random([:query, :analysis, :cpg])
+      # Reduced concurrency for test stability
+      tasks =
+        for i <- 1..50 do
+          Task.async(fn ->
+            key = :"stress_key_#{test_id}_#{i}"
+            value = %{data: "stress_data_#{i}", index: i, test_id: test_id}
+            cache_type = Enum.random([:query, :analysis, :cpg])
 
-          MemoryManager.cache_put(cache_type, key, value)
+            MemoryManager.cache_put(cache_type, key, value)
 
-          # Small random delay
-          Process.sleep(:rand.uniform(3))
+            # Small random delay
+            Process.sleep(:rand.uniform(3))
 
-          MemoryManager.cache_get(cache_type, key)
-        end)
-      end
+            MemoryManager.cache_get(cache_type, key)
+          end)
+        end
 
       # Wait for all tasks to complete
       results = Task.await_many(tasks, 5000)
@@ -378,31 +396,42 @@ defmodule ElixirScope.ASTRepository.MemoryManagerTest do
 
   defp generate_test_data(count) do
     for i <- 1..count do
-      module = :"test_module_#{:rand.uniform(100000)}_#{i}"
+      module = :"test_module_#{:rand.uniform(100_000)}_#{i}"
+
       data = %{
         ast: generate_mock_ast(),
         analysis: %{complexity: :rand.uniform(10), lines: :rand.uniform(100)},
         metadata: %{
           file: "test_#{i}.ex",
           timestamp: System.monotonic_time(),
-          test_run: :rand.uniform(100000)
+          test_run: :rand.uniform(100_000)
         }
       }
+
       {module, data}
     end
   end
 
   defp generate_mock_ast() do
-    {:defmodule, [line: 1], [
-      {:__aliases__, [line: 1], [:TestModule]},
-      [do: {:def, [line: 2], [
-        {:test_function, [line: 2], []},
-        [do: {:__block__, [line: 3], [
-          {:=, [line: 3], [{:x, [line: 3], nil}, 42]},
-          {:x, [line: 4], nil}
-        ]}]
-      ]}]
-    ]}
+    {:defmodule, [line: 1],
+     [
+       {:__aliases__, [line: 1], [:TestModule]},
+       [
+         do:
+           {:def, [line: 2],
+            [
+              {:test_function, [line: 2], []},
+              [
+                do:
+                  {:__block__, [line: 3],
+                   [
+                     {:=, [line: 3], [{:x, [line: 3], nil}, 42]},
+                     {:x, [line: 4], nil}
+                   ]}
+              ]
+            ]}
+       ]
+     ]}
   end
 
   defp cleanup_test_state() do
@@ -411,7 +440,8 @@ defmodule ElixirScope.ASTRepository.MemoryManagerTest do
     try do
       # Don't clear all caches as it might interfere with other tests
       # Instead, just ensure the system is in a stable state
-      Process.sleep(1)  # Small delay to let any async operations complete
+      # Small delay to let any async operations complete
+      Process.sleep(1)
     rescue
       _ -> :ok
     end

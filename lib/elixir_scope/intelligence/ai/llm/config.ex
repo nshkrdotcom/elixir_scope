@@ -2,14 +2,14 @@
 defmodule ElixirScope.Intelligence.AI.LLM.Config do
   @moduledoc """
   Configuration management for LLM providers.
-  
+
   Handles API keys, provider selection, and other configuration
   options for the LLM integration layer.
   """
 
   @doc """
   Gets the Gemini API key from configuration or environment.
-  
+
   Checks in order:
   1. Application config: config :elixir_scope, :gemini_api_key
   2. Environment variable: GEMINI_API_KEY
@@ -23,7 +23,7 @@ defmodule ElixirScope.Intelligence.AI.LLM.Config do
 
   @doc """
   Gets the Vertex AI JSON credentials file path.
-  
+
   Checks in order:
   1. Environment variable: VERTEX_JSON_FILE
   2. Application config: config :elixir_scope, :vertex_json_file
@@ -37,13 +37,15 @@ defmodule ElixirScope.Intelligence.AI.LLM.Config do
 
   @doc """
   Gets the Vertex AI credentials from the JSON file.
-  
+
   Returns a map with the parsed JSON credentials or nil if file not found/invalid.
   """
   @spec get_vertex_credentials() :: map() | nil
   def get_vertex_credentials do
     case get_vertex_json_file() do
-      nil -> nil
+      nil ->
+        nil
+
       file_path ->
         case File.read(file_path) do
           {:ok, content} ->
@@ -51,14 +53,16 @@ defmodule ElixirScope.Intelligence.AI.LLM.Config do
               {:ok, credentials} -> credentials
               {:error, _} -> nil
             end
-          {:error, _} -> nil
+
+          {:error, _} ->
+            nil
         end
     end
   end
 
   @doc """
   Gets the primary provider to use.
-  
+
   Returns :vertex if Vertex credentials are available, :gemini if API key is available, otherwise :mock.
   Can be overridden with config or environment variable.
   In test environment, always returns :mock unless explicitly overridden.
@@ -71,21 +75,30 @@ defmodule ElixirScope.Intelligence.AI.LLM.Config do
              System.get_env("LLM_PROVIDER") do
         "gemini" -> :gemini
         "vertex" -> :vertex
-        _ -> :mock  # Default to mock in tests
+        # Default to mock in tests
+        _ -> :mock
       end
     else
       case Application.get_env(:elixir_scope, :llm_provider) ||
              System.get_env("LLM_PROVIDER") do
-        "mock" -> :mock
-        "gemini" -> :gemini
-        "vertex" -> :vertex
+        "mock" ->
+          :mock
+
+        "gemini" ->
+          :gemini
+
+        "vertex" ->
+          :vertex
+
         nil ->
           cond do
             get_vertex_credentials() -> :vertex
             get_gemini_api_key() -> :gemini
             true -> :mock
           end
-        _ -> :mock
+
+        _ ->
+          :mock
       end
     end
   end
@@ -113,7 +126,7 @@ defmodule ElixirScope.Intelligence.AI.LLM.Config do
   def get_vertex_base_url do
     credentials = get_vertex_credentials()
     project_id = credentials && credentials["project_id"]
-    
+
     if project_id do
       "https://us-central1-aiplatform.googleapis.com/v1/projects/#{project_id}/locations/us-central1/publishers/google/models"
     else
@@ -192,4 +205,4 @@ defmodule ElixirScope.Intelligence.AI.LLM.Config do
       request_timeout: get_request_timeout()
     }
   end
-end 
+end

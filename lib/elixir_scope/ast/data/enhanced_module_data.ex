@@ -25,6 +25,7 @@ defmodule ElixirScope.AST.EnhancedModuleData do
     EnhancedFunctionData,
     ComplexityMetrics
   }
+
   alias ElixirScope.AST.Enhanced.SupportingStructures.{
     MacroData,
     TypespecData,
@@ -37,45 +38,49 @@ defmodule ElixirScope.AST.EnhancedModuleData do
   }
 
   @type t :: %__MODULE__{
-    # Identity
-    module_name: atom(),
-    file_path: String.t(),
-    file_hash: String.t(),  # SHA256 for change detection
+          # Identity
+          module_name: atom(),
+          file_path: String.t(),
+          # SHA256 for change detection
+          file_hash: String.t(),
 
-    # AST Data
-    ast: Macro.t(),  # Complete module AST
-    ast_size: non_neg_integer(),  # Number of AST nodes
-    ast_depth: non_neg_integer(),  # Maximum AST depth
+          # AST Data
+          # Complete module AST
+          ast: Macro.t(),
+          # Number of AST nodes
+          ast_size: non_neg_integer(),
+          # Maximum AST depth
+          ast_depth: non_neg_integer(),
 
-    # Module Components
-    functions: [EnhancedFunctionData.t()],
-    macros: [MacroData.t()],
-    module_attributes: %{atom() => term()},
-    typespecs: [TypespecData.t()],
+          # Module Components
+          functions: [EnhancedFunctionData.t()],
+          macros: [MacroData.t()],
+          module_attributes: %{atom() => term()},
+          typespecs: [TypespecData.t()],
 
-    # Dependencies & Relationships
-    imports: [ModuleDependency.t()],
-    aliases: [ModuleDependency.t()],
-    requires: [ModuleDependency.t()],
-    uses: [BehaviourUsage.t()],
+          # Dependencies & Relationships
+          imports: [ModuleDependency.t()],
+          aliases: [ModuleDependency.t()],
+          requires: [ModuleDependency.t()],
+          uses: [BehaviourUsage.t()],
 
-    # OTP Patterns
-    behaviours: [atom()],
-    callbacks_implemented: [CallbackData.t()],
-    child_specs: [ChildSpecData.t()],
+          # OTP Patterns
+          behaviours: [atom()],
+          callbacks_implemented: [CallbackData.t()],
+          child_specs: [ChildSpecData.t()],
 
-    # Analysis Metadata
-    complexity_metrics: ComplexityMetrics.t(),
-    code_smells: [CodeSmell.t()],
-    security_risks: [SecurityRisk.t()],
+          # Analysis Metadata
+          complexity_metrics: ComplexityMetrics.t(),
+          code_smells: [CodeSmell.t()],
+          security_risks: [SecurityRisk.t()],
 
-    # Timestamps
-    last_modified: DateTime.t(),
-    last_analyzed: DateTime.t(),
+          # Timestamps
+          last_modified: DateTime.t(),
+          last_analyzed: DateTime.t(),
 
-    # Extensible Metadata
-    metadata: map()
-  }
+          # Extensible Metadata
+          metadata: map()
+        }
 
   defstruct [
     # Identity
@@ -239,7 +244,8 @@ defmodule ElixirScope.AST.EnhancedModuleData do
       ast: decompress_ast(compressed_data.ast_compressed),
       ast_size: compressed_data.ast_size,
       ast_depth: compressed_data.ast_depth,
-      functions: [],  # Loaded separately for performance
+      # Loaded separately for performance
+      functions: [],
       macros: [],
       module_attributes: %{},
       typespecs: [],
@@ -264,10 +270,7 @@ defmodule ElixirScope.AST.EnhancedModuleData do
   """
   @spec add_function(t(), EnhancedFunctionData.t()) :: t()
   def add_function(%__MODULE__{} = data, function_data) do
-    %{data |
-      functions: [function_data | data.functions],
-      last_analyzed: DateTime.utc_now()
-    }
+    %{data | functions: [function_data | data.functions], last_analyzed: DateTime.utc_now()}
   end
 
   @doc """
@@ -292,6 +295,7 @@ defmodule ElixirScope.AST.EnhancedModuleData do
   @spec get_total_complexity(t()) :: float()
   def get_total_complexity(%__MODULE__{} = data) do
     module_complexity = get_complexity_score(data.complexity_metrics)
+
     function_complexity =
       data.functions
       |> Enum.map(& &1.complexity_score)
@@ -314,7 +318,8 @@ defmodule ElixirScope.AST.EnhancedModuleData do
       ast: module_data.ast,
       ast_size: calculate_ast_size(module_data.ast),
       ast_depth: calculate_ast_depth(module_data.ast),
-      functions: [],  # Will be populated separately
+      # Will be populated separately
+      functions: [],
       macros: [],
       module_attributes: %{},
       typespecs: [],
@@ -355,26 +360,39 @@ defmodule ElixirScope.AST.EnhancedModuleData do
     ast
     |> Macro.prewalk(0, fn
       {_, _, children}, depth when is_list(children) ->
-        max_child_depth = children
-        |> Enum.map(fn child -> calculate_ast_depth(child) end)
-        |> Enum.max(fn -> 0 end)
+        max_child_depth =
+          children
+          |> Enum.map(fn child -> calculate_ast_depth(child) end)
+          |> Enum.max(fn -> 0 end)
+
         {{}, depth + 1 + max_child_depth}
+
       _, depth ->
         {{}, depth}
     end)
     |> elem(1)
   end
 
-  defp extract_macros(_ast), do: []  # TODO: Implement macro extraction
-  defp extract_module_attributes(_ast), do: %{}  # TODO: Implement attribute extraction
-  defp extract_typespecs(_ast), do: []  # TODO: Implement typespec extraction
-  defp extract_imports(_ast), do: []  # TODO: Implement import extraction
-  defp extract_aliases(_ast), do: []  # TODO: Implement alias extraction
-  defp extract_requires(_ast), do: []  # TODO: Implement require extraction
-  defp extract_uses(_ast), do: []  # TODO: Implement use extraction
-  defp extract_behaviours(_ast), do: []  # TODO: Implement behaviour extraction
-  defp extract_callbacks_implemented(_ast), do: []  # TODO: Implement callback extraction
-  defp extract_child_specs(_ast), do: []  # TODO: Implement child spec extraction
+  # TODO: Implement macro extraction
+  defp extract_macros(_ast), do: []
+  # TODO: Implement attribute extraction
+  defp extract_module_attributes(_ast), do: %{}
+  # TODO: Implement typespec extraction
+  defp extract_typespecs(_ast), do: []
+  # TODO: Implement import extraction
+  defp extract_imports(_ast), do: []
+  # TODO: Implement alias extraction
+  defp extract_aliases(_ast), do: []
+  # TODO: Implement require extraction
+  defp extract_requires(_ast), do: []
+  # TODO: Implement use extraction
+  defp extract_uses(_ast), do: []
+  # TODO: Implement behaviour extraction
+  defp extract_behaviours(_ast), do: []
+  # TODO: Implement callback extraction
+  defp extract_callbacks_implemented(_ast), do: []
+  # TODO: Implement child spec extraction
+  defp extract_child_specs(_ast), do: []
 
   defp calculate_complexity_metrics(_ast) do
     %ComplexityMetrics{
@@ -386,18 +404,25 @@ defmodule ElixirScope.AST.EnhancedModuleData do
     }
   end
 
-  defp detect_code_smells(_ast), do: []  # TODO: Implement code smell detection
-  defp assess_security_risks(_ast), do: []  # TODO: Implement security risk assessment
+  # TODO: Implement code smell detection
+  defp detect_code_smells(_ast), do: []
+  # TODO: Implement security risk assessment
+  defp assess_security_risks(_ast), do: []
 
   defp validate_required_fields(%__MODULE__{module_name: nil}), do: {:error, :missing_module_name}
   defp validate_required_fields(%__MODULE__{ast: nil}), do: {:error, :missing_ast}
   defp validate_required_fields(_), do: :ok
 
-  defp validate_ast_consistency(%__MODULE__{ast_size: size}) when size <= 0, do: {:error, :invalid_ast_size}
-  defp validate_ast_consistency(%__MODULE__{ast_depth: depth}) when depth <= 0, do: {:error, :invalid_ast_depth}
+  defp validate_ast_consistency(%__MODULE__{ast_size: size}) when size <= 0,
+    do: {:error, :invalid_ast_size}
+
+  defp validate_ast_consistency(%__MODULE__{ast_depth: depth}) when depth <= 0,
+    do: {:error, :invalid_ast_depth}
+
   defp validate_ast_consistency(_), do: :ok
 
-  defp validate_dependencies(_), do: :ok  # TODO: Implement dependency validation
+  # TODO: Implement dependency validation
+  defp validate_dependencies(_), do: :ok
 
   defp validate_timestamps(%__MODULE__{last_modified: nil}), do: {:error, :missing_last_modified}
   defp validate_timestamps(%__MODULE__{last_analyzed: nil}), do: {:error, :missing_last_analyzed}
@@ -419,8 +444,15 @@ defmodule ElixirScope.AST.EnhancedModuleData do
   defp get_complexity_score(_), do: 1.0
 
   defp migrate_complexity_metrics(nil) do
-    %ComplexityMetrics{score: 1.0, cyclomatic: 1, cognitive: 1, halstead: %{}, maintainability_index: 100.0}
+    %ComplexityMetrics{
+      score: 1.0,
+      cyclomatic: 1,
+      cognitive: 1,
+      halstead: %{},
+      maintainability_index: 100.0
+    }
   end
+
   defp migrate_complexity_metrics(old_metrics) do
     %ComplexityMetrics{
       score: Map.get(old_metrics, :score, 1.0),

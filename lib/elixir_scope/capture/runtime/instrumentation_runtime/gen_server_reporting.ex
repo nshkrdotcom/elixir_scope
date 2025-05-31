@@ -18,7 +18,9 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.GenServerReporting 
     case Context.get_context() do
       %{enabled: true, buffer: buffer} when not is_nil(buffer) ->
         Ingestor.ingest_genserver_callback_start(buffer, callback_name, pid, capture_state)
-      _ -> :ok
+
+      _ ->
+        :ok
     end
   end
 
@@ -30,7 +32,9 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.GenServerReporting 
     case Context.get_context() do
       %{enabled: true, buffer: buffer} when not is_nil(buffer) ->
         Ingestor.ingest_genserver_callback_success(buffer, callback_name, pid, result)
-      _ -> :ok
+
+      _ ->
+        :ok
     end
   end
 
@@ -42,7 +46,9 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.GenServerReporting 
     case Context.get_context() do
       %{enabled: true, buffer: buffer} when not is_nil(buffer) ->
         Ingestor.ingest_genserver_callback_error(buffer, callback_name, pid, kind, reason)
-      _ -> :ok
+
+      _ ->
+        :ok
     end
   end
 
@@ -54,7 +60,9 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.GenServerReporting 
     case Context.get_context() do
       %{enabled: true, buffer: buffer} when not is_nil(buffer) ->
         Ingestor.ingest_genserver_callback_complete(buffer, callback_name, pid, capture_state)
-      _ -> :ok
+
+      _ ->
+        :ok
     end
   end
 end

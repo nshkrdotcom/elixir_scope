@@ -1,6 +1,6 @@
 defmodule ElixirScope.Integration.ProductionPhoenixTest do
   use ExUnit.Case, async: false
-  
+
   # Skip production Phoenix tests since the app doesn't exist
   @moduletag :skip
 

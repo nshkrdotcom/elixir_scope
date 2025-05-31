@@ -1,7 +1,7 @@
 # test/elixir_scope/performance/hybrid_benchmarks_test.exs
 defmodule ElixirScope.Performance.HybridBenchmarksTest do
   use ExUnit.Case
-  
+
   @moduletag :skip
 
   @moduletag :performance
@@ -29,7 +29,8 @@ defmodule ElixirScope.Performance.HybridBenchmarksTest do
       #   assert actual_time <= target_time,
       #     "#{operation} took #{actual_time}ms, expected <= #{target_time}ms"
       # end
-      assert true # Placeholder
+      # Placeholder
+      assert true
     end
 
     test "memory usage scales linearly with data size" do
@@ -41,7 +42,8 @@ defmodule ElixirScope.Performance.HybridBenchmarksTest do
       # Check linear scaling
       # correlation = calculate_linear_correlation(memory_usage)
       # assert correlation >= 0.95, "Memory scaling correlation: #{correlation}, expected >= 0.95"
-      assert true # Placeholder
+      # Placeholder
+      assert true
     end
   end
 end

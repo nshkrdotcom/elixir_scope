@@ -143,8 +143,10 @@ defmodule ElixirScope.Capture.Runtime.EnhancedInstrumentation.WatchpointManager 
       ast_node_id: ast_node_id
     }
 
-    updated_history = [value_entry | watchpoint.value_history]
-    |> Enum.take(100)  # Keep last 100 values
+    updated_history =
+      [value_entry | watchpoint.value_history]
+      # Keep last 100 values
+      |> Enum.take(100)
 
     updated_watchpoint = %{watchpoint | value_history: updated_history}
     Storage.update_watchpoint(watchpoint.id, updated_watchpoint)
@@ -194,6 +196,7 @@ defmodule ElixirScope.Capture.Runtime.EnhancedInstrumentation.WatchpointManager 
   end
 
   defp rapid_changes?(history, _current) when length(history) < 2, do: false
+
   defp rapid_changes?([prev | _], current) do
     time_diff = current.timestamp - prev.timestamp
     # Alert if changes happen faster than 1ms
@@ -204,18 +207,25 @@ defmodule ElixirScope.Capture.Runtime.EnhancedInstrumentation.WatchpointManager 
     # Check if current value is an error and if there's a pattern
     case current.value do
       {:error, _} ->
-        error_count = Enum.count(history, fn entry ->
-          match?({:error, _}, entry.value)
-        end)
-        error_count >= 2  # Alert if 2+ recent errors
+        error_count =
+          Enum.count(history, fn entry ->
+            match?({:error, _}, entry.value)
+          end)
+
+        # Alert if 2+ recent errors
+        error_count >= 2
 
       nil ->
-        nil_count = Enum.count(history, fn entry ->
-          is_nil(entry.value)
-        end)
-        nil_count >= 2  # Alert if 2+ recent nils
+        nil_count =
+          Enum.count(history, fn entry ->
+            is_nil(entry.value)
+          end)
 
-      _ -> false
+        # Alert if 2+ recent nils
+        nil_count >= 2
+
+      _ ->
+        false
     end
   end
 

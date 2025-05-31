@@ -16,7 +16,9 @@ defmodule ElixirScope.Capture.Runtime.TemporalBridgeEnhancement.ASTContextBuilde
   def build_ast_context_for_state(events, ast_repo) do
     # Get the most recent event with AST correlation
     case Enum.find(events, fn event -> Map.has_key?(event, :ast_node_id) end) do
-      nil -> {:ok, nil}
+      nil ->
+        {:ok, nil}
+
       event ->
         case RuntimeCorrelator.get_runtime_context(ast_repo, event) do
           {:ok, context} -> {:ok, context}
@@ -45,16 +47,17 @@ defmodule ElixirScope.Capture.Runtime.TemporalBridgeEnhancement.ASTContextBuilde
   """
   @spec build_execution_path(list(map()), pid()) :: {:ok, list(map())}
   def build_execution_path(events, _ast_repo) do
-    execution_path = events
-    |> Enum.filter(fn event -> Map.has_key?(event, :ast_node_id) end)
-    |> Enum.map(fn event ->
-      %{
-        ast_node_id: event.ast_node_id,
-        timestamp: Map.get(event, :timestamp),
-        event_type: Map.get(event, :event_type),
-        context: extract_event_context(event)
-      }
-    end)
+    execution_path =
+      events
+      |> Enum.filter(fn event -> Map.has_key?(event, :ast_node_id) end)
+      |> Enum.map(fn event ->
+        %{
+          ast_node_id: event.ast_node_id,
+          timestamp: Map.get(event, :timestamp),
+          event_type: Map.get(event, :event_type),
+          context: extract_event_context(event)
+        }
+      end)
 
     {:ok, execution_path}
   end
@@ -64,22 +67,23 @@ defmodule ElixirScope.Capture.Runtime.TemporalBridgeEnhancement.ASTContextBuilde
   """
   @spec build_variable_flow_for_state(list(map())) :: {:ok, map()}
   def build_variable_flow_for_state(events) do
-    variable_flow = events
-    |> Enum.filter(fn event -> Map.has_key?(event, :variables) end)
-    |> Enum.reduce(%{}, fn event, acc ->
-      variables = Map.get(event, :variables, %{})
-      timestamp = Map.get(event, :timestamp)
+    variable_flow =
+      events
+      |> Enum.filter(fn event -> Map.has_key?(event, :variables) end)
+      |> Enum.reduce(%{}, fn event, acc ->
+        variables = Map.get(event, :variables, %{})
+        timestamp = Map.get(event, :timestamp)
 
-      Enum.reduce(variables, acc, fn {var_name, var_value}, var_acc ->
-        var_history = Map.get(var_acc, var_name, [])
-        var_entry = %{value: var_value, timestamp: timestamp}
-        Map.put(var_acc, var_name, [var_entry | var_history])
+        Enum.reduce(variables, acc, fn {var_name, var_value}, var_acc ->
+          var_history = Map.get(var_acc, var_name, [])
+          var_entry = %{value: var_value, timestamp: timestamp}
+          Map.put(var_acc, var_name, [var_entry | var_history])
+        end)
       end)
-    end)
-    |> Enum.map(fn {var_name, history} ->
-      {var_name, Enum.reverse(history)}
-    end)
-    |> Enum.into(%{})
+      |> Enum.map(fn {var_name, history} ->
+        {var_name, Enum.reverse(history)}
+      end)
+      |> Enum.into(%{})
 
     {:ok, variable_flow}
   end
@@ -104,7 +108,8 @@ defmodule ElixirScope.Capture.Runtime.TemporalBridgeEnhancement.ASTContextBuilde
   defp extract_execution_context(events) do
     %{
       total_events: length(events),
-      event_types: events |> Enum.map(fn event -> Map.get(event, :event_type) end) |> Enum.frequencies(),
+      event_types:
+        events |> Enum.map(fn event -> Map.get(event, :event_type) end) |> Enum.frequencies(),
       time_span: calculate_time_span(events)
     }
   end

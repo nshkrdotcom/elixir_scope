@@ -20,7 +20,11 @@ defmodule ElixirScope.AST.Enhanced.ProjectPopulator.PerformanceMetrics do
 
     %{
       total_duration_ms: total_duration / 1000,
-      avg_parse_time_ms: if(file_count > 0, do: (Enum.sum(Enum.map(parsed_files, & &1.parse_time)) / file_count) / 1000, else: 0.0),
+      avg_parse_time_ms:
+        if(file_count > 0,
+          do: Enum.sum(Enum.map(parsed_files, & &1.parse_time)) / file_count / 1000,
+          else: 0.0
+        ),
       files_per_second: if(duration_seconds > 0, do: file_count / duration_seconds, else: 0.0),
       modules_per_second: if(duration_seconds > 0, do: module_count / duration_seconds, else: 0.0),
       total_file_size: Enum.sum(Enum.map(parsed_files, & &1.file_size)),

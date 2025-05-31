@@ -19,7 +19,7 @@ defmodule ElixirScope.Foundation.Application do
 
     children = [
       # Configuration must start first
-      {Config, []},
+      {Config, []}
 
       # Add other supervised processes here as needed
       # Note: Events and Telemetry are currently stateless and don't need supervision
@@ -28,14 +28,15 @@ defmodule ElixirScope.Foundation.Application do
     opts = [strategy: :one_for_one, name: ElixirScope.Foundation.Supervisor]
 
     case ErrorContext.with_context(context, fn ->
-      Supervisor.start_link(children, opts)
-    end) do
+           Supervisor.start_link(children, opts)
+         end) do
       {:ok, _pid} = result ->
         # Initialize stateless components after supervision tree is up
         case initialize_stateless_components() do
           :ok ->
             Logger.info("ElixirScope Foundation Application started successfully")
             result
+
           {:error, error} ->
             Logger.error("Failed to initialize stateless components: #{inspect(error)}")
             {:error, error}

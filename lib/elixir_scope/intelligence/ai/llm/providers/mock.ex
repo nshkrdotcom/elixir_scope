@@ -2,7 +2,7 @@
 defmodule ElixirScope.Intelligence.AI.LLM.Providers.Mock do
   @moduledoc """
   Mock LLM provider for testing and fallback scenarios.
-  
+
   Provides realistic responses without external API calls,
   useful for testing, development, and when real providers fail.
   """
@@ -18,7 +18,7 @@ defmodule ElixirScope.Intelligence.AI.LLM.Providers.Mock do
   @spec analyze_code(String.t(), map()) :: Response.t()
   def analyze_code(code, context) do
     analysis = generate_code_analysis(code, context)
-    
+
     Response.success(
       analysis,
       0.85,
@@ -38,7 +38,7 @@ defmodule ElixirScope.Intelligence.AI.LLM.Providers.Mock do
   @spec explain_error(String.t(), map()) :: Response.t()
   def explain_error(error_message, context) do
     explanation = generate_error_explanation(error_message, context)
-    
+
     Response.success(
       explanation,
       0.90,
@@ -58,7 +58,7 @@ defmodule ElixirScope.Intelligence.AI.LLM.Providers.Mock do
   @spec suggest_fix(String.t(), map()) :: Response.t()
   def suggest_fix(problem_description, context) do
     suggestion = generate_fix_suggestion(problem_description, context)
-    
+
     Response.success(
       suggestion,
       0.80,
@@ -76,13 +76,14 @@ defmodule ElixirScope.Intelligence.AI.LLM.Providers.Mock do
   """
   @spec simulate_error(String.t()) :: Response.t()
   def simulate_error(error_type \\ "timeout") do
-    error_message = case error_type do
-      "timeout" -> "Mock provider timeout simulation"
-      "rate_limit" -> "Mock provider rate limit simulation"
-      "invalid_request" -> "Mock provider invalid request simulation"
-      _ -> "Mock provider generic error simulation"
-    end
-    
+    error_message =
+      case error_type do
+        "timeout" -> "Mock provider timeout simulation"
+        "rate_limit" -> "Mock provider rate limit simulation"
+        "invalid_request" -> "Mock provider invalid request simulation"
+        _ -> "Mock provider generic error simulation"
+      end
+
     Response.error(error_message, :mock, %{simulated: true, error_type: error_type})
   end
 
@@ -102,7 +103,7 @@ defmodule ElixirScope.Intelligence.AI.LLM.Providers.Mock do
   defp generate_code_analysis(code, context) do
     base_analysis = analyze_code_structure(code)
     context_analysis = if map_size(context) > 0, do: analyze_context(context), else: ""
-    
+
     """
     ## Code Analysis (Mock Provider)
 
@@ -116,27 +117,28 @@ defmodule ElixirScope.Intelligence.AI.LLM.Providers.Mock do
     cond do
       String.contains?(code, "defmodule") ->
         "This appears to be an Elixir module definition. The code structure looks well-organized with proper module boundaries."
-      
+
       String.contains?(code, "def ") ->
         "This contains function definitions. Consider breaking down complex functions into smaller, more focused ones for better maintainability."
-      
+
       String.contains?(code, "case ") or String.contains?(code, "cond ") ->
         "The code uses pattern matching or conditional logic. This is good Elixir practice for handling different scenarios."
-      
+
       String.length(code) > 500 ->
         "This is a substantial piece of code. Consider reviewing for opportunities to extract reusable components."
-      
+
       true ->
         "This appears to be a code snippet. The structure looks reasonable for its size."
     end
   end
 
   defp analyze_context(context) do
-    context_info = context
-    |> Map.keys()
-    |> Enum.map(&to_string/1)
-    |> Enum.join(", ")
-    
+    context_info =
+      context
+      |> Map.keys()
+      |> Enum.map(&to_string/1)
+      |> Enum.join(", ")
+
     """
 
     ### Context Analysis
@@ -147,7 +149,7 @@ defmodule ElixirScope.Intelligence.AI.LLM.Providers.Mock do
   defp generate_error_explanation(error_message, context) do
     base_explanation = explain_error_type(error_message)
     context_explanation = if map_size(context) > 0, do: explain_with_context(context), else: ""
-    
+
     """
     ## Error Explanation (Mock Provider)
 
@@ -161,16 +163,16 @@ defmodule ElixirScope.Intelligence.AI.LLM.Providers.Mock do
     cond do
       String.contains?(error_message, "undefined") ->
         "This error typically occurs when trying to use a variable, function, or module that hasn't been defined or imported."
-      
+
       String.contains?(error_message, "syntax") ->
         "This is a syntax error, meaning the code doesn't follow Elixir's grammar rules. Check for missing parentheses, commas, or keywords."
-      
+
       String.contains?(error_message, "match") ->
         "This is a pattern matching error. The left and right sides of the match don't have compatible structures."
-      
+
       String.contains?(error_message, "timeout") ->
         "This indicates an operation took longer than expected. Consider increasing timeouts or optimizing the operation."
-      
+
       true ->
         "This error requires careful analysis of the surrounding code context to determine the root cause."
     end
@@ -187,7 +189,7 @@ defmodule ElixirScope.Intelligence.AI.LLM.Providers.Mock do
   defp generate_fix_suggestion(problem_description, context) do
     base_suggestion = suggest_fix_type(problem_description)
     context_suggestion = if map_size(context) > 0, do: suggest_with_context(context), else: ""
-    
+
     """
     ## Fix Suggestion (Mock Provider)
 
@@ -201,16 +203,16 @@ defmodule ElixirScope.Intelligence.AI.LLM.Providers.Mock do
     cond do
       String.contains?(problem_description, "performance") ->
         "For performance issues, consider: 1) Using more efficient data structures, 2) Implementing caching, 3) Optimizing database queries, 4) Profiling to identify bottlenecks."
-      
+
       String.contains?(problem_description, "complexity") ->
         "To reduce complexity: 1) Extract functions for repeated logic, 2) Use pattern matching instead of nested conditionals, 3) Consider the single responsibility principle."
-      
+
       String.contains?(problem_description, "test") ->
         "For testing improvements: 1) Add more edge case tests, 2) Use property-based testing, 3) Mock external dependencies, 4) Improve test coverage."
-      
+
       String.contains?(problem_description, "error") ->
         "For error handling: 1) Use proper error tuples {:ok, result} | {:error, reason}, 2) Add comprehensive error messages, 3) Consider using with statements for error chaining."
-      
+
       true ->
         "General suggestions: 1) Follow Elixir conventions, 2) Add documentation, 3) Consider edge cases, 4) Write tests for the functionality."
     end
@@ -223,4 +225,4 @@ defmodule ElixirScope.Intelligence.AI.LLM.Providers.Mock do
     Given the context of your codebase, also consider reviewing related modules and functions for consistency and shared patterns.
     """
   end
-end 
+end

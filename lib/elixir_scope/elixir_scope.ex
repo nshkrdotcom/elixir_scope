@@ -21,11 +21,11 @@ defmodule ElixirScope do
   Get the current status of all ElixirScope subsystems.
   """
   @spec status() :: %{
-    config: :ok | {:error, Error.t()},
-    events: :ok | {:error, Error.t()},
-    telemetry: :ok | {:error, Error.t()},
-    uptime_ms: non_neg_integer()
-  }
+          config: :ok | {:error, Error.t()},
+          events: :ok | {:error, Error.t()},
+          telemetry: :ok | {:error, Error.t()},
+          uptime_ms: non_neg_integer()
+        }
   def status do
     Foundation.status()
   end

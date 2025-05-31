@@ -4,12 +4,13 @@ defmodule ElixirScope.AST.TransformerTest do
 
   describe "function transformation" do
     test "transforms simple function with entry/exit instrumentation" do
-      input_ast = quote do
-        def calculate(x, y) do
-          result = x + y
-          result * 2
+      input_ast =
+        quote do
+          def calculate(x, y) do
+            result = x + y
+            result * 2
+          end
         end
-      end
 
       plan = %{
         functions: %{
@@ -36,15 +37,16 @@ defmodule ElixirScope.AST.TransformerTest do
     end
 
     test "handles exception scenarios correctly" do
-      input_ast = quote do
-        def risky_function(x) do
-          if x > 0 do
-            x / (x - 1)
-          else
-            raise "Invalid input"
+      input_ast =
+        quote do
+          def risky_function(x) do
+            if x > 0 do
+              x / (x - 1)
+            else
+              raise "Invalid input"
+            end
           end
         end
-      end
 
       plan = %{functions: %{{TestModule, :risky_function, 1} => %{type: :full_instrumentation}}}
       result = Transformer.transform_function(input_ast, plan)
@@ -55,13 +57,14 @@ defmodule ElixirScope.AST.TransformerTest do
     end
 
     test "preserves function metadata and documentation" do
-      input_ast = quote do
-        @doc "Calculates fibonacci number"
-        @spec fibonacci(integer()) :: integer()
-        def fibonacci(0), do: 0
-        def fibonacci(1), do: 1
-        def fibonacci(n), do: fibonacci(n-1) + fibonacci(n-2)
-      end
+      input_ast =
+        quote do
+          @doc "Calculates fibonacci number"
+          @spec fibonacci(integer()) :: integer()
+          def fibonacci(0), do: 0
+          def fibonacci(1), do: 1
+          def fibonacci(n), do: fibonacci(n - 1) + fibonacci(n - 2)
+        end
 
       plan = %{functions: %{{TestModule, :fibonacci, 1} => %{type: :performance_only}}}
       result = Transformer.transform_function(input_ast, plan)
@@ -75,12 +78,13 @@ defmodule ElixirScope.AST.TransformerTest do
 
   describe "GenServer callback transformation" do
     test "instruments handle_call with state capture" do
-      input_ast = quote do
-        def handle_call({:get, key}, _from, state) do
-          value = Map.get(state, key)
-          {:reply, value, state}
+      input_ast =
+        quote do
+          def handle_call({:get, key}, _from, state) do
+            value = Map.get(state, key)
+            {:reply, value, state}
+          end
         end
-      end
 
       plan = %{
         genserver_callbacks: %{
@@ -104,12 +108,13 @@ defmodule ElixirScope.AST.TransformerTest do
     end
 
     test "handles handle_cast correctly" do
-      input_ast = quote do
-        def handle_cast({:update, key, value}, state) do
-          new_state = Map.put(state, key, value)
-          {:noreply, new_state}
+      input_ast =
+        quote do
+          def handle_cast({:update, key, value}, state) do
+            new_state = Map.put(state, key, value)
+            {:noreply, new_state}
+          end
         end
-      end
 
       plan = %{genserver_callbacks: %{handle_cast: %{capture_state_diff: true}}}
       result = Transformer.transform_genserver_callback(input_ast, plan)
@@ -121,12 +126,13 @@ defmodule ElixirScope.AST.TransformerTest do
 
   describe "Phoenix-specific transformations" do
     test "instruments Phoenix controller actions" do
-      input_ast = quote do
-        def show(conn, %{"id" => id}) do
-          user = Repo.get!(User, id)
-          render(conn, "show.html", user: user)
+      input_ast =
+        quote do
+          def show(conn, %{"id" => id}) do
+            user = Repo.get!(User, id)
+            render(conn, "show.html", user: user)
+          end
         end
-      end
 
       plan = %{
         phoenix_controllers: %{
@@ -148,12 +154,13 @@ defmodule ElixirScope.AST.TransformerTest do
     end
 
     test "instruments LiveView callbacks" do
-      input_ast = quote do
-        def handle_event("increment", _params, socket) do
-          new_count = socket.assigns.count + 1
-          {:noreply, assign(socket, count: new_count)}
+      input_ast =
+        quote do
+          def handle_event("increment", _params, socket) do
+            new_count = socket.assigns.count + 1
+            {:noreply, assign(socket, count: new_count)}
+          end
         end
-      end
 
       plan = %{
         liveview_callbacks: %{
@@ -177,7 +184,8 @@ defmodule ElixirScope.AST.TransformerTest do
     Macro.prewalk(ast, false, fn
       {{:., _, [_, :report_function_entry]}, _, _}, _acc -> {true, true}
       node, acc -> {node, acc}
-    end) |> elem(1)
+    end)
+    |> elem(1)
   end
 
   defp original_logic_preserved?(transformed_ast) do
@@ -192,7 +200,8 @@ defmodule ElixirScope.AST.TransformerTest do
     Macro.prewalk(ast, false, fn
       {{:., _, [_, :report_function_exit]}, _, _}, _acc -> {true, true}
       node, acc -> {node, acc}
-    end) |> elem(1)
+    end)
+    |> elem(1)
   end
 
   # Additional helper functions for test compilation
@@ -220,14 +229,22 @@ defmodule ElixirScope.AST.TransformerTest do
     # Look for the original operations like +, *, assignments, etc.
     Macro.prewalk(ast, [], fn
       # Look for arithmetic operations that were in the original function
-      {:+, _, _} = node, acc -> {node, [node | acc]}
-      {:*, _, _} = node, acc -> {node, [node | acc]}
-      {:-, _, _} = node, acc -> {node, [node | acc]}
-      {:/, _, _} = node, acc -> {node, [node | acc]}
-      
+      {:+, _, _} = node, acc ->
+        {node, [node | acc]}
+
+      {:*, _, _} = node, acc ->
+        {node, [node | acc]}
+
+      {:-, _, _} = node, acc ->
+        {node, [node | acc]}
+
+      {:/, _, _} = node, acc ->
+        {node, [node | acc]}
+
       # Look for assignments to the original result variable  
-      {:=, _, [{:result, _, ElixirScope.AST.TransformerTest}, _]} = node, acc -> {node, [node | acc]}
-      
+      {:=, _, [{:result, _, ElixirScope.AST.TransformerTest}, _]} = node, acc ->
+        {node, [node | acc]}
+
       # Look for function calls that were in the original
       {{:., _, _}, _, _} = node, acc ->
         # Skip ElixirScope instrumentation calls
@@ -235,8 +252,10 @@ defmodule ElixirScope.AST.TransformerTest do
           {{:., _, [{:__aliases__, _, [:ElixirScope | _]}, _]}, _, _} -> {node, acc}
           _ -> {node, [node | acc]}
         end
-        
-      node, acc -> {node, acc}
-    end) |> elem(1)
+
+      node, acc ->
+        {node, acc}
+    end)
+    |> elem(1)
   end
 end

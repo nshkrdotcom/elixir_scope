@@ -72,7 +72,8 @@ defmodule ElixirScope.AST.PatternMatcher.Validators do
     end
   end
 
-  defp validate_pattern_spec(%Types{pattern_ast: pattern, pattern_type: pattern_type}) when not is_nil(pattern) do
+  defp validate_pattern_spec(%Types{pattern_ast: pattern, pattern_type: pattern_type})
+       when not is_nil(pattern) do
     cond do
       is_nil(pattern_type) -> {:error, :missing_pattern_type}
       pattern == nil -> {:error, :invalid_ast_pattern}

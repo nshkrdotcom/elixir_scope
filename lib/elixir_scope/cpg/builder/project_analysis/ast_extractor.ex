@@ -20,7 +20,9 @@ defmodule ElixirScope.AST.Enhanced.ProjectPopulator.ASTExtractor do
           atom when is_atom(atom) -> atom
           _ -> nil
         end
-      _ -> nil
+
+      _ ->
+        nil
     end
   end
 
@@ -31,7 +33,9 @@ defmodule ElixirScope.AST.Enhanced.ProjectPopulator.ASTExtractor do
     case ast do
       {:defmodule, _, [_module_name, [do: body]]} ->
         extract_functions_from_body(body, [])
-      _ -> []
+
+      _ ->
+        []
     end
   end
 
@@ -76,25 +80,36 @@ defmodule ElixirScope.AST.Enhanced.ProjectPopulator.ASTExtractor do
   defp extract_functions_from_body({:__block__, _, statements}, acc) do
     Enum.reduce(statements, acc, &extract_function_from_statement/2)
   end
+
   defp extract_functions_from_body(statement, acc) do
     extract_function_from_statement(statement, acc)
   end
 
-  defp extract_function_from_statement({:def, meta, [{:when, _, [{name, _, args}, _guard]}, body]}, acc) do
+  defp extract_function_from_statement(
+         {:def, meta, [{:when, _, [{name, _, args}, _guard]}, body]},
+         acc
+       ) do
     arity = if is_list(args), do: length(args), else: 0
     [{name, arity, {:def, meta, [{name, [], args || []}, body]}} | acc]
   end
-  defp extract_function_from_statement({:defp, meta, [{:when, _, [{name, _, args}, _guard]}, body]}, acc) do
+
+  defp extract_function_from_statement(
+         {:defp, meta, [{:when, _, [{name, _, args}, _guard]}, body]},
+         acc
+       ) do
     arity = if is_list(args), do: length(args), else: 0
     [{name, arity, {:defp, meta, [{name, [], args || []}, body]}} | acc]
   end
+
   defp extract_function_from_statement({:def, meta, [{name, _, args}, body]}, acc) do
     arity = if is_list(args), do: length(args), else: 0
     [{name, arity, {:def, meta, [{name, [], args || []}, body]}} | acc]
   end
+
   defp extract_function_from_statement({:defp, meta, [{name, _, args}, body]}, acc) do
     arity = if is_list(args), do: length(args), else: 0
     [{name, arity, {:defp, meta, [{name, [], args || []}, body]}} | acc]
   end
+
   defp extract_function_from_statement(_, acc), do: acc
 end

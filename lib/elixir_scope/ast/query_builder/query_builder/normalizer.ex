@@ -60,7 +60,7 @@ defmodule ElixirScope.AST.QueryBuilder.Normalizer do
     {field, op, value}
   end
 
-  defp normalize_condition({field, op}) when is_atom(field) and op in [:not_nil, :nil] do
+  defp normalize_condition({field, op}) when is_atom(field) and op in [:not_nil, nil] do
     {field, op}
   end
 

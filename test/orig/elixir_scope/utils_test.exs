@@ -1,6 +1,6 @@
 defmodule ElixirScope.UtilsTest do
   use ExUnit.Case, async: true
-  
+
   alias ElixirScope.Utils
 
   describe "timestamp generation" do
@@ -18,12 +18,13 @@ defmodule ElixirScope.UtilsTest do
 
       assert is_integer(timestamp)
       # Should be a reasonable timestamp (after 2020)
-      assert timestamp > 1_577_836_800_000_000_000  # 2020-01-01 in nanoseconds
+      # 2020-01-01 in nanoseconds
+      assert timestamp > 1_577_836_800_000_000_000
     end
 
     test "monotonic timestamps are monotonically increasing" do
       timestamps = for _i <- 1..100, do: Utils.monotonic_timestamp()
-      
+
       # All timestamps should be in non-decreasing order
       sorted_timestamps = Enum.sort(timestamps)
       assert timestamps == sorted_timestamps
@@ -31,7 +32,7 @@ defmodule ElixirScope.UtilsTest do
 
     test "timestamp resolution is nanoseconds" do
       timestamp = Utils.monotonic_timestamp()
-      
+
       # Should be an integer timestamp (monotonic can be negative)
       assert is_integer(timestamp)
       # Verify timestamp changes over time
@@ -42,7 +43,8 @@ defmodule ElixirScope.UtilsTest do
 
     test "formats timestamps correctly" do
       # Use a known timestamp for predictable testing
-      timestamp_ns = 1_609_459_200_000_000_000  # 2021-01-01 00:00:00 UTC
+      # 2021-01-01 00:00:00 UTC
+      timestamp_ns = 1_609_459_200_000_000_000
       formatted = Utils.format_timestamp(timestamp_ns)
 
       assert is_binary(formatted)
@@ -51,7 +53,8 @@ defmodule ElixirScope.UtilsTest do
     end
 
     test "formats timestamps with nanosecond precision" do
-      timestamp_ns = 1_609_459_200_123_456_789  # With nanoseconds
+      # With nanoseconds
+      timestamp_ns = 1_609_459_200_123_456_789
       formatted = Utils.format_timestamp(timestamp_ns)
 
       assert String.contains?(formatted, "456789")
@@ -60,12 +63,14 @@ defmodule ElixirScope.UtilsTest do
 
   describe "execution measurement" do
     test "measures execution time" do
-      sleep_time = 10  # milliseconds
-      
-      {result, duration} = Utils.measure(fn ->
-        :timer.sleep(sleep_time)
-        :test_result
-      end)
+      # milliseconds
+      sleep_time = 10
+
+      {result, duration} =
+        Utils.measure(fn ->
+          :timer.sleep(sleep_time)
+          :test_result
+        end)
 
       assert result == :test_result
       assert is_integer(duration)
@@ -76,15 +81,17 @@ defmodule ElixirScope.UtilsTest do
     end
 
     test "measures fast operations" do
-      {result, duration} = Utils.measure(fn ->
-        1 + 1
-      end)
+      {result, duration} =
+        Utils.measure(fn ->
+          1 + 1
+        end)
 
       assert result == 2
       assert is_integer(duration)
       assert duration >= 0
       # Should be very fast
-      assert duration < 1_000_000  # Less than 1ms
+      # Less than 1ms
+      assert duration < 1_000_000
     end
 
     test "measures operations that raise exceptions" do
@@ -109,14 +116,15 @@ defmodule ElixirScope.UtilsTest do
     test "generates many unique IDs" do
       count = 1000
       ids = for _i <- 1..count, do: Utils.generate_id()
-      
+
       unique_ids = Enum.uniq(ids)
       assert length(unique_ids) == count
     end
 
     test "IDs are roughly sortable by time" do
       id1 = Utils.generate_id()
-      :timer.sleep(1)  # Ensure time passes
+      # Ensure time passes
+      :timer.sleep(1)
       id2 = Utils.generate_id()
 
       # Later ID should generally be larger (due to timestamp component)
@@ -127,9 +135,9 @@ defmodule ElixirScope.UtilsTest do
       _before_timestamp = Utils.monotonic_timestamp()
       id = Utils.generate_id()
       _after_timestamp = Utils.monotonic_timestamp()
-      
+
       extracted_timestamp = Utils.id_to_timestamp(id)
-      
+
       assert is_integer(extracted_timestamp)
       # Test that timestamp extraction works by comparing relative values
       # (avoiding absolute comparisons due to bit shifting and negative timestamps)
@@ -143,7 +151,7 @@ defmodule ElixirScope.UtilsTest do
       assert is_binary(corr_id1)
       assert is_binary(corr_id2)
       assert corr_id1 != corr_id2
-      
+
       # Should be UUID format
       assert String.length(corr_id1) == 36
       assert String.contains?(corr_id1, "-")
@@ -151,16 +159,19 @@ defmodule ElixirScope.UtilsTest do
 
     test "correlation IDs are valid UUID format" do
       corr_id = Utils.generate_correlation_id()
-      
+
       # UUID v4 format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-      assert Regex.match?(~r/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/, corr_id)
+      assert Regex.match?(
+               ~r/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+               corr_id
+             )
     end
   end
 
   describe "data inspection and truncation" do
     test "safely inspects simple terms" do
       result = Utils.safe_inspect(%{key: "value"})
-      
+
       assert is_binary(result)
       assert String.contains?(result, "key")
       assert String.contains?(result, "value")
@@ -168,9 +179,9 @@ defmodule ElixirScope.UtilsTest do
 
     test "safely inspects with custom limits" do
       large_map = for i <- 1..1000, into: %{}, do: {i, i}
-      
+
       result = Utils.safe_inspect(large_map, limit: 5)
-      
+
       assert is_binary(result)
       assert String.contains?(result, "...")
     end
@@ -184,7 +195,7 @@ defmodule ElixirScope.UtilsTest do
 
       assert small_result == small_term
       assert match?({:truncated, _, _}, large_result)
-      
+
       {:truncated, size, hint} = large_result
       assert size > 1000
       assert hint == "binary data"
@@ -220,10 +231,11 @@ defmodule ElixirScope.UtilsTest do
 
   describe "performance helpers" do
     test "measures memory usage" do
-      {result, {_memory_before, _memory_after, diff}} = Utils.measure_memory(fn ->
-        # Allocate some memory
-        Enum.to_list(1..1000)
-      end)
+      {result, {_memory_before, _memory_after, diff}} =
+        Utils.measure_memory(fn ->
+          # Allocate some memory
+          Enum.to_list(1..1000)
+        end)
 
       assert is_list(result)
       assert length(result) == 1000
@@ -233,10 +245,11 @@ defmodule ElixirScope.UtilsTest do
     end
 
     test "measures memory for operations that don't allocate" do
-      {result, {_memory_before, _memory_after, diff}} = Utils.measure_memory(fn ->
-        # Simple operation that shouldn't allocate much
-        1 + 1
-      end)
+      {result, {_memory_before, _memory_after, diff}} =
+        Utils.measure_memory(fn ->
+          # Simple operation that shouldn't allocate much
+          1 + 1
+        end)
 
       assert result == 2
       assert is_integer(diff)
@@ -251,7 +264,7 @@ defmodule ElixirScope.UtilsTest do
       assert Map.has_key?(stats, :reductions)
       assert Map.has_key?(stats, :message_queue_len)
       assert Map.has_key?(stats, :timestamp)
-      
+
       assert is_integer(stats.memory)
       assert is_integer(stats.reductions)
       assert stats.memory > 0
@@ -259,24 +272,26 @@ defmodule ElixirScope.UtilsTest do
     end
 
     test "gets process statistics for other process" do
-      other_pid = spawn(fn -> 
-        receive do
-          :stop -> :ok
-        end
-      end)
+      other_pid =
+        spawn(fn ->
+          receive do
+            :stop -> :ok
+          end
+        end)
 
       stats = Utils.process_stats(other_pid)
 
       assert is_map(stats)
       assert Map.has_key?(stats, :memory)
-      
+
       send(other_pid, :stop)
     end
 
     test "handles non-existent process" do
       # Create a process and let it die
       dead_pid = spawn(fn -> nil end)
-      Process.sleep(10)  # Ensure it's dead
+      # Ensure it's dead
+      Process.sleep(10)
 
       stats = Utils.process_stats(dead_pid)
 
@@ -291,7 +306,7 @@ defmodule ElixirScope.UtilsTest do
       assert Map.has_key?(stats, :process_count)
       assert Map.has_key?(stats, :total_memory)
       assert Map.has_key?(stats, :scheduler_count)
-      
+
       assert is_integer(stats.process_count)
       assert is_integer(stats.total_memory)
       assert stats.process_count > 0
@@ -352,28 +367,29 @@ defmodule ElixirScope.UtilsTest do
 
     test "validates PIDs" do
       assert Utils.valid_pid?(self()) == true
-      
+
       # Create a process and let it die
       dead_pid = spawn(fn -> nil end)
       Process.sleep(10)
       assert Utils.valid_pid?(dead_pid) == false
-      
+
       assert Utils.valid_pid?("not_a_pid") == false
       assert Utils.valid_pid?(123) == false
     end
 
     test "validates live PIDs" do
-      live_pid = spawn(fn -> 
-        receive do
-          :stop -> :ok
-        end
-      end)
+      live_pid =
+        spawn(fn ->
+          receive do
+            :stop -> :ok
+          end
+        end)
 
       assert Utils.valid_pid?(live_pid) == true
-      
+
       send(live_pid, :stop)
       Process.sleep(10)
-      
+
       assert Utils.valid_pid?(live_pid) == false
     end
   end
@@ -391,7 +407,7 @@ defmodule ElixirScope.UtilsTest do
 
     test "safe inspect works correctly" do
       data = %{key: "value", nested: %{list: [1, 2, 3]}}
-      
+
       result = Utils.safe_inspect(data)
 
       # Verify it works
@@ -402,7 +418,7 @@ defmodule ElixirScope.UtilsTest do
 
     test "term size estimation works" do
       data = Enum.to_list(1..1000)
-      
+
       result = Utils.term_size(data)
 
       # Should return a reasonable size
@@ -412,10 +428,11 @@ defmodule ElixirScope.UtilsTest do
 
     test "handles high-frequency operations" do
       count = 1000
-      
-      results = for _i <- 1..count do
-        Utils.generate_id()
-      end
+
+      results =
+        for _i <- 1..count do
+          Utils.generate_id()
+        end
 
       # Should generate unique IDs
       unique_results = Enum.uniq(results)
@@ -428,7 +445,7 @@ defmodule ElixirScope.UtilsTest do
       assert Utils.safe_inspect([]) == "[]"
       assert Utils.safe_inspect(%{}) == "%{}"
       assert Utils.safe_inspect("") == "\"\""
-      
+
       assert Utils.term_size([]) >= 0
       assert Utils.term_size(%{}) >= 0
     end
@@ -456,7 +473,7 @@ defmodule ElixirScope.UtilsTest do
 
       result = Utils.safe_inspect(deep_data)
       assert is_binary(result)
-      
+
       size = Utils.term_size(deep_data)
       assert size > 0
     end
@@ -464,13 +481,13 @@ defmodule ElixirScope.UtilsTest do
     test "format functions handle edge cases" do
       assert Utils.format_bytes(0) == "0 B"
       assert Utils.format_duration(0) == "0 ns"
-      
+
       # Large values
       large_bytes = 999_999_999_999
       large_duration = 999_999_999_999
-      
+
       assert is_binary(Utils.format_bytes(large_bytes))
       assert is_binary(Utils.format_duration(large_duration))
     end
   end
-end 
+end

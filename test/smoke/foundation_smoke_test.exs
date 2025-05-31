@@ -106,14 +106,16 @@ defmodule ElixirScope.Smoke.FoundationTest do
       corr_id = Utils.generate_correlation_id()
 
       assert is_binary(corr_id)
-      assert String.length(corr_id) == 36  # UUID format
+      # UUID format
+      assert String.length(corr_id) == 36
     end
 
     test "can measure execution time" do
-      {result, duration} = Utils.measure(fn ->
-        :timer.sleep(1)
-        :test_result
-      end)
+      {result, duration} =
+        Utils.measure(fn ->
+          :timer.sleep(1)
+          :test_result
+        end)
 
       assert result == :test_result
       assert is_integer(duration)
@@ -139,9 +141,10 @@ defmodule ElixirScope.Smoke.FoundationTest do
 
   describe "telemetry smoke tests" do
     test "can measure telemetry events" do
-      result = Telemetry.measure_event([:test, :measurement], %{}, fn ->
-        :measured_result
-      end)
+      result =
+        Telemetry.measure_event([:test, :measurement], %{}, fn ->
+          :measured_result
+        end)
 
       assert result == :measured_result
     end
@@ -171,12 +174,13 @@ defmodule ElixirScope.Smoke.FoundationTest do
 
     test "error handling preserves context" do
       # Test error context preservation through function calls
-      result = ElixirScope.Foundation.ErrorContext.with_context(
-        ElixirScope.Foundation.ErrorContext.new(__MODULE__, :test_error_handling),
-        fn ->
-          {:error, Error.new(:test_error, "Test error message")}
-        end
-      )
+      result =
+        ElixirScope.Foundation.ErrorContext.with_context(
+          ElixirScope.Foundation.ErrorContext.new(__MODULE__, :test_error_handling),
+          fn ->
+            {:error, Error.new(:test_error, "Test error message")}
+          end
+        )
 
       assert {:error, %Error{code: :test_error}} = result
     end
@@ -188,9 +192,10 @@ defmodule ElixirScope.Smoke.FoundationTest do
       event = Events.function_entry(TestModule, :integration_test, 0, [])
 
       # Measure serialization with telemetry
-      result = Telemetry.measure_event([:test, :serialization], %{}, fn ->
-        Events.serialize(event)
-      end)
+      result =
+        Telemetry.measure_event([:test, :serialization], %{}, fn ->
+          Events.serialize(event)
+        end)
 
       assert is_binary(result)
 

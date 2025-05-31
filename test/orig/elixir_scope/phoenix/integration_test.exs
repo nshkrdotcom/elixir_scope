@@ -21,11 +21,11 @@ if Code.ensure_loaded?(Phoenix.ConnTest) do
       test "can disable Phoenix integration" do
         assert Integration.disable() == :ok
       end
-      
+
       test "integration module is loaded" do
         assert Code.ensure_loaded?(ElixirScope.Phoenix.Integration)
       end
-      
+
       test "can build test connections" do
         conn = build_conn()
         assert conn.method == "GET"
@@ -39,7 +39,7 @@ if Code.ensure_loaded?(Phoenix.ConnTest) do
         conn = build_conn(:get, "/users/123")
         assert conn.method == "GET"
         assert conn.request_path == "/users/123"
-        
+
         # Just verify we can create the connection - actual tracing would
         # require a running Phoenix app which is complex to set up in tests
         assert true
@@ -50,7 +50,7 @@ if Code.ensure_loaded?(Phoenix.ConnTest) do
         conn = build_conn(:post, "/users", %{"name" => "Test User"})
         assert conn.method == "POST"
         assert conn.request_path == "/users"
-        
+
         # Verify basic functionality
         assert true
       end
@@ -67,7 +67,7 @@ if Code.ensure_loaded?(Phoenix.ConnTest) do
       end
     end
 
-    describe "Channel tracing" do  
+    describe "Channel tracing" do
       test "Channel integration module is available" do
         # Just test that Channel functions can be called if available
         if Code.ensure_loaded?(Phoenix.Channel) do
@@ -83,7 +83,7 @@ else
   defmodule ElixirScope.Phoenix.IntegrationTest do
     use ExUnit.Case
     @moduletag :skip
-    
+
     test "Phoenix not available - test skipped" do
       assert true, "Phoenix integration tests skipped - Phoenix not loaded"
     end

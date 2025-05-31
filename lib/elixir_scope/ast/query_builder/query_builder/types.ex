@@ -20,38 +20,50 @@ defmodule ElixirScope.AST.QueryBuilder.Types do
   ]
 
   @type query_t :: %__MODULE__{
-    select: list(atom()) | :all,
-    from: :functions | :modules | :patterns,
-    where: list(filter_condition()),
-    order_by: {atom(), :asc | :desc} | list({atom(), :asc | :desc}),
-    limit: pos_integer() | nil,
-    offset: non_neg_integer() | nil,
-    group_by: list(atom()) | nil,
-    having: list(filter_condition()) | nil,
-    joins: list(join_spec()) | nil,
-    cache_key: String.t() | nil,
-    estimated_cost: non_neg_integer() | nil,
-    optimization_hints: list(String.t()) | nil
-  }
+          select: list(atom()) | :all,
+          from: :functions | :modules | :patterns,
+          where: list(filter_condition()),
+          order_by: {atom(), :asc | :desc} | list({atom(), :asc | :desc}),
+          limit: pos_integer() | nil,
+          offset: non_neg_integer() | nil,
+          group_by: list(atom()) | nil,
+          having: list(filter_condition()) | nil,
+          joins: list(join_spec()) | nil,
+          cache_key: String.t() | nil,
+          estimated_cost: non_neg_integer() | nil,
+          optimization_hints: list(String.t()) | nil
+        }
 
   @type filter_condition ::
-    {atom(), :eq | :ne | :gt | :lt | :gte | :lte | :in | :not_in | :contains | :not_contains | :matches | :similar_to, any()} |
-    {:and, list(filter_condition())} |
-    {:or, list(filter_condition())} |
-    {:not, filter_condition()}
+          {atom(),
+           :eq
+           | :ne
+           | :gt
+           | :lt
+           | :gte
+           | :lte
+           | :in
+           | :not_in
+           | :contains
+           | :not_contains
+           | :matches
+           | :similar_to, any()}
+          | {:and, list(filter_condition())}
+          | {:or, list(filter_condition())}
+          | {:not, filter_condition()}
 
   @type join_spec :: {atom(), atom(), atom(), atom()}
 
   @type query_result :: %{
-    data: list(map()),
-    metadata: %{
-      total_count: non_neg_integer(),
-      execution_time_ms: non_neg_integer(),
-      cache_hit: boolean(),
-      optimization_applied: list(String.t()),
-      performance_score: :excellent | :good | :fair | :poor
-    }
-  }
+          data: list(map()),
+          metadata: %{
+            total_count: non_neg_integer(),
+            execution_time_ms: non_neg_integer(),
+            cache_hit: boolean(),
+            optimization_applied: list(String.t()),
+            performance_score: :excellent | :good | :fair | :poor
+          }
+        }
 
   # Performance thresholds
   @simple_query_threshold 50

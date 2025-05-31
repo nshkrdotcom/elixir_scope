@@ -11,6 +11,7 @@ defmodule ElixirScope.Capture.Runtime.EnhancedInstrumentation.EventHandler do
 
   alias ElixirScope.Capture.Runtime.InstrumentationRuntime
   alias ElixirScope.AST.RuntimeCorrelator
+
   alias ElixirScope.Capture.Runtime.EnhancedInstrumentation.{
     BreakpointManager,
     WatchpointManager,
@@ -28,7 +29,11 @@ defmodule ElixirScope.Capture.Runtime.EnhancedInstrumentation.EventHandler do
 
       # Report to standard instrumentation with AST correlation
       InstrumentationRuntime.report_ast_function_entry_with_node_id(
-        module, function, args, correlation_id, ast_node_id
+        module,
+        function,
+        args,
+        correlation_id,
+        ast_node_id
       )
 
       # Correlate with AST repository if available
@@ -59,7 +64,10 @@ defmodule ElixirScope.Capture.Runtime.EnhancedInstrumentation.EventHandler do
     if state.ast_correlation_enabled do
       # Report to standard instrumentation with AST correlation
       InstrumentationRuntime.report_ast_function_exit_with_node_id(
-        correlation_id, return_value, duration_ns, ast_node_id
+        correlation_id,
+        return_value,
+        duration_ns,
+        ast_node_id
       )
 
       # Evaluate performance-based breakpoints
@@ -97,7 +105,12 @@ defmodule ElixirScope.Capture.Runtime.EnhancedInstrumentation.EventHandler do
       BreakpointManager.evaluate_data_flow_breakpoints(variables, ast_node_id)
 
       # Report to standard instrumentation with AST correlation
-      InstrumentationRuntime.report_ast_variable_snapshot(correlation_id, variables, line, ast_node_id)
+      InstrumentationRuntime.report_ast_variable_snapshot(
+        correlation_id,
+        variables,
+        line,
+        ast_node_id
+      )
 
       # Correlate with AST repository if available
       if state.ast_repo do
@@ -131,7 +144,12 @@ defmodule ElixirScope.Capture.Runtime.EnhancedInstrumentation.EventHandler do
       evaluate_exception_breakpoints(exception, ast_node_id)
 
       # Report to standard instrumentation with AST correlation
-      InstrumentationRuntime.report_ast_exception(correlation_id, exception, stacktrace, ast_node_id)
+      InstrumentationRuntime.report_ast_exception(
+        correlation_id,
+        exception,
+        stacktrace,
+        ast_node_id
+      )
 
       # Correlate with AST repository if available
       if state.ast_repo do
@@ -157,21 +175,23 @@ defmodule ElixirScope.Capture.Runtime.EnhancedInstrumentation.EventHandler do
     # Remove or truncate large variables to avoid memory issues in correlation
     variables
     |> Enum.map(fn {key, value} ->
-      sanitized_value = case value do
-        val when is_binary(val) and byte_size(val) > 1000 ->
-          String.slice(val, 0, 1000) <> "... [truncated]"
+      sanitized_value =
+        case value do
+          val when is_binary(val) and byte_size(val) > 1000 ->
+            String.slice(val, 0, 1000) <> "... [truncated]"
 
-        val when is_list(val) and length(val) > 50 ->
-          Enum.take(val, 50) ++ ["... [truncated]"]
+          val when is_list(val) and length(val) > 50 ->
+            Enum.take(val, 50) ++ ["... [truncated]"]
 
-        val when is_map(val) and map_size(val) > 20 ->
-          val
-          |> Enum.take(20)
-          |> Enum.into(%{})
-          |> Map.put("__truncated__", true)
+          val when is_map(val) and map_size(val) > 20 ->
+            val
+            |> Enum.take(20)
+            |> Enum.into(%{})
+            |> Map.put("__truncated__", true)
 
-        val -> val
-      end
+          val ->
+            val
+        end
 
       {key, sanitized_value}
     end)

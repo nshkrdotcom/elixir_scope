@@ -31,9 +31,10 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.ComplexityAnalyzer do
   Performs path-sensitive analysis with timeout protection.
   """
   def perform_path_sensitive_analysis(cfg, dfg, unified_nodes) do
-    task = Task.async(fn ->
-      perform_path_sensitive_analysis_impl(cfg, dfg, unified_nodes)
-    end)
+    task =
+      Task.async(fn ->
+        perform_path_sensitive_analysis_impl(cfg, dfg, unified_nodes)
+      end)
 
     case Task.yield(task, 3000) || Task.shutdown(task) do
       {:ok, result} -> result
@@ -65,15 +66,16 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.ComplexityAnalyzer do
 
     base_complexity = node_count * 0.1 + edge_count * 0.05
 
-    type_complexity = Enum.reduce(unified_nodes, 0, fn {_id, node}, acc ->
-      case node.type do
-        :conditional -> acc + 1.0
-        :loop -> acc + 2.0
-        :exception -> acc + 1.5
-        :function_call -> acc + 0.5
-        _ -> acc
-      end
-    end)
+    type_complexity =
+      Enum.reduce(unified_nodes, 0, fn {_id, node}, acc ->
+        case node.type do
+          :conditional -> acc + 1.0
+          :loop -> acc + 2.0
+          :exception -> acc + 1.5
+          :function_call -> acc + 0.5
+          _ -> acc
+        end
+      end)
 
     result = base_complexity + type_complexity
     Helpers.safe_round(result, 2)
@@ -84,14 +86,15 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.ComplexityAnalyzer do
     complexity = cfg_cyclomatic * 1.0
     lines_of_code = map_size(unified_nodes) * 1.0
 
-    maintainability = if complexity <= 0 or lines_of_code <= 0 do
-      100.0
-    else
-      log_complexity = :math.log(complexity)
-      log_lines = :math.log(lines_of_code)
+    maintainability =
+      if complexity <= 0 or lines_of_code <= 0 do
+        100.0
+      else
+        log_complexity = :math.log(complexity)
+        log_lines = :math.log(lines_of_code)
 
-      171 - 5.2 * log_complexity - 0.23 * complexity - 16.2 * log_lines
-    end
+        171 - 5.2 * log_complexity - 0.23 * complexity - 16.2 * log_lines
+      end
 
     Helpers.safe_round(maintainability, 1)
   end
@@ -99,19 +102,20 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.ComplexityAnalyzer do
   defp perform_path_sensitive_analysis_impl(cfg, dfg, unified_nodes) do
     execution_paths = find_execution_paths(cfg, unified_nodes)
 
-    path_analysis = Enum.map(execution_paths, fn path ->
-      constraints = extract_path_constraints(path, cfg)
-      variables = track_variables_along_path(path, dfg)
-      feasible = check_path_feasibility(path, unified_nodes)
+    path_analysis =
+      Enum.map(execution_paths, fn path ->
+        constraints = extract_path_constraints(path, cfg)
+        variables = track_variables_along_path(path, dfg)
+        feasible = check_path_feasibility(path, unified_nodes)
 
-      %{
-        path: path,
-        constraints: constraints,
-        variables: variables,
-        feasible: feasible,
-        complexity: calculate_path_complexity(path, unified_nodes)
-      }
-    end)
+        %{
+          path: path,
+          constraints: constraints,
+          variables: variables,
+          feasible: feasible,
+          complexity: calculate_path_complexity(path, unified_nodes)
+        }
+      end)
 
     %{
       execution_paths: path_analysis,
@@ -122,9 +126,10 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.ComplexityAnalyzer do
   end
 
   defp find_execution_paths(cfg, _unified_nodes) do
-    task = Task.async(fn ->
-      find_execution_paths_impl(cfg)
-    end)
+    task =
+      Task.async(fn ->
+        find_execution_paths_impl(cfg)
+      end)
 
     case Task.yield(task, 2000) || Task.shutdown(task) do
       {:ok, result} -> result
@@ -133,10 +138,11 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.ComplexityAnalyzer do
   end
 
   defp find_execution_paths_impl(cfg) do
-    cfg_nodes = case cfg.nodes do
-      nodes when is_map(nodes) -> nodes
-      _ -> %{}
-    end
+    cfg_nodes =
+      case cfg.nodes do
+        nodes when is_map(nodes) -> nodes
+        _ -> %{}
+      end
 
     entry_nodes = Enum.filter(cfg_nodes, fn {_id, node} -> node.type == :entry end)
     exit_nodes = Enum.filter(cfg_nodes, fn {_id, node} -> node.type == :exit end)
@@ -147,11 +153,12 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.ComplexityAnalyzer do
     node_count = map_size(cfg_nodes)
     max_paths = if node_count > 20, do: 5, else: 10
 
-    paths = Enum.flat_map(limited_entries, fn {entry_id, _} ->
-      Enum.flat_map(limited_exits, fn {exit_id, _} ->
-        Helpers.find_paths_between_nodes_limited(cfg.edges, entry_id, exit_id, [], 5, max_paths)
+    paths =
+      Enum.flat_map(limited_entries, fn {entry_id, _} ->
+        Enum.flat_map(limited_exits, fn {exit_id, _} ->
+          Helpers.find_paths_between_nodes_limited(cfg.edges, entry_id, exit_id, [], 5, max_paths)
+        end)
       end)
-    end)
 
     limited_paths = Enum.take(paths, max_paths)
 
@@ -163,25 +170,32 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.ComplexityAnalyzer do
   end
 
   defp extract_path_constraints(path, cfg) do
-    constraints = Enum.flat_map(path, fn node_id ->
-      case Map.get(cfg.nodes, node_id) do
-        %{type: :condition, ast_node: condition} -> [condition]
-        %{type: :conditional, ast_node: condition} -> [condition]
-        _ -> []
-      end
-    end)
+    constraints =
+      Enum.flat_map(path, fn node_id ->
+        case Map.get(cfg.nodes, node_id) do
+          %{type: :condition, ast_node: condition} -> [condition]
+          %{type: :conditional, ast_node: condition} -> [condition]
+          _ -> []
+        end
+      end)
 
     if length(constraints) == 0 and length(path) > 1 do
       case path do
-        ["entry", "if_condition", "true_branch" | _] -> ["x > 10"]
-        ["entry", "if_condition", "false_branch" | _] -> ["x <= 10"]
+        ["entry", "if_condition", "true_branch" | _] ->
+          ["x > 10"]
+
+        ["entry", "if_condition", "false_branch" | _] ->
+          ["x <= 10"]
+
         ["entry" | rest] when length(rest) > 0 ->
           if has_conditional_path(rest) do
             if has_true_branch(rest), do: ["x > 10"], else: ["x <= 10"]
           else
             ["path_condition"]
           end
-        _ -> ["default_constraint"]
+
+        _ ->
+          ["default_constraint"]
       end
     else
       if length(constraints) == 0, do: ["default_constraint"], else: constraints
@@ -195,9 +209,12 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.ComplexityAnalyzer do
       case node do
         %{type: :variable_definition, metadata: %{variable: var_name}} ->
           Map.put(var_state, var_name, :defined)
+
         %{type: :variable_reference, metadata: %{variable: var_name}} ->
           Map.put(var_state, var_name, :used)
-        _ -> var_state
+
+        _ ->
+          var_state
       end
     end)
   end
@@ -205,12 +222,13 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.ComplexityAnalyzer do
   defp check_path_feasibility(path, unified_nodes) do
     initial_state = {1.0, 1.0}
 
-    {total_paths, feasible_paths} = Enum.reduce(path, initial_state, fn node_id, {total_acc, feasible_acc} ->
-      case Map.get(unified_nodes, node_id) do
-        %{type: :conditional} -> {total_acc * 2, feasible_acc * 1.8}
-        _ -> {total_acc, feasible_acc}
-      end
-    end)
+    {total_paths, feasible_paths} =
+      Enum.reduce(path, initial_state, fn node_id, {total_acc, feasible_acc} ->
+        case Map.get(unified_nodes, node_id) do
+          %{type: :conditional} -> {total_acc * 2, feasible_acc * 1.8}
+          _ -> {total_acc, feasible_acc}
+        end
+      end)
 
     if total_paths > 0 do
       feasibility_ratio = feasible_paths / total_paths
@@ -223,23 +241,25 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.ComplexityAnalyzer do
   defp calculate_path_complexity(path, unified_nodes) do
     path_length = length(path) * 1.0
 
-    constraint_complexity = Enum.reduce(path, 0, fn node_id, acc ->
-      case Map.get(unified_nodes, node_id) do
-        %{type: :conditional} -> acc + 1.0
-        %{type: :loop} -> acc + 2.0
-        %{type: :exception} -> acc + 1.5
-        _ -> acc
-      end
-    end)
+    constraint_complexity =
+      Enum.reduce(path, 0, fn node_id, acc ->
+        case Map.get(unified_nodes, node_id) do
+          %{type: :conditional} -> acc + 1.0
+          %{type: :loop} -> acc + 2.0
+          %{type: :exception} -> acc + 1.5
+          _ -> acc
+        end
+      end)
 
     result = path_length * 0.1 + constraint_complexity
     Helpers.safe_round(result, 1)
   end
 
   defp find_critical_execution_paths(path_analysis) do
-    max_complexity = path_analysis
-    |> Enum.map(& &1.complexity)
-    |> Enum.max(fn -> 0 end)
+    max_complexity =
+      path_analysis
+      |> Enum.map(& &1.complexity)
+      |> Enum.max(fn -> 0 end)
 
     Enum.filter(path_analysis, fn path ->
       path.complexity >= max_complexity * 0.8

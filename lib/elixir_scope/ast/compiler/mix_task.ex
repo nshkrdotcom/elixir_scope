@@ -36,7 +36,10 @@ defmodule Mix.Tasks.Compile.ElixirScope do
     end
   rescue
     error ->
-      Mix.shell().error("ElixirScope compiler crashed: #{Exception.format(:error, error, __STACKTRACE__)}")
+      Mix.shell().error(
+        "ElixirScope compiler crashed: #{Exception.format(:error, error, __STACKTRACE__)}"
+      )
+
       {:error, [error]}
   end
 
@@ -50,16 +53,16 @@ defmodule Mix.Tasks.Compile.ElixirScope do
   defp transform_project(plan, config) do
     # Find all .ex files in the project
     elixir_files = find_elixir_files(config.source_paths)
-    
+
     if length(elixir_files) == 0 do
       Mix.shell().info("ElixirScope: No Elixir files found to instrument")
       :ok
     else
       # Create output directory structure
       ensure_output_directories(config)
-      
+
       # Transform each file
-      {success_count, failed_files} = 
+      {success_count, failed_files} =
         elixir_files
         |> Enum.map(&transform_file(&1, plan, config))
         |> Enum.reduce({0, []}, fn
@@ -72,9 +75,11 @@ defmodule Mix.Tasks.Compile.ElixirScope do
         :ok
       else
         Mix.shell().error("ElixirScope: Failed to instrument #{length(failed_files)} files:")
+
         Enum.each(failed_files, fn {file, reason} ->
           Mix.shell().error("  #{file}: #{inspect(reason)}")
         end)
+
         {:error, {:transformation_failed, failed_files}}
       end
     end
@@ -84,12 +89,11 @@ defmodule Mix.Tasks.Compile.ElixirScope do
     try do
       # Read and parse the file
       source = File.read!(file_path)
-      
+
       case Code.string_to_quoted(source, file: file_path, line: 1, column: 1) do
         {:ok, ast} ->
           # Check if this file should be instrumented
           if should_instrument_file?(file_path, ast, plan) do
-
             # Get module-specific instrumentation plan
             module_plan = extract_module_plan(ast, plan)
 
@@ -103,20 +107,22 @@ defmodule Mix.Tasks.Compile.ElixirScope do
             # Write transformed code with proper formatting
             transformed_code = format_transformed_code(transformed_ast, file_path)
             File.write!(output_path, transformed_code)
-            
+
             if config.debug do
               Mix.shell().info("ElixirScope: Transformed #{Path.relative_to_cwd(file_path)}")
             end
-            
+
             :ok
           else
             # File doesn't need instrumentation, skip it
             :ok
           end
-          
+
         {:error, {line, error_message, token}} ->
-          {:error, {file_path, "Parse error at line #{line}: #{inspect(error_message)} near #{inspect(token)}"}}
-          
+          {:error,
+           {file_path,
+            "Parse error at line #{line}: #{inspect(error_message)} near #{inspect(token)}"}}
+
         {:error, reason} ->
           {:error, {file_path, "Parse error: #{inspect(reason)}"}}
       end
@@ -148,15 +154,19 @@ defmodule Mix.Tasks.Compile.ElixirScope do
     else
       # Check if the module should be instrumented
       module_name = extract_module_name(ast)
+
       case module_name do
-        :unknown -> false
-        module -> 
+        :unknown ->
+          false
+
+        module ->
           # Check if module is explicitly excluded
           if module_excluded?(module, plan) do
             false
           else
             # If there's a modules plan and it's not empty, only instrument modules in the plan
             modules_plan = plan[:modules] || %{}
+
             if Enum.empty?(modules_plan) do
               # No specific modules plan, instrument all non-excluded files
               true
@@ -171,15 +181,19 @@ defmodule Mix.Tasks.Compile.ElixirScope do
 
   defp module_excluded?(module_name, plan) do
     excluded_modules = plan[:excluded_modules] || []
-    
+
     # Check exact module name or pattern matches
     Enum.any?(excluded_modules, fn pattern ->
       case pattern do
-        ^module_name -> true
-        pattern when is_binary(pattern) -> 
+        ^module_name ->
+          true
+
+        pattern when is_binary(pattern) ->
           module_string = to_string(module_name)
           String.contains?(module_string, pattern)
-        _ -> false
+
+        _ ->
+          false
       end
     end)
   end
@@ -195,11 +209,19 @@ defmodule Mix.Tasks.Compile.ElixirScope do
     # Use current working directory instead of stored project_root to handle test scenarios
     current_root = File.cwd!()
     relative_path = Path.relative_to(input_path, current_root)
-    Path.join([to_string(config.build_path), to_string(config.target_env), "elixir_scope", relative_path])
+
+    Path.join([
+      to_string(config.build_path),
+      to_string(config.target_env),
+      "elixir_scope",
+      relative_path
+    ])
   end
 
   defp ensure_output_directories(config) do
-    output_dir = Path.join([to_string(config.build_path), to_string(config.target_env), "elixir_scope"])
+    output_dir =
+      Path.join([to_string(config.build_path), to_string(config.target_env), "elixir_scope"])
+
     File.mkdir_p!(output_dir)
   end
 
@@ -211,7 +233,7 @@ defmodule Mix.Tasks.Compile.ElixirScope do
     try do
       # Try to format with proper line breaks and indentation
       code = Macro.to_string(ast)
-      
+
       # Add file header comment to track transformation
       header = """
       # This file was automatically instrumented by ElixirScope
@@ -219,7 +241,7 @@ defmodule Mix.Tasks.Compile.ElixirScope do
       # Generated: #{DateTime.utc_now() |> DateTime.to_iso8601()}
 
       """
-      
+
       header <> code
     rescue
       _error ->
@@ -232,8 +254,10 @@ defmodule Mix.Tasks.Compile.ElixirScope do
 
   defp ensure_elixir_scope_started do
     case Application.ensure_all_started(:elixir_scope) do
-      {:ok, _} -> :ok
-      {:error, reason} -> 
+      {:ok, _} ->
+        :ok
+
+      {:error, reason} ->
         Mix.shell().error("Failed to start ElixirScope: #{inspect(reason)}")
         {:error, reason}
     end
@@ -247,11 +271,14 @@ defmodule Mix.Tasks.Compile.ElixirScope do
       {:error, :no_plan} ->
         # Generate plan if none exists
         Mix.shell().info("ElixirScope: Generating instrumentation plan...")
+
         case Orchestrator.analyze_and_plan(config.project_root) do
-          {:ok, plan} -> 
+          {:ok, plan} ->
             Mix.shell().info("ElixirScope: Plan generated successfully")
             {:ok, plan}
-          {:error, reason} -> {:error, reason}
+
+          {:error, reason} ->
+            {:error, reason}
         end
 
       {:error, reason} ->
@@ -260,21 +287,22 @@ defmodule Mix.Tasks.Compile.ElixirScope do
   end
 
   defp parse_argv(argv) do
-    {opts, _args, _invalid} = OptionParser.parse(argv, 
-      switches: [
-        force: :boolean,
-        debug: :boolean,
-        minimal: :boolean,
-        full_trace: :boolean
-      ],
-      aliases: [
-        f: :force,
-        d: :debug
-      ]
-    )
+    {opts, _args, _invalid} =
+      OptionParser.parse(argv,
+        switches: [
+          force: :boolean,
+          debug: :boolean,
+          minimal: :boolean,
+          full_trace: :boolean
+        ],
+        aliases: [
+          f: :force,
+          d: :debug
+        ]
+      )
 
     project = Mix.Project.config()
-    
+
     %{
       source_paths: project[:elixirc_paths] || ["lib"],
       build_path: project[:build_path] || "_build",
@@ -290,7 +318,8 @@ defmodule Mix.Tasks.Compile.ElixirScope do
     cond do
       opts[:minimal] -> :minimal
       opts[:full_trace] -> :full_trace
-      true -> :balanced  # Default strategy
+      # Default strategy
+      true -> :balanced
     end
   end
 
@@ -298,8 +327,10 @@ defmodule Mix.Tasks.Compile.ElixirScope do
     case ast do
       {:defmodule, _, [{:__aliases__, _, module_parts}, _]} ->
         Module.concat(module_parts)
+
       {:defmodule, _, [module_name, _]} when is_atom(module_name) ->
         module_name
+
       _ ->
         :unknown
     end

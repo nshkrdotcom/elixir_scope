@@ -2,21 +2,35 @@ ExUnit.start()
 
 # Configure Mox for dependency injection testing
 Mox.defmock(ElixirScope.MockStateManager,
-  for: ElixirScope.ASTRepository.Enhanced.CFGGenerator.StateManagerBehaviour)
+  for: ElixirScope.ASTRepository.Enhanced.CFGGenerator.StateManagerBehaviour
+)
 
 Mox.defmock(ElixirScope.MockASTUtilities,
-  for: ElixirScope.ASTRepository.Enhanced.CFGGenerator.ASTUtilitiesBehaviour)
+  for: ElixirScope.ASTRepository.Enhanced.CFGGenerator.ASTUtilitiesBehaviour
+)
 
 Mox.defmock(ElixirScope.MockASTProcessor,
-  for: ElixirScope.ASTRepository.Enhanced.CFGGenerator.ASTProcessorBehaviour)
+  for: ElixirScope.ASTRepository.Enhanced.CFGGenerator.ASTProcessorBehaviour
+)
 
 # Set default dependency injection configuration for tests
-Application.put_env(:elixir_scope, :state_manager,
-  ElixirScope.ASTRepository.Enhanced.CFGGenerator.StateManager)
-Application.put_env(:elixir_scope, :ast_utilities,
-  ElixirScope.ASTRepository.Enhanced.CFGGenerator.ASTUtilities)
-Application.put_env(:elixir_scope, :ast_processor,
-  ElixirScope.ASTRepository.Enhanced.CFGGenerator.ASTProcessor)
+Application.put_env(
+  :elixir_scope,
+  :state_manager,
+  ElixirScope.ASTRepository.Enhanced.CFGGenerator.StateManager
+)
+
+Application.put_env(
+  :elixir_scope,
+  :ast_utilities,
+  ElixirScope.ASTRepository.Enhanced.CFGGenerator.ASTUtilities
+)
+
+Application.put_env(
+  :elixir_scope,
+  :ast_processor,
+  ElixirScope.ASTRepository.Enhanced.CFGGenerator.ASTProcessor
+)
 
 # Configure test environment
 Application.put_env(:elixir_scope, :test_mode, true)
@@ -120,9 +134,14 @@ defmodule ElixirScope.TestHelpers do
   """
   def ensure_config_available do
     # Use a global lock to prevent race conditions between async tests
-    :global.trans({:config_setup, self()}, fn ->
-      do_ensure_config_available()
-    end, [node()], 5000)
+    :global.trans(
+      {:config_setup, self()},
+      fn ->
+        do_ensure_config_available()
+      end,
+      [node()],
+      5000
+    )
   end
 
   defp do_ensure_config_available do
@@ -141,11 +160,14 @@ defmodule ElixirScope.TestHelpers do
   end
 
   defp start_config_with_retry(0), do: {:error, :max_retries_exceeded}
+
   defp start_config_with_retry(retries) do
     case ElixirScope.Config.start_link([]) do
       {:ok, pid} ->
         case wait_for_config_ready(pid, 100) do
-          :ok -> :ok
+          :ok ->
+            :ok
+
           :timeout ->
             GenServer.stop(pid, :kill, 1000)
             start_config_with_retry(retries - 1)
@@ -159,12 +181,14 @@ defmodule ElixirScope.TestHelpers do
         end
 
       {:error, _reason} ->
-        Process.sleep(50)  # Brief pause before retry
+        # Brief pause before retry
+        Process.sleep(50)
         start_config_with_retry(retries - 1)
     end
   end
 
   defp restart_config_with_retry(_pid, 0), do: {:error, :max_retries_exceeded}
+
   defp restart_config_with_retry(pid, retries) do
     # Safely stop the GenServer, handling the case where it might already be dead
     try do
@@ -172,12 +196,15 @@ defmodule ElixirScope.TestHelpers do
         GenServer.stop(pid, :normal, 2000)
       end
     rescue
-      _ -> :ok  # Process already dead or stopping
+      # Process already dead or stopping
+      _ -> :ok
     catch
-      :exit, _ -> :ok  # Process already dead or stopping
+      # Process already dead or stopping
+      :exit, _ -> :ok
     end
 
-    Process.sleep(50)  # Allow cleanup
+    # Allow cleanup
+    Process.sleep(50)
     start_config_with_retry(retries)
   end
 
@@ -208,7 +235,9 @@ defmodule ElixirScope.TestHelpers do
 
   defp wait_for_config_ready_loop(pid, max_attempts, attempts) do
     case test_config_responsiveness(pid) do
-      :ok -> :ok
+      :ok ->
+        :ok
+
       :unresponsive ->
         # Exponential backoff: start with 10ms, max 100ms
         sleep_time = min(10 * :math.pow(1.2, attempts), 100) |> round()

@@ -7,8 +7,12 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.ASTProcessor do
   @behaviour ElixirScope.AST.Enhanced.CFGGenerator.ASTProcessorBehaviour
 
   alias ElixirScope.AST.Enhanced.{CFGNode, CFGEdge, ScopeInfo}
+
   alias ElixirScope.AST.Enhanced.CFGGenerator.{
-    StateManager, ASTUtilities, ControlFlowProcessors, ExpressionProcessors
+    StateManager,
+    ASTUtilities,
+    ControlFlowProcessors,
+    ExpressionProcessors
   }
 
   @doc """
@@ -24,14 +28,16 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.ASTProcessor do
     line = ASTUtilities.get_line_number(meta)
 
     # Extract function parameters and check for guards
-    {function_params, guard_ast} = case head do
-      {:when, _, [func_head, guard]} ->
-        # Function has a guard
-        {ASTUtilities.extract_function_parameters(func_head), guard}
-      func_head ->
-        # No guard
-        {ASTUtilities.extract_function_parameters(func_head), nil}
-    end
+    {function_params, guard_ast} =
+      case head do
+        {:when, _, [func_head, guard]} ->
+          # Function has a guard
+          {ASTUtilities.extract_function_parameters(func_head), guard}
+
+        func_head ->
+          # No guard
+          {ASTUtilities.extract_function_parameters(func_head), nil}
+      end
 
     # Create function scope
     function_scope = %ScopeInfo{
@@ -74,13 +80,15 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.ASTProcessor do
       process_ast_node(body, guard_state)
 
     # Connect entry to guard (if present) or directly to body
-    entry_connections = build_entry_connections(state.entry_node, guard_ast, guard_nodes, body_nodes)
+    entry_connections =
+      build_entry_connections(state.entry_node, guard_ast, guard_nodes, body_nodes)
 
     # Connect guard to body (if guard exists)
     guard_to_body_edges = build_guard_to_body_connections(guard_ast, guard_exits, body_nodes)
 
     # Create exit node
     {exit_node_id, final_state} = StateManager.generate_node_id("exit", updated_state)
+
     exit_node = %CFGNode{
       id: exit_node_id,
       type: :exit,
@@ -97,19 +105,29 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.ASTProcessor do
     exit_edges = build_exit_connections(body_exits, exit_node_id)
 
     # Handle empty function body case
-    direct_entry_to_exit_edges = build_direct_entry_to_exit_connections(
-      body_exits, guard_exits, state.entry_node, exit_node_id
-    )
+    direct_entry_to_exit_edges =
+      build_direct_entry_to_exit_connections(
+        body_exits,
+        guard_exits,
+        state.entry_node,
+        exit_node_id
+      )
 
-    all_nodes = guard_nodes
-    |> Map.merge(body_nodes)
-    |> Map.put(state.entry_node, entry_node)
-    |> Map.put(exit_node_id, exit_node)
+    all_nodes =
+      guard_nodes
+      |> Map.merge(body_nodes)
+      |> Map.put(state.entry_node, entry_node)
+      |> Map.put(exit_node_id, exit_node)
 
-    all_edges = entry_connections ++ guard_edges ++ guard_to_body_edges ++
-                body_edges ++ exit_edges ++ direct_entry_to_exit_edges
-    all_scopes = Map.merge(guard_scopes, body_scopes)
-    |> Map.put(state.current_scope, function_scope)
+    all_edges =
+      entry_connections ++
+        guard_edges ++
+        guard_to_body_edges ++
+        body_edges ++ exit_edges ++ direct_entry_to_exit_edges
+
+    all_scopes =
+      Map.merge(guard_scopes, body_scopes)
+      |> Map.put(state.current_scope, function_scope)
 
     {all_nodes, all_edges, [exit_node_id], all_scopes, final_state}
   end
@@ -144,10 +162,13 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.ASTProcessor do
       # If statement with optional else
       {:if, meta, [condition, clauses]} when is_list(clauses) ->
         then_branch = Keyword.get(clauses, :do)
-        else_clause = case Keyword.get(clauses, :else) do
-          nil -> []
-          else_branch -> [else: else_branch]
-        end
+
+        else_clause =
+          case Keyword.get(clauses, :else) do
+            nil -> []
+            else_branch -> [else: else_branch]
+          end
+
         ControlFlowProcessors.process_if_statement(condition, then_branch, else_clause, meta, state)
 
       # Cond statement - multiple conditions
@@ -168,7 +189,14 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.ASTProcessor do
 
       # Function call with module
       {{:., meta1, [module, func_name]}, meta2, args} ->
-        ExpressionProcessors.process_module_function_call(module, func_name, args, meta1, meta2, state)
+        ExpressionProcessors.process_module_function_call(
+          module,
+          func_name,
+          args,
+          meta1,
+          meta2,
+          state
+        )
 
       # Function call
       {func_name, meta, args} when is_atom(func_name) ->
@@ -208,7 +236,8 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.ASTProcessor do
         ExpressionProcessors.process_send_statement(pid, message, meta, state)
 
       # Binary operations
-      {op, meta, [left, right]} when op in [:+, :-, :*, :/, :==, :!=, :<, :>, :<=, :>=, :and, :or, :&&, :||] ->
+      {op, meta, [left, right]}
+      when op in [:+, :-, :*, :/, :==, :!=, :<, :>, :<=, :>=, :and, :or, :&&, :||] ->
         ExpressionProcessors.process_binary_operation(op, left, right, meta, state)
 
       # Unary operations
@@ -264,6 +293,7 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.ASTProcessor do
     if guard_ast do
       # Connect entry to guard
       guard_entry_nodes = get_entry_nodes(guard_nodes)
+
       Enum.map(guard_entry_nodes, fn node_id ->
         %CFGEdge{
           from_node_id: entry_node_id,
@@ -277,6 +307,7 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.ASTProcessor do
     else
       # Connect entry directly to body
       body_entry_nodes = get_entry_nodes(body_nodes)
+
       if body_entry_nodes == [] do
         # Empty function body - no body nodes to connect to
         []
@@ -298,6 +329,7 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.ASTProcessor do
   defp build_guard_to_body_connections(guard_ast, guard_exits, body_nodes) do
     if guard_ast do
       body_entry_nodes = get_entry_nodes(body_nodes)
+
       Enum.flat_map(guard_exits, fn guard_exit ->
         Enum.map(body_entry_nodes, fn body_entry ->
           %CFGEdge{
@@ -331,20 +363,23 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.ASTProcessor do
   defp build_direct_entry_to_exit_connections(body_exits, guard_exits, entry_node_id, exit_node_id) do
     if body_exits == [] and guard_exits == [entry_node_id] do
       # Empty function body with no guard, or guard that doesn't produce nodes
-      [%CFGEdge{
-        from_node_id: entry_node_id,
-        to_node_id: exit_node_id,
-        type: :sequential,
-        condition: nil,
-        probability: 1.0,
-        metadata: %{connection: :entry_to_exit_direct}
-      }]
+      [
+        %CFGEdge{
+          from_node_id: entry_node_id,
+          to_node_id: exit_node_id,
+          type: :sequential,
+          condition: nil,
+          probability: 1.0,
+          metadata: %{connection: :entry_to_exit_direct}
+        }
+      ]
     else
       []
     end
   end
 
   defp get_entry_nodes(nodes) when map_size(nodes) == 0, do: []
+
   defp get_entry_nodes(nodes) do
     # Find nodes with no predecessors
     nodes
@@ -352,7 +387,8 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.ASTProcessor do
     |> Enum.filter(fn node -> length(node.predecessors) == 0 end)
     |> Enum.map(& &1.id)
     |> case do
-      [] -> [nodes |> Map.keys() |> List.first()]  # Fallback to first node
+      # Fallback to first node
+      [] -> [nodes |> Map.keys() |> List.first()]
       entry_nodes -> entry_nodes
     end
   end

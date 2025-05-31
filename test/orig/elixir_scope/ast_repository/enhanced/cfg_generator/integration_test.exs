@@ -8,12 +8,23 @@ defmodule ElixirScope.ASTRepository.Enhanced.CFGGenerator.IntegrationTest do
   describe "integration tests with real modules" do
     setup do
       # Ensure real modules are configured (this should already be done in test_helper.exs)
-      Application.put_env(:elixir_scope, :state_manager,
-        ElixirScope.ASTRepository.Enhanced.CFGGenerator.StateManager)
-      Application.put_env(:elixir_scope, :ast_utilities,
-        ElixirScope.ASTRepository.Enhanced.CFGGenerator.ASTUtilities)
-      Application.put_env(:elixir_scope, :ast_processor,
-        ElixirScope.ASTRepository.Enhanced.CFGGenerator.ASTProcessor)
+      Application.put_env(
+        :elixir_scope,
+        :state_manager,
+        ElixirScope.ASTRepository.Enhanced.CFGGenerator.StateManager
+      )
+
+      Application.put_env(
+        :elixir_scope,
+        :ast_utilities,
+        ElixirScope.ASTRepository.Enhanced.CFGGenerator.ASTUtilities
+      )
+
+      Application.put_env(
+        :elixir_scope,
+        :ast_processor,
+        ElixirScope.ASTRepository.Enhanced.CFGGenerator.ASTProcessor
+      )
 
       :ok
     end

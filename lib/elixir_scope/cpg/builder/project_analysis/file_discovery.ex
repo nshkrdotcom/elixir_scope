@@ -24,23 +24,24 @@ defmodule ElixirScope.AST.Enhanced.ProjectPopulator.FileDiscovery do
       {:error, :directory_not_found}
     else
       try do
-        files = include_patterns
-        |> Enum.flat_map(fn pattern ->
-          Path.wildcard(Path.join(project_path, pattern))
-        end)
-        |> Enum.uniq()
-        |> Enum.reject(fn file ->
-          Enum.any?(exclude_patterns, fn pattern ->
-            String.contains?(file, pattern)
+        files =
+          include_patterns
+          |> Enum.flat_map(fn pattern ->
+            Path.wildcard(Path.join(project_path, pattern))
           end)
-        end)
-        |> Enum.filter(fn file ->
-          case File.stat(file) do
-            {:ok, %{size: size}} when size <= max_file_size -> true
-            _ -> false
-          end
-        end)
-        |> Enum.sort()
+          |> Enum.uniq()
+          |> Enum.reject(fn file ->
+            Enum.any?(exclude_patterns, fn pattern ->
+              String.contains?(file, pattern)
+            end)
+          end)
+          |> Enum.filter(fn file ->
+            case File.stat(file) do
+              {:ok, %{size: size}} when size <= max_file_size -> true
+              _ -> false
+            end
+          end)
+          |> Enum.sort()
 
         Logger.debug("Discovered #{length(files)} Elixir files")
         {:ok, files}

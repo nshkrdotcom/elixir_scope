@@ -33,10 +33,11 @@ defmodule ElixirScope.Capture.Runtime.Ingestor.Distributed do
   """
   @spec ingest_partition_detected(RingBuffer.t(), list(atom()), map()) :: ingest_result()
   def ingest_partition_detected(buffer, partitioned_nodes, metadata) do
-    event = Events.new_event(:partition_detected, %{
-      partitioned_nodes: partitioned_nodes,
-      metadata: Utils.truncate_data(metadata)
-    })
+    event =
+      Events.new_event(:partition_detected, %{
+        partitioned_nodes: partitioned_nodes,
+        metadata: Utils.truncate_data(metadata)
+      })
 
     RingBuffer.write(buffer, event)
   end

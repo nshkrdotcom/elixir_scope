@@ -81,21 +81,24 @@ defmodule ElixirScope.AST.PerformanceOptimizer.StatisticsCollector do
 
     case operation_type do
       :module_storage ->
-        %{stats |
-          modules_optimized: stats.modules_optimized + 1,
-          total_time_saved_ms: stats.total_time_saved_ms + max(0, 10 - duration_ms)
+        %{
+          stats
+          | modules_optimized: stats.modules_optimized + 1,
+            total_time_saved_ms: stats.total_time_saved_ms + max(0, 10 - duration_ms)
         }
 
       :function_storage ->
-        %{stats |
-          functions_optimized: stats.functions_optimized + 1,
-          total_time_saved_ms: stats.total_time_saved_ms + max(0, 20 - duration_ms)
+        %{
+          stats
+          | functions_optimized: stats.functions_optimized + 1,
+            total_time_saved_ms: stats.total_time_saved_ms + max(0, 20 - duration_ms)
         }
 
       :query_optimization ->
-        %{stats |
-          query_optimizations: stats.query_optimizations + 1,
-          total_time_saved_ms: stats.total_time_saved_ms + max(0, 100 - duration_ms)
+        %{
+          stats
+          | query_optimizations: stats.query_optimizations + 1,
+            total_time_saved_ms: stats.total_time_saved_ms + max(0, 100 - duration_ms)
         }
 
       _ ->

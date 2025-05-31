@@ -106,12 +106,12 @@ defmodule ElixirScope.Foundation.Config do
   ]
 
   @type t :: %__MODULE__{
-    ai: map(),
-    capture: map(),
-    storage: map(),
-    interface: map(),
-    dev: map()
-  }
+          ai: map(),
+          capture: map(),
+          storage: map(),
+          interface: map(),
+          dev: map()
+        }
 
   ## Access Behavior Implementation
 
@@ -133,6 +133,7 @@ defmodule ElixirScope.Foundation.Config do
         case struct(__MODULE__, updated_map) do
           updated_config when is_struct(updated_config, __MODULE__) ->
             {current_value, updated_config}
+
           _ ->
             # Fallback if struct creation fails
             {current_value, config}
@@ -163,8 +164,8 @@ defmodule ElixirScope.Foundation.Config do
 
   # Valid values for enum-like configuration options
   @valid_ai_providers [:mock, :openai, :anthropic, :gemini]
-  #@valid_overflow_strategies [:drop_oldest, :drop_newest, :block]
-  #@valid_compression_types [:none, :gzip, :zstd]
+  # @valid_overflow_strategies [:drop_oldest, :drop_newest, :block]
+  # @valid_compression_types [:none, :gzip, :zstd]
 
   ## Public API
 
@@ -174,10 +175,15 @@ defmodule ElixirScope.Foundation.Config do
 
     ErrorContext.with_context(context, fn ->
       case GenServer.start_link(__MODULE__, opts, name: __MODULE__) do
-        {:ok, _pid} -> :ok
-        {:error, {:already_started, _pid}} -> :ok
+        {:ok, _pid} ->
+          :ok
+
+        {:error, {:already_started, _pid}} ->
+          :ok
+
         {:error, reason} ->
-          Error.error_result(:initialization_failed,
+          Error.error_result(
+            :initialization_failed,
             "Failed to start Config GenServer",
             context: %{reason: reason}
           )
@@ -195,9 +201,11 @@ defmodule ElixirScope.Foundation.Config do
     ErrorContext.with_context(context, fn ->
       case GenServer.whereis(__MODULE__) do
         nil ->
-          Error.error_result(:service_unavailable,
+          Error.error_result(
+            :service_unavailable,
             "Configuration service not started"
           )
+
         _pid ->
           GenServer.call(__MODULE__, :get_config)
       end
@@ -211,9 +219,11 @@ defmodule ElixirScope.Foundation.Config do
     ErrorContext.with_context(context, fn ->
       case GenServer.whereis(__MODULE__) do
         nil ->
-          Error.error_result(:service_unavailable,
+          Error.error_result(
+            :service_unavailable,
             "Configuration service not started"
           )
+
         _pid ->
           GenServer.call(__MODULE__, {:get_config_path, path})
       end
@@ -227,9 +237,11 @@ defmodule ElixirScope.Foundation.Config do
     ErrorContext.with_context(context, fn ->
       case GenServer.whereis(__MODULE__) do
         nil ->
-          Error.error_result(:service_unavailable,
+          Error.error_result(
+            :service_unavailable,
             "Configuration service not started"
           )
+
         _pid ->
           GenServer.call(__MODULE__, {:update_config, path, value})
       end
@@ -268,10 +280,12 @@ defmodule ElixirScope.Foundation.Config do
           :ok ->
             Logger.info("ElixirScope.Foundation.Config initialized successfully")
             {:ok, config}
+
           {:error, error} ->
             Logger.error("Config validation failed: #{Error.to_string(error)}")
             {:stop, {:validation_failed, error}}
         end
+
       {:error, error} ->
         Logger.error("Config build failed: #{Error.to_string(error)}")
         {:stop, {:build_failed, error}}
@@ -293,30 +307,33 @@ defmodule ElixirScope.Foundation.Config do
   def handle_call({:update_config, path, value}, _from, config) do
     context = ErrorContext.new(__MODULE__, :handle_update, metadata: %{path: path, value: value})
 
-    result = ErrorContext.with_context(context, fn ->
-      cond do
-        path not in @updatable_paths ->
-          Error.error_result(:config_update_forbidden,
-            "Configuration path cannot be updated at runtime",
-            context: %{path: path, updatable_paths: @updatable_paths}
-          )
+    result =
+      ErrorContext.with_context(context, fn ->
+        cond do
+          path not in @updatable_paths ->
+            Error.error_result(
+              :config_update_forbidden,
+              "Configuration path cannot be updated at runtime",
+              context: %{path: path, updatable_paths: @updatable_paths}
+            )
 
-        true ->
-          # Replace this line:
-          # new_config = put_in(config, path, value)
+          true ->
+            # Replace this line:
+            # new_config = put_in(config, path, value)
 
-          # With this:
-          new_config = put_in(config, path, value)
+            # With this:
+            new_config = put_in(config, path, value)
 
-          case validate(new_config) do
-            :ok ->
-              Logger.debug("Config updated: #{inspect(path)} = #{inspect(value)}")
-              {:ok, new_config}
-            {:error, _} = error ->
-              error
-          end
-      end
-    end)
+            case validate(new_config) do
+              :ok ->
+                Logger.debug("Config updated: #{inspect(path)} = #{inspect(value)}")
+                {:ok, new_config}
+
+              {:error, _} = error ->
+                error
+            end
+        end
+      end)
 
     case result do
       {:ok, new_config} -> {:reply, :ok, new_config}
@@ -348,7 +365,6 @@ defmodule ElixirScope.Foundation.Config do
   #   new_value = put_config_value(current_value, rest, value)
   #   Map.put(config, key, new_value)
   # end
-
 
   # # # Add this private function:
   # # defp get_config_value(config, []) do
@@ -388,7 +404,8 @@ defmodule ElixirScope.Foundation.Config do
     if provider in @valid_ai_providers do
       :ok
     else
-      Error.error_result(:invalid_config_value,
+      Error.error_result(
+        :invalid_config_value,
         "Invalid AI provider",
         context: %{
           provider: provider,
@@ -420,7 +437,8 @@ defmodule ElixirScope.Foundation.Config do
     if is_number(target) and target >= 0 do
       :ok
     else
-      Error.error_result(:constraint_violation,
+      Error.error_result(
+        :constraint_violation,
         "Performance target must be a non-negative number",
         context: %{target: target}
       )
@@ -432,7 +450,8 @@ defmodule ElixirScope.Foundation.Config do
     if is_number(rate) and rate >= 0 and rate <= 1 do
       :ok
     else
-      Error.error_result(:range_error,
+      Error.error_result(
+        :range_error,
         "Sampling rate must be between 0 and 1",
         context: %{rate: rate}
       )
@@ -441,19 +460,24 @@ defmodule ElixirScope.Foundation.Config do
 
   @spec validate_positive_integers(map(), [atom()]) :: :ok | {:error, Error.t()}
   defp validate_positive_integers(data, fields) do
-    errors = Enum.reduce(fields, [], fn field, acc ->
-      value = Map.get(data, field)
-      if is_integer(value) and value > 0 do
-        acc
-      else
-        [{field, value} | acc]
-      end
-    end)
+    errors =
+      Enum.reduce(fields, [], fn field, acc ->
+        value = Map.get(data, field)
+
+        if is_integer(value) and value > 0 do
+          acc
+        else
+          [{field, value} | acc]
+        end
+      end)
 
     case errors do
-      [] -> :ok
+      [] ->
+        :ok
+
       _ ->
-        Error.error_result(:constraint_violation,
+        Error.error_result(
+          :constraint_violation,
           "Fields must be positive integers",
           context: %{invalid_fields: errors}
         )
@@ -477,9 +501,12 @@ defmodule ElixirScope.Foundation.Config do
     missing = Enum.reject(required, &Map.has_key?(data, &1))
 
     case missing do
-      [] -> :ok
+      [] ->
+        :ok
+
       _ ->
-        Error.error_result(:missing_required_config,
+        Error.error_result(
+          :missing_required_config,
           "Required fields missing",
           context: %{missing_fields: missing}
         )
@@ -488,22 +515,29 @@ defmodule ElixirScope.Foundation.Config do
 
   @spec validate_field_types(map(), map()) :: :ok | {:error, Error.t()}
   defp validate_field_types(data, types) do
-    errors = Enum.reduce(types, [], fn {field, expected_type}, acc ->
-      case Map.get(data, field) do
-        nil -> acc  # Field not present, handled by required validation
-        value ->
-          if valid_type?(value, expected_type) do
+    errors =
+      Enum.reduce(types, [], fn {field, expected_type}, acc ->
+        case Map.get(data, field) do
+          # Field not present, handled by required validation
+          nil ->
             acc
-          else
-            [{field, expected_type, typeof(value)} | acc]
-          end
-      end
-    end)
+
+          value ->
+            if valid_type?(value, expected_type) do
+              acc
+            else
+              [{field, expected_type, typeof(value)} | acc]
+            end
+        end
+      end)
 
     case errors do
-      [] -> :ok
+      [] ->
+        :ok
+
       _ ->
-        Error.error_result(:type_mismatch,
+        Error.error_result(
+          :type_mismatch,
           "Field type validation failed",
           context: %{field_errors: errors}
         )
@@ -533,9 +567,10 @@ defmodule ElixirScope.Foundation.Config do
       base_config = %__MODULE__{}
       env_config = Application.get_all_env(:elixir_scope)
 
-      merged_config = base_config
-      |> merge_env_config(env_config)
-      |> merge_opts_config(opts)
+      merged_config =
+        base_config
+        |> merge_env_config(env_config)
+        |> merge_opts_config(opts)
 
       {:ok, merged_config}
     end)
@@ -565,6 +600,7 @@ defmodule ElixirScope.Foundation.Config do
   defp deep_merge(left, right) when is_map(left) and is_list(right) do
     # Convert keyword list to map, then merge recursively
     right_map = Enum.into(right, %{})
+
     Map.merge(left, right_map, fn _key, left_val, right_val ->
       deep_merge(left_val, right_val)
     end)
@@ -593,50 +629,49 @@ defmodule ElixirScope.Foundation.Config do
   defp typeof(_value), do: :unknown
 end
 
+# TODO: implement remaining validation functions with same pattern
 
-  # TODO: implement remaining validation functions with same pattern
+# defp validate_capture_config(capture) do
+#   with :ok <- validate_ring_buffer(capture.ring_buffer),
+#       :ok <- validate_processing(capture.processing),
+#       :ok <- validate_vm_tracing(capture.vm_tracing) do
+#     :ok
+#   end
+# end
 
-  # defp validate_capture_config(capture) do
-  #   with :ok <- validate_ring_buffer(capture.ring_buffer),
-  #       :ok <- validate_processing(capture.processing),
-  #       :ok <- validate_vm_tracing(capture.vm_tracing) do
-  #     :ok
-  #   end
-  # end
+# defp validate_storage_config(storage) do
+#   with :ok <- validate_hot_storage(storage.hot),
+#       :ok <- validate_warm_storage(storage.warm),
+#       :ok <- validate_cold_storage(storage.cold) do
+#     :ok
+#   end
+# end
 
-  # defp validate_storage_config(storage) do
-  #   with :ok <- validate_hot_storage(storage.hot),
-  #       :ok <- validate_warm_storage(storage.warm),
-  #       :ok <- validate_cold_storage(storage.cold) do
-  #     :ok
-  #   end
-  # end
+# defp validate_interface_config(interface) do
+#   schema = %{
+#     required: [:query_timeout, :max_results, :enable_streaming],
+#     types: %{
+#       query_timeout: :integer,
+#       max_results: :integer,
+#       enable_streaming: :boolean
+#     }
+#   }
+#   ErrorHandler.validate_map(interface, schema)
+# end
 
-  # defp validate_interface_config(interface) do
-  #   schema = %{
-  #     required: [:query_timeout, :max_results, :enable_streaming],
-  #     types: %{
-  #       query_timeout: :integer,
-  #       max_results: :integer,
-  #       enable_streaming: :boolean
-  #     }
-  #   }
-  #   ErrorHandler.validate_map(interface, schema)
-  # end
+# defp validate_dev_config(dev) do
+#   schema = %{
+#     required: [:debug_mode, :verbose_logging, :performance_monitoring],
+#     types: %{
+#       debug_mode: :boolean,
+#       verbose_logging: :boolean,
+#       performance_monitoring: :boolean
+#     }
+#   }
+#   ErrorHandler.validate_map(dev, schema)
+# end
 
-  # defp validate_dev_config(dev) do
-  #   schema = %{
-  #     required: [:debug_mode, :verbose_logging, :performance_monitoring],
-  #     types: %{
-  #       debug_mode: :boolean,
-  #       verbose_logging: :boolean,
-  #       performance_monitoring: :boolean
-  #     }
-  #   }
-  #   ErrorHandler.validate_map(dev, schema)
-  # end
-
-  ## Private Functions
+## Private Functions
 
 #   defp build_config(opts) do
 #     safe_call do

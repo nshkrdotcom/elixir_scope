@@ -71,6 +71,7 @@ defmodule ElixirScope.AST.QueryBuilder.Cache do
       cache: state.cache_stats,
       performance: state.performance_stats
     }
+
     {:reply, {:ok, stats}, state}
   end
 
@@ -139,7 +140,8 @@ defmodule ElixirScope.AST.QueryBuilder.Cache do
           :miss
         end
 
-      [] -> :miss
+      [] ->
+        :miss
     end
   end
 
@@ -151,12 +153,17 @@ defmodule ElixirScope.AST.QueryBuilder.Cache do
   defp cleanup_expired_cache() do
     current_time = System.monotonic_time(:millisecond)
 
-    :ets.foldl(fn {key, _result, timestamp}, acc ->
-      if current_time - timestamp >= @cache_ttl do
-        :ets.delete(@table_name, key)
-      end
-      acc
-    end, nil, @table_name)
+    :ets.foldl(
+      fn {key, _result, timestamp}, acc ->
+        if current_time - timestamp >= @cache_ttl do
+          :ets.delete(@table_name, key)
+        end
+
+        acc
+      end,
+      nil,
+      @table_name
+    )
   end
 
   defp update_cache_stats(stats, :hit) do

@@ -16,7 +16,9 @@ defmodule ElixirScope.Foundation.TestHelpers do
           :ok -> :ok
           {:error, _} = error -> error
         end
-      _pid -> :ok
+
+      _pid ->
+        :ok
     end
   end
 
@@ -41,7 +43,7 @@ defmodule ElixirScope.Foundation.TestHelpers do
   @doc """
   Creates a temporary configuration for testing.
   """
-  @spec with_test_config(map(), (() -> any())) :: any()
+  @spec with_test_config(map(), (-> any())) :: any()
   def with_test_config(config_overrides, test_fun) do
     original_config = Config.get()
 
@@ -61,7 +63,7 @@ defmodule ElixirScope.Foundation.TestHelpers do
   @doc """
   Waits for a condition to be true with timeout.
   """
-  @spec wait_for((() -> boolean()), non_neg_integer()) :: :ok | :timeout
+  @spec wait_for((-> boolean()), non_neg_integer()) :: :ok | :timeout
   def wait_for(condition, timeout_ms \\ 1000) do
     deadline = System.monotonic_time(:millisecond) + timeout_ms
     wait_for_condition(condition, deadline)
@@ -86,6 +88,7 @@ defmodule ElixirScope.Foundation.TestHelpers do
       raise "Expected error code #{expected_code}, got #{code}"
     end
   end
+
   def assert_error_result(other, expected_code) do
     raise "Expected {:error, Error.t()} with code #{expected_code}, got #{inspect(other)}"
   end
@@ -97,9 +100,11 @@ defmodule ElixirScope.Foundation.TestHelpers do
   def assert_ok_result({:ok, value}), do: value
   def assert_ok_result(:ok), do: :ok
   def assert_ok_result(value) when not is_tuple(value), do: value
+
   def assert_ok_result({:error, error}) do
     raise "Expected success, got error: #{inspect(error)}"
   end
+
   def assert_ok_result(other) do
     raise "Expected success result, got: #{inspect(other)}"
   end
@@ -116,9 +121,10 @@ defmodule ElixirScope.Foundation.TestHelpers do
       end
     end)
   end
+
   defp deep_merge_config(_original, override), do: override
 
-  @spec wait_for_condition((() -> boolean()), integer()) :: :ok | :timeout
+  @spec wait_for_condition((-> boolean()), integer()) :: :ok | :timeout
   defp wait_for_condition(condition, deadline) do
     if System.monotonic_time(:millisecond) >= deadline do
       :timeout

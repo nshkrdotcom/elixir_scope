@@ -6,6 +6,7 @@ IO.puts("=== ElixirScope Foundation Layer Development Workflow ===")
 alias ElixirScope.Foundation.{Config, Events, Utils, Telemetry}
 
 IO.puts("1. Testing Configuration System...")
+
 try do
   # Test configuration retrieval
   config = Config.get()
@@ -25,13 +26,13 @@ try do
 
   # Restore original rate
   Config.update([:ai, :planning, :sampling_rate], old_rate)
-
 rescue
   error ->
     IO.puts("   ❌ Configuration test failed: #{Exception.message(error)}")
 end
 
 IO.puts("\n2. Testing Event System...")
+
 try do
   # Test basic event creation
   event = Events.new_event(:test_event, %{message: "Hello, World!"})
@@ -55,13 +56,13 @@ try do
   else
     IO.puts("   ❌ Event serialization round-trip failed")
   end
-
 rescue
   error ->
     IO.puts("   ❌ Event system test failed: #{Exception.message(error)}")
 end
 
 IO.puts("\n3. Testing Utilities...")
+
 try do
   # Test ID generation
   id1 = Utils.generate_id()
@@ -77,19 +78,21 @@ try do
   IO.puts("   ✅ Correlation ID generated: #{corr_id}")
 
   # Test time measurement
-  {result, duration} = Utils.measure(fn ->
-    :timer.sleep(10)
-    :measured_operation
-  end)
+  {result, duration} =
+    Utils.measure(fn ->
+      :timer.sleep(10)
+      :measured_operation
+    end)
 
   IO.puts("   ✅ Time measurement working")
   IO.puts("   - Operation result: #{result}")
   IO.puts("   - Duration: #{Utils.format_duration(duration)}")
 
   # Test memory measurement
-  {_list, {mem_before, mem_after, diff}} = Utils.measure_memory(fn ->
-    Enum.to_list(1..1000)
-  end)
+  {_list, {mem_before, mem_after, diff}} =
+    Utils.measure_memory(fn ->
+      Enum.to_list(1..1000)
+    end)
 
   IO.puts("   ✅ Memory measurement working")
   IO.puts("   - Memory before: #{Utils.format_bytes(mem_before)}")
@@ -105,22 +108,24 @@ try do
       IO.puts("   ✅ Data truncation working")
       IO.puts("   - Original size: #{size} bytes")
       IO.puts("   - Type hint: #{hint}")
+
     _ ->
       IO.puts("   ❌ Data truncation not working as expected")
   end
-
 rescue
   error ->
     IO.puts("   ❌ Utilities test failed: #{Exception.message(error)}")
 end
 
 IO.puts("\n4. Testing Telemetry...")
+
 try do
   # Test telemetry measurement
-  result = Telemetry.measure_event([:test, :operation], %{component: :foundation}, fn ->
-    :timer.sleep(5)
-    :telemetry_test_result
-  end)
+  result =
+    Telemetry.measure_event([:test, :operation], %{component: :foundation}, fn ->
+      :timer.sleep(5)
+      :telemetry_test_result
+    end)
 
   IO.puts("   ✅ Telemetry measurement working")
   IO.puts("   - Result: #{result}")
@@ -131,13 +136,13 @@ try do
   IO.puts("   - Uptime: #{metrics.foundation.uptime_ms} ms")
   IO.puts("   - Memory: #{Utils.format_bytes(metrics.foundation.memory_usage)}")
   IO.puts("   - Processes: #{metrics.foundation.process_count}")
-
 rescue
   error ->
     IO.puts("   ❌ Telemetry test failed: #{Exception.message(error)}")
 end
 
 IO.puts("\n5. Testing System Stats...")
+
 try do
   process_stats = Utils.process_stats()
   system_stats = Utils.system_stats()
@@ -151,7 +156,6 @@ try do
   IO.puts("   - Total memory: #{Utils.format_bytes(system_stats.total_memory)}")
   IO.puts("   - Schedulers: #{system_stats.scheduler_count}")
   IO.puts("   - OTP Release: #{system_stats.otp_release}")
-
 rescue
   error ->
     IO.puts("   ❌ System stats test failed: #{Exception.message(error)}")

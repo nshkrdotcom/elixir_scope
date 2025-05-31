@@ -99,70 +99,112 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.QualityAnalyzer do
   # Private implementation
 
   defp detect_long_functions(cfg) do
-    node_count = case cfg do
-      %{nodes: nodes} when is_map(nodes) -> map_size(nodes)
-      %{nodes: nodes} when is_list(nodes) -> length(nodes)
-      _ -> 0
-    end
+    node_count =
+      case cfg do
+        %{nodes: nodes} when is_map(nodes) -> map_size(nodes)
+        %{nodes: nodes} when is_list(nodes) -> length(nodes)
+        _ -> 0
+      end
 
     if node_count > 20 do
-      [%{type: :long_function, severity: :medium, node_count: node_count, suggestion: "Consider breaking this function into smaller functions"}]
+      [
+        %{
+          type: :long_function,
+          severity: :medium,
+          node_count: node_count,
+          suggestion: "Consider breaking this function into smaller functions"
+        }
+      ]
     else
       []
     end
   end
 
   defp detect_complex_functions(cfg) do
-    complexity = case cfg do
-      %{complexity_metrics: %{cyclomatic: cyclomatic}} -> cyclomatic
-      %{cyclomatic_complexity: cyclomatic} -> cyclomatic
-      _ -> 1
-    end
+    complexity =
+      case cfg do
+        %{complexity_metrics: %{cyclomatic: cyclomatic}} -> cyclomatic
+        %{cyclomatic_complexity: cyclomatic} -> cyclomatic
+        _ -> 1
+      end
 
     if complexity > 10 do
-      [%{type: :complex_function, severity: :high, complexity: complexity, suggestion: "Reduce cyclomatic complexity by simplifying control flow"}]
+      [
+        %{
+          type: :complex_function,
+          severity: :high,
+          complexity: complexity,
+          suggestion: "Reduce cyclomatic complexity by simplifying control flow"
+        }
+      ]
     else
       []
     end
   end
 
   defp detect_too_many_variables(dfg) do
-    var_count = case dfg do
-      %{variables: vars} when is_list(vars) -> length(vars)
-      %{nodes: nodes} when is_list(nodes) ->
-        nodes
-        |> Enum.filter(fn node -> node.type == :variable_definition end)
-        |> length()
-      _ -> 0
-    end
+    var_count =
+      case dfg do
+        %{variables: vars} when is_list(vars) ->
+          length(vars)
+
+        %{nodes: nodes} when is_list(nodes) ->
+          nodes
+          |> Enum.filter(fn node -> node.type == :variable_definition end)
+          |> length()
+
+        _ ->
+          0
+      end
 
     if var_count > 15 do
-      [%{type: :too_many_variables, severity: :medium, variable_count: var_count, suggestion: "Consider grouping related variables into data structures"}]
+      [
+        %{
+          type: :too_many_variables,
+          severity: :medium,
+          variable_count: var_count,
+          suggestion: "Consider grouping related variables into data structures"
+        }
+      ]
     else
       []
     end
   end
 
   defp detect_unused_variables(dfg) do
-    unused_vars = case dfg do
-      %{unused_variables: unused} when is_list(unused) -> unused
-      _ -> []
-    end
+    unused_vars =
+      case dfg do
+        %{unused_variables: unused} when is_list(unused) -> unused
+        _ -> []
+      end
 
     Enum.map(unused_vars, fn var ->
-      %{type: :unused_variable, severity: :low, variable: var, suggestion: "Remove unused variable #{var}"}
+      %{
+        type: :unused_variable,
+        severity: :low,
+        variable: var,
+        suggestion: "Remove unused variable #{var}"
+      }
     end)
   end
 
   defp detect_deep_nesting(cfg) do
-    nesting_depth = case cfg do
-      %{complexity_metrics: %{nesting_depth: depth}} -> depth
-      %{max_nesting_depth: depth} -> depth
-      _ -> 0
-    end
+    nesting_depth =
+      case cfg do
+        %{complexity_metrics: %{nesting_depth: depth}} -> depth
+        %{max_nesting_depth: depth} -> depth
+        _ -> 0
+      end
 
     if nesting_depth > 4 do
-      [%{type: :deep_nesting, severity: :high, nesting_depth: nesting_depth, suggestion: "Reduce nesting by using early returns or extracting methods"}]
+      [
+        %{
+          type: :deep_nesting,
+          severity: :high,
+          nesting_depth: nesting_depth,
+          suggestion: "Reduce nesting by using early returns or extracting methods"
+        }
+      ]
     else
       []
     end
@@ -176,35 +218,53 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.QualityAnalyzer do
         Enum.flat_map(function_scopes, fn {_id, scope} ->
           case scope.metadata do
             %{function_head: {_name, _meta, args}} when is_list(args) and length(args) > 6 ->
-              [%{type: :too_many_parameters, severity: :medium, parameter_count: length(args), suggestion: "Consider grouping parameters into a data structure"}]
-            _ -> []
+              [
+                %{
+                  type: :too_many_parameters,
+                  severity: :medium,
+                  parameter_count: length(args),
+                  suggestion: "Consider grouping parameters into a data structure"
+                }
+              ]
+
+            _ ->
+              []
           end
         end)
-      _ -> []
+
+      _ ->
+        []
     end
   end
 
   defp detect_complex_expressions(cfg, unified_nodes) do
-    complex_expressions = Enum.filter(unified_nodes, fn {_id, node} ->
-      case node do
-        %{ast_type: :assignment, cfg_node: %{expression: expr}} ->
-          Helpers.is_complex_expression(expr)
-        %{cfg_node: %{expression: expr}} ->
-          Helpers.is_complex_expression(expr)
-        _ -> false
-      end
-    end)
+    complex_expressions =
+      Enum.filter(unified_nodes, fn {_id, node} ->
+        case node do
+          %{ast_type: :assignment, cfg_node: %{expression: expr}} ->
+            Helpers.is_complex_expression(expr)
 
-    cfg_complex_expressions = case cfg do
-      %{nodes: cfg_nodes} when is_map(cfg_nodes) ->
-        Enum.filter(cfg_nodes, fn {_id, node} ->
-          case node do
-            %{expression: expr} -> Helpers.is_complex_expression(expr)
-            _ -> false
-          end
-        end)
-      _ -> []
-    end
+          %{cfg_node: %{expression: expr}} ->
+            Helpers.is_complex_expression(expr)
+
+          _ ->
+            false
+        end
+      end)
+
+    cfg_complex_expressions =
+      case cfg do
+        %{nodes: cfg_nodes} when is_map(cfg_nodes) ->
+          Enum.filter(cfg_nodes, fn {_id, node} ->
+            case node do
+              %{expression: expr} -> Helpers.is_complex_expression(expr)
+              _ -> false
+            end
+          end)
+
+        _ ->
+          []
+      end
 
     total_complex = length(complex_expressions) + length(cfg_complex_expressions)
 
@@ -214,7 +274,14 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.QualityAnalyzer do
     has_deep_nesting = detect_nesting_complexity(cfg)
 
     if total_complex > 0 or has_long_expression or has_many_parameters or has_deep_nesting do
-      [%{type: :complex_expression, severity: :medium, expression_count: max(total_complex, 1), suggestion: "Break down complex expressions into simpler parts"}]
+      [
+        %{
+          type: :complex_expression,
+          severity: :medium,
+          expression_count: max(total_complex, 1),
+          suggestion: "Break down complex expressions into simpler parts"
+        }
+      ]
     else
       []
     end
@@ -229,7 +296,9 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.QualityAnalyzer do
             expr -> Helpers.count_operators(expr) >= 5
           end
         end)
-      _ -> false
+
+      _ ->
+        false
     end
   end
 
@@ -242,7 +311,9 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.QualityAnalyzer do
             _ -> false
           end
         end)
-      _ -> false
+
+      _ ->
+        false
     end
   end
 
@@ -255,23 +326,25 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.QualityAnalyzer do
   end
 
   defp calculate_maintainability_index(cfg, _dfg, unified_nodes) do
-    cfg_cyclomatic = case cfg do
-      %{complexity_metrics: %{cyclomatic: cyclomatic}} -> cyclomatic
-      %{cyclomatic_complexity: cyclomatic} -> cyclomatic
-      _ -> 1
-    end
+    cfg_cyclomatic =
+      case cfg do
+        %{complexity_metrics: %{cyclomatic: cyclomatic}} -> cyclomatic
+        %{cyclomatic_complexity: cyclomatic} -> cyclomatic
+        _ -> 1
+      end
 
     complexity = cfg_cyclomatic * 1.0
     lines_of_code = map_size(unified_nodes) * 1.0
 
-    maintainability = if complexity <= 0 or lines_of_code <= 0 do
-      100.0
-    else
-      log_complexity = :math.log(complexity)
-      log_lines = :math.log(lines_of_code)
+    maintainability =
+      if complexity <= 0 or lines_of_code <= 0 do
+        100.0
+      else
+        log_complexity = :math.log(complexity)
+        log_lines = :math.log(lines_of_code)
 
-      171 - 5.2 * log_complexity - 0.23 * complexity - 16.2 * log_lines
-    end
+        171 - 5.2 * log_complexity - 0.23 * complexity - 16.2 * log_lines
+      end
 
     Helpers.safe_round(maintainability, 1)
   end
@@ -281,19 +354,21 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.QualityAnalyzer do
   defp calculate_complexity_density(_cfg), do: 0.1
 
   defp calculate_technical_debt_ratio(cfg, dfg) do
-    cfg_cyclomatic = case cfg do
-      %{complexity_metrics: %{cyclomatic: cyclomatic}} -> cyclomatic
-      %{cyclomatic_complexity: cyclomatic} -> cyclomatic
-      _ -> 1
-    end
+    cfg_cyclomatic =
+      case cfg do
+        %{complexity_metrics: %{cyclomatic: cyclomatic}} -> cyclomatic
+        %{cyclomatic_complexity: cyclomatic} -> cyclomatic
+        _ -> 1
+      end
 
     complexity_debt = (cfg_cyclomatic - 10) * 0.1
 
-    dfg_complexity = case dfg do
-      %{complexity_score: score} -> score
-      %{analysis_results: %{complexity_score: score}} -> score
-      _ -> 0
-    end
+    dfg_complexity =
+      case dfg do
+        %{complexity_score: score} -> score
+        %{analysis_results: %{complexity_score: score}} -> score
+        _ -> 0
+      end
 
     data_flow_debt = (dfg_complexity - 5) * 0.05
     total_debt = max(0.0, complexity_debt + data_flow_debt)
@@ -302,11 +377,14 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.QualityAnalyzer do
   end
 
   defp calculate_coupling_factor(_cfg, dfg) do
-    function_calls = case dfg do
-      %{nodes: nodes} when is_list(nodes) ->
-        Enum.count(nodes, fn node -> node.type == :call end)
-      _ -> 0
-    end
+    function_calls =
+      case dfg do
+        %{nodes: nodes} when is_list(nodes) ->
+          Enum.count(nodes, fn node -> node.type == :call end)
+
+        _ ->
+          0
+      end
 
     base_coupling = function_calls * 0.1
     Helpers.safe_round(base_coupling, 2)
@@ -315,15 +393,16 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.QualityAnalyzer do
   defp find_extract_method_opportunities(cfg, code_smells) do
     long_function_smells = Enum.filter(code_smells, fn smell -> smell.type == :long_function end)
 
-    long_function_opportunities = Enum.map(long_function_smells, fn smell ->
-      %{
-        type: :extract_method,
-        severity: :medium,
-        suggestion: "Extract parts of this long function into separate methods",
-        target_function: "current_function",
-        estimated_methods: div(smell.node_count, 10)
-      }
-    end)
+    long_function_opportunities =
+      Enum.map(long_function_smells, fn smell ->
+        %{
+          type: :extract_method,
+          severity: :medium,
+          suggestion: "Extract parts of this long function into separate methods",
+          target_function: "current_function",
+          estimated_methods: div(smell.node_count, 10)
+        }
+      end)
 
     duplicate_opportunities = detect_duplicate_patterns(cfg)
 
@@ -339,77 +418,91 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.QualityAnalyzer do
   defp detect_duplicate_patterns(cfg) do
     case cfg do
       %{nodes: cfg_nodes} when is_map(cfg_nodes) ->
-        function_calls = Enum.flat_map(cfg_nodes, fn {_id, node} ->
-          Helpers.extract_all_function_calls(node.expression)
-        end)
+        function_calls =
+          Enum.flat_map(cfg_nodes, fn {_id, node} ->
+            Helpers.extract_all_function_calls(node.expression)
+          end)
 
         call_frequencies = Enum.frequencies(function_calls)
         duplicates = Enum.filter(call_frequencies, fn {_func, count} -> count > 1 end)
 
         if length(duplicates) > 0 do
-          [%{
-            type: :extract_method,
-            severity: :medium,
-            suggestion: "Extract common patterns into separate methods to reduce duplication",
-            target_function: "refactoring_opportunities",
-            duplicate_patterns: length(duplicates)
-          }]
+          [
+            %{
+              type: :extract_method,
+              severity: :medium,
+              suggestion: "Extract common patterns into separate methods to reduce duplication",
+              target_function: "refactoring_opportunities",
+              duplicate_patterns: length(duplicates)
+            }
+          ]
         else
           []
         end
-      _ -> []
+
+      _ ->
+        []
     end
   end
 
   defp create_fallback_extract_opportunities(cfg) do
-    has_multiple_statements = case cfg do
-      %{nodes: cfg_nodes} when is_map(cfg_nodes) and map_size(cfg_nodes) > 3 -> true
-      _ -> false
-    end
+    has_multiple_statements =
+      case cfg do
+        %{nodes: cfg_nodes} when is_map(cfg_nodes) and map_size(cfg_nodes) > 3 -> true
+        _ -> false
+      end
 
     if has_multiple_statements do
-      [%{
-        type: :extract_method,
-        severity: :medium,
-        suggestion: "Extract common patterns into separate methods to reduce duplication",
-        target_function: "refactoring_opportunities",
-        duplicate_patterns: 1
-      }]
+      [
+        %{
+          type: :extract_method,
+          severity: :medium,
+          suggestion: "Extract common patterns into separate methods to reduce duplication",
+          target_function: "refactoring_opportunities",
+          duplicate_patterns: 1
+        }
+      ]
     else
-      [%{
-        type: :extract_method,
-        severity: :medium,
-        suggestion: "Extract common patterns into separate methods to reduce duplication",
-        target_function: "refactoring_opportunities",
-        duplicate_patterns: 1
-      }]
+      [
+        %{
+          type: :extract_method,
+          severity: :medium,
+          suggestion: "Extract common patterns into separate methods to reduce duplication",
+          target_function: "refactoring_opportunities",
+          duplicate_patterns: 1
+        }
+      ]
     end
   end
 
   defp find_simplify_conditional_opportunities(cfg) do
-    nesting_depth = case cfg do
-      %{complexity_metrics: %{nesting_depth: depth}} -> depth
-      %{max_nesting_depth: depth} -> depth
-      _ -> 0
-    end
+    nesting_depth =
+      case cfg do
+        %{complexity_metrics: %{nesting_depth: depth}} -> depth
+        %{max_nesting_depth: depth} -> depth
+        _ -> 0
+      end
 
     if nesting_depth > 3 do
-      [%{
-        type: :simplify_conditional,
-        severity: :medium,
-        suggestion: "Simplify nested conditionals using early returns or guard clauses",
-        nesting_depth: nesting_depth
-      }]
+      [
+        %{
+          type: :simplify_conditional,
+          severity: :medium,
+          suggestion: "Simplify nested conditionals using early returns or guard clauses",
+          nesting_depth: nesting_depth
+        }
+      ]
     else
       []
     end
   end
 
   defp find_remove_unused_opportunities(dfg) do
-    unused_vars = case dfg do
-      %{unused_variables: unused} when is_list(unused) -> unused
-      _ -> []
-    end
+    unused_vars =
+      case dfg do
+        %{unused_variables: unused} when is_list(unused) -> unused
+        _ -> []
+      end
 
     Enum.map(unused_vars, fn var ->
       %{
@@ -424,44 +517,53 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.QualityAnalyzer do
   defp find_duplicate_code_opportunities(dfg) do
     case dfg do
       %{nodes: nodes} when is_list(nodes) ->
-        function_calls = Enum.filter(nodes, fn node ->
-          node.type == :call or (Map.has_key?(node, :metadata) and Map.get(node.metadata, :function))
-        end)
+        function_calls =
+          Enum.filter(nodes, fn node ->
+            node.type == :call or
+              (Map.has_key?(node, :metadata) and Map.get(node.metadata, :function))
+          end)
 
-        call_groups = Enum.group_by(function_calls, fn node ->
-          case node do
-            %{metadata: %{function: func}} -> func
-            %{operation: func} -> func
-            _ -> :unknown
-          end
-        end)
+        call_groups =
+          Enum.group_by(function_calls, fn node ->
+            case node do
+              %{metadata: %{function: func}} -> func
+              %{operation: func} -> func
+              _ -> :unknown
+            end
+          end)
 
-        duplicates = Enum.filter(call_groups, fn {func, calls} ->
-          func != :unknown and length(calls) > 1
-        end)
+        duplicates =
+          Enum.filter(call_groups, fn {func, calls} ->
+            func != :unknown and length(calls) > 1
+          end)
 
         Enum.map(duplicates, fn {func, calls} ->
           %{
             type: :duplicate_code,
             severity: :medium,
-            suggestion: "Function #{func} is called #{length(calls)} times - consider extracting common logic",
+            suggestion:
+              "Function #{func} is called #{length(calls)} times - consider extracting common logic",
             function: func,
             occurrences: length(calls)
           }
         end)
 
-      _ -> []
+      _ ->
+        []
     end
   end
 
   defp create_fallback_duplicate_opportunities do
-    [%{
-      type: :duplicate_code,
-      severity: :medium,
-      suggestion: "Function expensive_operation is called multiple times - consider extracting common logic",
-      function: :expensive_operation,
-      occurrences: 2
-    }]
+    [
+      %{
+        type: :duplicate_code,
+        severity: :medium,
+        suggestion:
+          "Function expensive_operation is called multiple times - consider extracting common logic",
+        function: :expensive_operation,
+        occurrences: 2
+      }
+    ]
   end
 
   defp detect_design_patterns(_cfg, _dfg), do: []

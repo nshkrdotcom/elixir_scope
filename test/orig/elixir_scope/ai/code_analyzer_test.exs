@@ -176,7 +176,8 @@ defmodule ElixirScope.AI.CodeAnalyzerTest do
 
       # Verify instrumentation recommendations
       assert is_map(project_analysis.recommended_plan)
-      assert project_analysis.estimated_overhead < 0.05  # <5%
+      # <5%
+      assert project_analysis.estimated_overhead < 0.05
 
       # Verify dependency analysis
       assert is_list(project_analysis.external_dependencies)
@@ -241,13 +242,17 @@ defmodule ElixirScope.AI.CodeAnalyzerTest do
 
   # Helper functions
   defp find_module(modules, target_module) do
-    Enum.find(modules, fn module_info -> 
+    Enum.find(modules, fn module_info ->
       # Handle different possible structures
       cond do
-        Map.has_key?(module_info, :name) -> module_info.name == target_module
+        Map.has_key?(module_info, :name) ->
+          module_info.name == target_module
+
         Map.has_key?(module_info, :module) && Map.has_key?(module_info.module, :file_path) ->
           String.contains?(module_info.module.file_path, Atom.to_string(target_module))
-        true -> false
+
+        true ->
+          false
       end
     end) || %{instrumentation_type: :full_tracing, reason: "high complexity"}
   end

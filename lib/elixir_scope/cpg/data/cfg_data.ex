@@ -11,28 +11,37 @@ defmodule ElixirScope.AST.Enhanced.CFGData do
   """
 
   defstruct [
-    :function_key,          # {module, function, arity}
-    :entry_node,           # Entry node ID
-    :exit_nodes,           # List of exit node IDs (multiple returns)
-    :nodes,                # %{node_id => CFGNode.t()}
-    :edges,                # [CFGEdge.t()]
-    :scopes,               # %{scope_id => ScopeInfo.t()}
-    :complexity_metrics,   # ComplexityMetrics.t()
-    :path_analysis,        # PathAnalysis.t()
-    :metadata              # Additional metadata
+    # {module, function, arity}
+    :function_key,
+    # Entry node ID
+    :entry_node,
+    # List of exit node IDs (multiple returns)
+    :exit_nodes,
+    # %{node_id => CFGNode.t()}
+    :nodes,
+    # [CFGEdge.t()]
+    :edges,
+    # %{scope_id => ScopeInfo.t()}
+    :scopes,
+    # ComplexityMetrics.t()
+    :complexity_metrics,
+    # PathAnalysis.t()
+    :path_analysis,
+    # Additional metadata
+    :metadata
   ]
 
   @type t :: %__MODULE__{
-    function_key: {module(), atom(), non_neg_integer()},
-    entry_node: String.t(),
-    exit_nodes: [String.t()],
-    nodes: %{String.t() => CFGNode.t()},
-    edges: [CFGEdge.t()],
-    scopes: %{String.t() => ScopeInfo.t()},
-    complexity_metrics: ComplexityMetrics.t(),
-    path_analysis: PathAnalysis.t(),
-    metadata: map()
-  }
+          function_key: {module(), atom(), non_neg_integer()},
+          entry_node: String.t(),
+          exit_nodes: [String.t()],
+          nodes: %{String.t() => CFGNode.t()},
+          edges: [CFGEdge.t()],
+          scopes: %{String.t() => ScopeInfo.t()},
+          complexity_metrics: ComplexityMetrics.t(),
+          path_analysis: PathAnalysis.t(),
+          metadata: map()
+        }
 end
 
 defmodule ElixirScope.AST.Enhanced.CFGNode do
@@ -41,50 +50,77 @@ defmodule ElixirScope.AST.Enhanced.CFGNode do
   """
 
   defstruct [
-    :id,                   # Unique node identifier
-    :type,                 # Node type (see @node_types)
-    :ast_node_id,          # Corresponding AST node ID
-    :line,                 # Source line number
-    :scope_id,             # Scope identifier
-    :expression,           # AST expression for this node
-    :predecessors,         # [node_id] - incoming edges
-    :successors,           # [node_id] - outgoing edges
-    :metadata              # Node-specific metadata
+    # Unique node identifier
+    :id,
+    # Node type (see @node_types)
+    :type,
+    # Corresponding AST node ID
+    :ast_node_id,
+    # Source line number
+    :line,
+    # Scope identifier
+    :scope_id,
+    # AST expression for this node
+    :expression,
+    # [node_id] - incoming edges
+    :predecessors,
+    # [node_id] - outgoing edges
+    :successors,
+    # Node-specific metadata
+    :metadata
   ]
 
   @type t :: %__MODULE__{
-    id: String.t(),
-    type: atom(),
-    ast_node_id: String.t() | nil,
-    line: non_neg_integer(),
-    scope_id: String.t(),
-    expression: term(),
-    predecessors: [String.t()],
-    successors: [String.t()],
-    metadata: map()
-  }
+          id: String.t(),
+          type: atom(),
+          ast_node_id: String.t() | nil,
+          line: non_neg_integer(),
+          scope_id: String.t(),
+          expression: term(),
+          predecessors: [String.t()],
+          successors: [String.t()],
+          metadata: map()
+        }
 
   # Elixir-specific node types
   @node_types [
     # Basic control flow
-    :entry, :exit, :statement, :expression,
+    :entry,
+    :exit,
+    :statement,
+    :expression,
 
     # Pattern matching
-    :pattern_match, :case_entry, :case_clause, :guard_check,
+    :pattern_match,
+    :case_entry,
+    :case_clause,
+    :guard_check,
 
     # Function calls and operations
-    :function_call, :pipe_operation, :anonymous_function,
+    :function_call,
+    :pipe_operation,
+    :anonymous_function,
 
     # Control structures
-    :if_condition, :if_then, :if_else,
-    :cond_entry, :cond_clause,
-    :try_entry, :catch_clause, :rescue_clause, :after_clause,
+    :if_condition,
+    :if_then,
+    :if_else,
+    :cond_entry,
+    :cond_clause,
+    :try_entry,
+    :catch_clause,
+    :rescue_clause,
+    :after_clause,
 
     # Comprehensions
-    :comprehension_entry, :comprehension_filter, :comprehension_generator,
+    :comprehension_entry,
+    :comprehension_filter,
+    :comprehension_generator,
 
     # Process operations
-    :send_message, :receive_message, :spawn_process
+    :send_message,
+    :receive_message,
+    :spawn_process
   ]
 
   def node_types, do: @node_types
@@ -96,34 +132,50 @@ defmodule ElixirScope.AST.Enhanced.CFGEdge do
   """
 
   defstruct [
-    :from_node_id,         # Source node
-    :to_node_id,           # Target node
-    :type,                 # Edge type (see @edge_types)
-    :condition,            # Optional condition (for conditional edges)
-    :probability,          # Execution probability (0.0-1.0)
-    :metadata              # Edge-specific metadata
+    # Source node
+    :from_node_id,
+    # Target node
+    :to_node_id,
+    # Edge type (see @edge_types)
+    :type,
+    # Optional condition (for conditional edges)
+    :condition,
+    # Execution probability (0.0-1.0)
+    :probability,
+    # Edge-specific metadata
+    :metadata
   ]
 
   @type t :: %__MODULE__{
-    from_node_id: String.t(),
-    to_node_id: String.t(),
-    type: atom(),
-    condition: term() | nil,
-    probability: float(),
-    metadata: map()
-  }
+          from_node_id: String.t(),
+          to_node_id: String.t(),
+          type: atom(),
+          condition: term() | nil,
+          probability: float(),
+          metadata: map()
+        }
 
   @edge_types [
-    :sequential,           # Normal sequential execution
-    :conditional,          # If/case branch
-    :pattern_match,        # Pattern match success
-    :pattern_no_match,     # Pattern match failure (fall through)
-    :guard_success,        # Guard clause success
-    :guard_failure,        # Guard clause failure
-    :exception,            # Exception flow
-    :catch,                # Exception caught
-    :loop_back,            # Loop iteration
-    :loop_exit             # Loop termination
+    # Normal sequential execution
+    :sequential,
+    # If/case branch
+    :conditional,
+    # Pattern match success
+    :pattern_match,
+    # Pattern match failure (fall through)
+    :pattern_no_match,
+    # Guard clause success
+    :guard_success,
+    # Guard clause failure
+    :guard_failure,
+    # Exception flow
+    :exception,
+    # Exception caught
+    :catch,
+    # Loop iteration
+    :loop_back,
+    # Loop termination
+    :loop_exit
   ]
 
   def edge_types, do: @edge_types
@@ -138,22 +190,28 @@ defmodule ElixirScope.AST.Enhanced.PathAnalysis do
   """
 
   defstruct [
-    :all_paths,                  # [Path.t()] - All execution paths
-    :critical_paths,             # [Path.t()] - Longest/most complex paths
-    :unreachable_nodes,          # [node_id] - Unreachable nodes
-    :loop_analysis,              # LoopAnalysis.t() - Loop detection results
-    :branch_coverage,            # BranchCoverage.t() - Branch coverage analysis
-    :path_conditions             # %{path_id => condition} - Path conditions
+    # [Path.t()] - All execution paths
+    :all_paths,
+    # [Path.t()] - Longest/most complex paths
+    :critical_paths,
+    # [node_id] - Unreachable nodes
+    :unreachable_nodes,
+    # LoopAnalysis.t() - Loop detection results
+    :loop_analysis,
+    # BranchCoverage.t() - Branch coverage analysis
+    :branch_coverage,
+    # %{path_id => condition} - Path conditions
+    :path_conditions
   ]
 
   @type t :: %__MODULE__{
-    all_paths: [Path.t()],
-    critical_paths: [Path.t()],
-    unreachable_nodes: [String.t()],
-    loop_analysis: LoopAnalysis.t(),
-    branch_coverage: BranchCoverage.t(),
-    path_conditions: %{String.t() => term()}
-  }
+          all_paths: [Path.t()],
+          critical_paths: [Path.t()],
+          unreachable_nodes: [String.t()],
+          loop_analysis: LoopAnalysis.t(),
+          branch_coverage: BranchCoverage.t(),
+          path_conditions: %{String.t() => term()}
+        }
 end
 
 defmodule ElixirScope.AST.Enhanced.Path do
@@ -162,24 +220,31 @@ defmodule ElixirScope.AST.Enhanced.Path do
   """
 
   defstruct [
-    :id,                         # Unique path identifier
-    :nodes,                      # [node_id] - Nodes in path
-    :edges,                      # [edge] - Edges in path
-    :conditions,                 # [condition] - Conditions for this path
-    :complexity,                 # Path complexity score
-    :probability,                # Execution probability
-    :metadata                    # Additional metadata
+    # Unique path identifier
+    :id,
+    # [node_id] - Nodes in path
+    :nodes,
+    # [edge] - Edges in path
+    :edges,
+    # [condition] - Conditions for this path
+    :conditions,
+    # Path complexity score
+    :complexity,
+    # Execution probability
+    :probability,
+    # Additional metadata
+    :metadata
   ]
 
   @type t :: %__MODULE__{
-    id: String.t(),
-    nodes: [String.t()],
-    edges: [CFGEdge.t()],
-    conditions: [term()],
-    complexity: non_neg_integer(),
-    probability: float(),
-    metadata: map()
-  }
+          id: String.t(),
+          nodes: [String.t()],
+          edges: [CFGEdge.t()],
+          conditions: [term()],
+          complexity: non_neg_integer(),
+          probability: float(),
+          metadata: map()
+        }
 end
 
 # ScopeInfo is defined in shared_data_structures.ex
@@ -191,18 +256,22 @@ defmodule ElixirScope.AST.Enhanced.LoopAnalysis do
   """
 
   defstruct [
-    :loops,                      # [Loop.t()] - Detected loops
-    :loop_nesting_depth,         # Maximum loop nesting depth
-    :infinite_loop_risk,         # Risk of infinite loops
-    :loop_complexity             # Complexity added by loops
+    # [Loop.t()] - Detected loops
+    :loops,
+    # Maximum loop nesting depth
+    :loop_nesting_depth,
+    # Risk of infinite loops
+    :infinite_loop_risk,
+    # Complexity added by loops
+    :loop_complexity
   ]
 
   @type t :: %__MODULE__{
-    loops: [Loop.t()],
-    loop_nesting_depth: non_neg_integer(),
-    infinite_loop_risk: atom(),
-    loop_complexity: non_neg_integer()
-  }
+          loops: [Loop.t()],
+          loop_nesting_depth: non_neg_integer(),
+          infinite_loop_risk: atom(),
+          loop_complexity: non_neg_integer()
+        }
 end
 
 defmodule ElixirScope.AST.Enhanced.Loop do
@@ -211,24 +280,31 @@ defmodule ElixirScope.AST.Enhanced.Loop do
   """
 
   defstruct [
-    :id,                         # Unique loop identifier
-    :header_node,                # Loop header node
-    :back_edges,                 # [edge] - Back edges
-    :body_nodes,                 # [node_id] - Nodes in loop body
-    :exit_conditions,            # [condition] - Loop exit conditions
-    :nesting_level,              # Nesting level
-    :metadata                    # Additional metadata
+    # Unique loop identifier
+    :id,
+    # Loop header node
+    :header_node,
+    # [edge] - Back edges
+    :back_edges,
+    # [node_id] - Nodes in loop body
+    :body_nodes,
+    # [condition] - Loop exit conditions
+    :exit_conditions,
+    # Nesting level
+    :nesting_level,
+    # Additional metadata
+    :metadata
   ]
 
   @type t :: %__MODULE__{
-    id: String.t(),
-    header_node: String.t(),
-    back_edges: [CFGEdge.t()],
-    body_nodes: [String.t()],
-    exit_conditions: [term()],
-    nesting_level: non_neg_integer(),
-    metadata: map()
-  }
+          id: String.t(),
+          header_node: String.t(),
+          back_edges: [CFGEdge.t()],
+          body_nodes: [String.t()],
+          exit_conditions: [term()],
+          nesting_level: non_neg_integer(),
+          metadata: map()
+        }
 end
 
 defmodule ElixirScope.AST.Enhanced.BranchCoverage do
@@ -237,18 +313,23 @@ defmodule ElixirScope.AST.Enhanced.BranchCoverage do
   """
 
   defstruct [
-    :total_branches,             # Total number of branches
-    :covered_branches,           # Number of covered branches
-    :uncovered_branches,         # [branch] - Uncovered branches
-    :coverage_percentage,        # Coverage percentage
-    :critical_uncovered          # [branch] - Critical uncovered branches
+    # Total number of branches
+    :total_branches,
+    # Number of covered branches
+    :covered_branches,
+    # [branch] - Uncovered branches
+    :uncovered_branches,
+    # Coverage percentage
+    :coverage_percentage,
+    # [branch] - Critical uncovered branches
+    :critical_uncovered
   ]
 
   @type t :: %__MODULE__{
-    total_branches: non_neg_integer(),
-    covered_branches: non_neg_integer(),
-    uncovered_branches: [term()],
-    coverage_percentage: float(),
-    critical_uncovered: [term()]
-  }
-end 
+          total_branches: non_neg_integer(),
+          covered_branches: non_neg_integer(),
+          uncovered_branches: [term()],
+          coverage_percentage: float(),
+          critical_uncovered: [term()]
+        }
+end

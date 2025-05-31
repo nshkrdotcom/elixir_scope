@@ -31,9 +31,12 @@ defmodule ElixirScope.Capture.Runtime.EventCorrelator do
 
   # Default configuration
   @default_config %{
-    cleanup_interval_ms: 60_000,    # Clean up every minute
-    correlation_ttl_ms: 300_000,    # 5 minute TTL for correlations
-    max_correlations: 100_000       # Maximum active correlations
+    # Clean up every minute
+    cleanup_interval_ms: 60_000,
+    # 5 minute TTL for correlations
+    correlation_ttl_ms: 300_000,
+    # Maximum active correlations
+    max_correlations: 100_000
   }
 
   defstruct [
@@ -51,14 +54,22 @@ defmodule ElixirScope.Capture.Runtime.EventCorrelator do
     Enhanced event structure with correlation metadata and causal links.
     """
     defstruct [
-      :event,                    # Original event
-      :correlation_id,           # Unique correlation ID
-      :parent_id,               # Parent correlation ID (for nested calls)
-      :root_id,                 # Root correlation ID (for call chains)
-      :links,                   # List of causal links: [{type, target_id}]
-      :correlation_type,        # Type of correlation
-      :correlated_at,          # When correlation was established
-      :correlation_confidence  # Confidence level (0.0 - 1.0)
+      # Original event
+      :event,
+      # Unique correlation ID
+      :correlation_id,
+      # Parent correlation ID (for nested calls)
+      :parent_id,
+      # Root correlation ID (for call chains)
+      :root_id,
+      # List of causal links: [{type, target_id}]
+      :links,
+      # Type of correlation
+      :correlation_type,
+      # When correlation was established
+      :correlated_at,
+      # Confidence level (0.0 - 1.0)
+      :correlation_confidence
     ]
   end
 
@@ -139,16 +150,20 @@ defmodule ElixirScope.Capture.Runtime.EventCorrelator do
   @impl true
   def init(opts) do
     # Merge with defaults
-    config = case opts do
-      [] -> @default_config
-      %{} = config_map -> Map.merge(@default_config, config_map)
-      _other -> @default_config
-    end
+    config =
+      case opts do
+        [] -> @default_config
+        %{} = config_map -> Map.merge(@default_config, config_map)
+        _other -> @default_config
+      end
 
     # Create ETS tables for correlation state
     call_stacks_table = :ets.new(:call_stacks, [:set, :public])
     message_registry_table = :ets.new(:message_registry, [:set, :public])
-    correlation_metadata_table = :ets.new(:correlation_metadata, [:set, :public, {:write_concurrency, true}])
+
+    correlation_metadata_table =
+      :ets.new(:correlation_metadata, [:set, :public, {:write_concurrency, true}])
+
     correlation_links_table = :ets.new(:correlation_links, [:bag, :public])
 
     # Initialize stats
@@ -180,12 +195,15 @@ defmodule ElixirScope.Capture.Runtime.EventCorrelator do
   @impl true
   def handle_call({:correlate_event, event}, _from, state) do
     start_time = System.monotonic_time()
-    
+
     correlated_event = correlate_single_event(event, state)
-    
+
     # Update stats
     correlation_time = System.monotonic_time() - start_time
-    updated_stats = update_correlation_stats(state.stats, correlated_event.correlation_type, correlation_time)
+
+    updated_stats =
+      update_correlation_stats(state.stats, correlated_event.correlation_type, correlation_time)
+
     updated_state = %{state | stats: updated_stats}
 
     {:reply, correlated_event, updated_state}
@@ -194,17 +212,18 @@ defmodule ElixirScope.Capture.Runtime.EventCorrelator do
   @impl true
   def handle_call({:correlate_batch, events}, _from, state) do
     start_time = System.monotonic_time()
-    
+
     correlated_events = Enum.map(events, &correlate_single_event(&1, state))
-    
+
     # Update batch stats
     correlation_time = System.monotonic_time() - start_time
     avg_time_per_event = correlation_time / length(events)
-    
-    updated_stats = Enum.reduce(correlated_events, state.stats, fn correlated, acc_stats ->
-      update_correlation_stats(acc_stats, correlated.correlation_type, avg_time_per_event)
-    end)
-    
+
+    updated_stats =
+      Enum.reduce(correlated_events, state.stats, fn correlated, acc_stats ->
+        update_correlation_stats(acc_stats, correlated.correlation_type, avg_time_per_event)
+      end)
+
     updated_state = %{state | stats: updated_stats}
 
     {:reply, correlated_events, updated_state}
@@ -212,10 +231,11 @@ defmodule ElixirScope.Capture.Runtime.EventCorrelator do
 
   @impl true
   def handle_call({:get_correlation_metadata, correlation_id}, _from, state) do
-    metadata = case :ets.lookup(state.correlation_metadata_table, correlation_id) do
-      [{^correlation_id, metadata}] -> metadata
-      [] -> nil
-    end
+    metadata =
+      case :ets.lookup(state.correlation_metadata_table, correlation_id) do
+        [{^correlation_id, metadata}] -> metadata
+        [] -> nil
+      end
 
     {:reply, metadata, state}
   end
@@ -235,11 +255,13 @@ defmodule ElixirScope.Capture.Runtime.EventCorrelator do
   @impl true
   def handle_call(:get_metrics, _from, state) do
     active_correlations = :ets.info(state.correlation_metadata_table, :size)
-    avg_correlation_time = if state.stats.total_correlations_created > 0 do
-      state.stats.total_correlation_time_ns / state.stats.total_correlations_created
-    else
-      0.0
-    end
+
+    avg_correlation_time =
+      if state.stats.total_correlations_created > 0 do
+        state.stats.total_correlation_time_ns / state.stats.total_correlations_created
+      else
+        0.0
+      end
 
     metrics = %{
       total_correlations_created: state.stats.total_correlations_created,
@@ -258,11 +280,12 @@ defmodule ElixirScope.Capture.Runtime.EventCorrelator do
     memory_usage = calculate_memory_usage(state)
     uptime_ms = (Utils.monotonic_timestamp() - state.start_time) / 1_000_000
 
-    correlation_rate = if uptime_ms > 0 do
-      state.stats.total_correlations_created / (uptime_ms / 1000)
-    else
-      0.0
-    end
+    correlation_rate =
+      if uptime_ms > 0 do
+        state.stats.total_correlations_created / (uptime_ms / 1000)
+      else
+        0.0
+      end
 
     health = %{
       status: :healthy,
@@ -313,10 +336,10 @@ defmodule ElixirScope.Capture.Runtime.EventCorrelator do
         correlate_message_receive(event, state)
 
       :unknown ->
-                 # Create a low-confidence correlation for unknown events
-         %CorrelatedEvent{
-           event: event,
-           correlation_id: Utils.generate_id(),
+        # Create a low-confidence correlation for unknown events
+        %CorrelatedEvent{
+          event: event,
+          correlation_id: Utils.generate_id(),
           parent_id: nil,
           root_id: nil,
           links: [],
@@ -327,22 +350,29 @@ defmodule ElixirScope.Capture.Runtime.EventCorrelator do
     end
   end
 
-  defp determine_event_type(%Events.FunctionExecution{event_type: :call}), do: {:function_execution, :call}
-  defp determine_event_type(%Events.FunctionExecution{event_type: :return}), do: {:function_execution, :return}
+  defp determine_event_type(%Events.FunctionExecution{event_type: :call}),
+    do: {:function_execution, :call}
+
+  defp determine_event_type(%Events.FunctionExecution{event_type: :return}),
+    do: {:function_execution, :return}
+
   defp determine_event_type(%Events.MessageEvent{event_type: :send}), do: {:message, :send}
   defp determine_event_type(%Events.MessageEvent{event_type: :receive}), do: {:message, :receive}
   defp determine_event_type(_), do: :unknown
 
   defp correlate_function_call(event, state) do
-    correlation_id = Utils.generate_id()  # Use generate_id instead of generate_correlation_id
+    # Use generate_id instead of generate_correlation_id
+    correlation_id = Utils.generate_id()
     pid = extract_pid(event)
-    
+
     # Get current call stack for this process
     current_stack = get_call_stack(state.call_stacks_table, pid)
-    parent_id = case current_stack do
-      [parent | _] -> parent
-      [] -> nil
-    end
+
+    parent_id =
+      case current_stack do
+        [parent | _] -> parent
+        [] -> nil
+      end
 
     # Push this call onto the stack
     push_call_stack(state.call_stacks_table, pid, correlation_id)
@@ -356,15 +386,17 @@ defmodule ElixirScope.Capture.Runtime.EventCorrelator do
       module: event.module,
       function: event.function
     }
+
     :ets.insert(state.correlation_metadata_table, {correlation_id, metadata})
 
     # Create correlation links
-    links = if parent_id do
-      :ets.insert(state.correlation_links_table, {correlation_id, {:called_from, parent_id}})
-      [{:called_from, parent_id}]
-    else
-      []
-    end
+    links =
+      if parent_id do
+        :ets.insert(state.correlation_links_table, {correlation_id, {:called_from, parent_id}})
+        [{:called_from, parent_id}]
+      else
+        []
+      end
 
     %CorrelatedEvent{
       event: event,
@@ -380,26 +412,28 @@ defmodule ElixirScope.Capture.Runtime.EventCorrelator do
 
   defp correlate_function_return(event, state) do
     pid = extract_pid(event)
-    
+
     # Pop the call stack to get the matching call correlation ID
-    correlation_id = case event.correlation_id do
-      nil ->
-        # If no correlation ID provided, pop from stack
-        pop_call_stack(state.call_stacks_table, pid)
-      
-      existing_id ->
-        # Use provided correlation ID and remove from stack
-        remove_from_call_stack(state.call_stacks_table, pid, existing_id)
-        existing_id
-    end
+    correlation_id =
+      case event.correlation_id do
+        nil ->
+          # If no correlation ID provided, pop from stack
+          pop_call_stack(state.call_stacks_table, pid)
+
+        existing_id ->
+          # Use provided correlation ID and remove from stack
+          remove_from_call_stack(state.call_stacks_table, pid, existing_id)
+          existing_id
+      end
 
     # Create completion link
-    links = if correlation_id do
-      :ets.insert(state.correlation_links_table, {correlation_id, {:completes, correlation_id}})
-      [{:completes, correlation_id}]
-    else
-      []
-    end
+    links =
+      if correlation_id do
+        :ets.insert(state.correlation_links_table, {correlation_id, {:completes, correlation_id}})
+        [{:completes, correlation_id}]
+      else
+        []
+      end
 
     %CorrelatedEvent{
       event: event,
@@ -415,9 +449,10 @@ defmodule ElixirScope.Capture.Runtime.EventCorrelator do
 
   defp correlate_message_send(event, state) do
     correlation_id = Utils.generate_id()
-    
+
     # Register the message for future correlation
     message_signature = create_message_signature(event)
+
     message_record = %{
       correlation_id: correlation_id,
       from_pid: event.from_pid,
@@ -425,7 +460,7 @@ defmodule ElixirScope.Capture.Runtime.EventCorrelator do
       timestamp: event.timestamp,
       signature: message_signature
     }
-    
+
     :ets.insert(state.message_registry_table, {message_signature, message_record})
 
     # Store correlation metadata
@@ -435,6 +470,7 @@ defmodule ElixirScope.Capture.Runtime.EventCorrelator do
       created_at: Utils.monotonic_timestamp(),
       pid: event.from_pid
     }
+
     :ets.insert(state.correlation_metadata_table, {correlation_id, metadata})
 
     %CorrelatedEvent{
@@ -451,17 +487,17 @@ defmodule ElixirScope.Capture.Runtime.EventCorrelator do
 
   defp correlate_message_receive(event, state) do
     message_signature = create_message_signature(event)
-    
+
     # Look for matching send event
     case :ets.lookup(state.message_registry_table, message_signature) do
       [{^message_signature, message_record}] ->
         # Found matching send
         correlation_id = message_record.correlation_id
-        
+
         # Create receive link
         links = [{:receives, correlation_id}]
         :ets.insert(state.correlation_links_table, {correlation_id, {:received_by, correlation_id}})
-        
+
         %CorrelatedEvent{
           event: event,
           correlation_id: correlation_id,
@@ -472,19 +508,20 @@ defmodule ElixirScope.Capture.Runtime.EventCorrelator do
           correlated_at: Utils.monotonic_timestamp(),
           correlation_confidence: 1.0
         }
-      
-             [] ->
-         # No matching send found
-         correlation_id = Utils.generate_id()
-        
+
+      [] ->
+        # No matching send found
+        correlation_id = Utils.generate_id()
+
         metadata = %{
           correlation_id: correlation_id,
           type: :message_receive,
           created_at: Utils.monotonic_timestamp(),
           pid: event.to_pid
         }
+
         :ets.insert(state.correlation_metadata_table, {correlation_id, metadata})
-        
+
         %CorrelatedEvent{
           event: event,
           correlation_id: correlation_id,
@@ -520,6 +557,7 @@ defmodule ElixirScope.Capture.Runtime.EventCorrelator do
       [top | rest] ->
         :ets.insert(table, {pid, rest})
         top
+
       [] ->
         nil
     end
@@ -538,19 +576,25 @@ defmodule ElixirScope.Capture.Runtime.EventCorrelator do
   end
 
   defp find_root_id(nil, _state), do: nil
+
   defp find_root_id(correlation_id, state) do
     case :ets.lookup(state.correlation_metadata_table, correlation_id) do
       [{^correlation_id, _metadata}] ->
         # Look for parent links
         case :ets.lookup(state.correlation_links_table, correlation_id) do
-          [] -> correlation_id  # This is the root
+          # This is the root
+          [] ->
+            correlation_id
+
           links ->
             parent_link = Enum.find(links, fn {_, {type, _}} -> type == :called_from end)
+
             case parent_link do
               {_, {:called_from, parent_id}} -> find_root_id(parent_id, state)
               _ -> correlation_id
             end
         end
+
       [] ->
         correlation_id
     end
@@ -560,28 +604,33 @@ defmodule ElixirScope.Capture.Runtime.EventCorrelator do
     case :ets.lookup(state.correlation_metadata_table, correlation_id) do
       [{^correlation_id, metadata}] ->
         new_acc = [metadata | acc]
-        
+
         # Look for parent links
         case :ets.lookup(state.correlation_links_table, correlation_id) do
-          [] -> new_acc
+          [] ->
+            new_acc
+
           links ->
             parent_link = Enum.find(links, fn {_, {type, _}} -> type == :called_from end)
+
             case parent_link do
               {_, {:called_from, parent_id}} -> build_correlation_chain(parent_id, state, new_acc)
               _ -> new_acc
             end
         end
+
       [] ->
         acc
     end
   end
 
   defp update_correlation_stats(stats, correlation_type, correlation_time) do
-    %{stats |
-      total_correlations_created: stats.total_correlations_created + 1,
-      total_correlation_time_ns: stats.total_correlation_time_ns + correlation_time,
-      function_correlations: stats.function_correlations + function_increment(correlation_type),
-      message_correlations: stats.message_correlations + message_increment(correlation_type)
+    %{
+      stats
+      | total_correlations_created: stats.total_correlations_created + 1,
+        total_correlation_time_ns: stats.total_correlation_time_ns + correlation_time,
+        function_correlations: stats.function_correlations + function_increment(correlation_type),
+        message_correlations: stats.message_correlations + message_increment(correlation_type)
     }
   end
 
@@ -597,37 +646,39 @@ defmodule ElixirScope.Capture.Runtime.EventCorrelator do
 
   defp perform_cleanup(state) do
     now = Utils.monotonic_timestamp()
-    ttl_threshold = now - (state.config.correlation_ttl_ms * 1_000_000)  # Convert to nanoseconds
-    
+    # Convert to nanoseconds
+    ttl_threshold = now - state.config.correlation_ttl_ms * 1_000_000
+
     # Find expired correlations by iterating through all metadata
     all_correlations = :ets.tab2list(state.correlation_metadata_table)
-    
-    expired_correlations = 
+
+    expired_correlations =
       all_correlations
       |> Enum.filter(fn {_correlation_id, metadata} ->
         metadata.created_at < ttl_threshold
       end)
       |> Enum.map(fn {correlation_id, _metadata} -> correlation_id end)
-    
+
     # Remove expired correlations
     Enum.each(expired_correlations, fn correlation_id ->
       :ets.delete(state.correlation_metadata_table, correlation_id)
       :ets.delete(state.correlation_links_table, correlation_id)
     end)
-    
+
     # Clean up call stacks and message registry
     cleanup_call_stacks(state.call_stacks_table, expired_correlations)
     cleanup_message_registry(state.message_registry_table, ttl_threshold)
-    
+
     length(expired_correlations)
   end
 
   defp cleanup_call_stacks(table, expired_correlations) do
     # Remove expired correlation IDs from all call stacks
     all_stacks = :ets.tab2list(table)
-    
+
     Enum.each(all_stacks, fn {pid, stack} ->
       cleaned_stack = Enum.reject(stack, &(&1 in expired_correlations))
+
       if cleaned_stack != stack do
         :ets.insert(table, {pid, cleaned_stack})
       end
@@ -637,14 +688,14 @@ defmodule ElixirScope.Capture.Runtime.EventCorrelator do
   defp cleanup_message_registry(table, ttl_threshold) do
     # Remove expired messages from registry
     all_messages = :ets.tab2list(table)
-    
-    expired_messages = 
+
+    expired_messages =
       all_messages
       |> Enum.filter(fn {_signature, message_record} ->
         message_record.timestamp < ttl_threshold
       end)
       |> Enum.map(fn {signature, _message_record} -> signature end)
-    
+
     Enum.each(expired_messages, fn signature ->
       :ets.delete(table, signature)
     end)
@@ -652,9 +703,9 @@ defmodule ElixirScope.Capture.Runtime.EventCorrelator do
 
   defp calculate_memory_usage(state) do
     :ets.info(state.call_stacks_table, :memory) +
-    :ets.info(state.message_registry_table, :memory) +
-    :ets.info(state.correlation_metadata_table, :memory) +
-    :ets.info(state.correlation_links_table, :memory)
+      :ets.info(state.message_registry_table, :memory) +
+      :ets.info(state.correlation_metadata_table, :memory) +
+      :ets.info(state.correlation_links_table, :memory)
   end
 
   defp cleanup_ets_tables(state) do
@@ -663,4 +714,4 @@ defmodule ElixirScope.Capture.Runtime.EventCorrelator do
     :ets.delete(state.correlation_metadata_table)
     :ets.delete(state.correlation_links_table)
   end
-end 
+end

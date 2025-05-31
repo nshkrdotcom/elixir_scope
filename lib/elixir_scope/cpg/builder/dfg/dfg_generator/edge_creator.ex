@@ -17,19 +17,20 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.EdgeCreator do
       type: type,
       from_node: extract_node_id(source),
       to_node: extract_node_id(target),
-      label: case type do
-        :data_flow -> "data"
-        :mutation -> "mutates"
-        :conditional_flow -> "conditional"
-        :call_flow -> "call"
-        :pipe_flow -> "pipe"
-        :capture -> "capture"
-        :assignment -> "assigns"
-        :destructuring -> "destructures"
-        :pin_match -> "pin match"
-        :guard_dependency -> "guard"
-        _ -> to_string(type)
-      end,
+      label:
+        case type do
+          :data_flow -> "data"
+          :mutation -> "mutates"
+          :conditional_flow -> "conditional"
+          :call_flow -> "call"
+          :pipe_flow -> "pipe"
+          :capture -> "capture"
+          :assignment -> "assigns"
+          :destructuring -> "destructures"
+          :pin_match -> "pin match"
+          :guard_dependency -> "guard"
+          _ -> to_string(type)
+        end,
       condition: nil,
       metadata: %{
         source: source,
@@ -98,32 +99,39 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.EdgeCreator do
     # Generate edges that represent data dependencies between variables
     variables = state.variables
 
-    edges = Enum.flat_map(variables, fn {{var_name, _scope}, var_info} ->
-      case var_info.source do
-        {op, _, args} when is_list(args) ->
-          # Create edges from each argument variable to this variable
-          Enum.flat_map(args, fn arg ->
-            case extract_variable_name(arg) do
-              nil -> []
-              source_var ->
-                [%DFGEdge{
-                  id: "data_flow_#{:erlang.phash2({source_var, var_name})}",
-                  type: :data_flow,
-                  from_node: "var_#{source_var}",
-                  to_node: "var_#{var_name}",
-                  label: "data dependency",
-                  condition: nil,
-                  metadata: %{
-                    operation: op,
-                    source_variable: source_var,
-                    target_variable: to_string(var_name)
-                  }
-                }]
-            end
-          end)
-        _ -> []
-      end
-    end)
+    edges =
+      Enum.flat_map(variables, fn {{var_name, _scope}, var_info} ->
+        case var_info.source do
+          {op, _, args} when is_list(args) ->
+            # Create edges from each argument variable to this variable
+            Enum.flat_map(args, fn arg ->
+              case extract_variable_name(arg) do
+                nil ->
+                  []
+
+                source_var ->
+                  [
+                    %DFGEdge{
+                      id: "data_flow_#{:erlang.phash2({source_var, var_name})}",
+                      type: :data_flow,
+                      from_node: "var_#{source_var}",
+                      to_node: "var_#{var_name}",
+                      label: "data dependency",
+                      condition: nil,
+                      metadata: %{
+                        operation: op,
+                        source_variable: source_var,
+                        target_variable: to_string(var_name)
+                      }
+                    }
+                  ]
+              end
+            end)
+
+          _ ->
+            []
+        end
+      end)
 
     edges
   end
@@ -137,10 +145,13 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.EdgeCreator do
       case control_node.type do
         :case ->
           create_case_flow_edges(control_node, acc_state)
+
         :conditional ->
           create_conditional_flow_edges(control_node, acc_state)
+
         :try_expression ->
           create_try_flow_edges(control_node, acc_state)
+
         _ ->
           acc_state
       end
@@ -154,7 +165,8 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.EdgeCreator do
     case expr do
       {var_name, _, nil} when is_atom(var_name) -> "var_#{var_name}"
       {func, _, _} when is_atom(func) -> "call_#{func}"
-      node_id when is_binary(node_id) -> node_id  # Already a node ID
+      # Already a node ID
+      node_id when is_binary(node_id) -> node_id
       _ -> "expr_#{:erlang.phash2(expr)}"
     end
   end
@@ -179,6 +191,7 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.EdgeCreator do
         Enum.reduce(case_variables, state, fn var_name, acc_state ->
           create_data_flow_edge(expr, var_name, :case_flow, case_node.line, acc_state)
         end)
+
       _ ->
         state
     end
@@ -191,8 +204,15 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.EdgeCreator do
         conditional_variables = find_conditional_branch_variables(state, conditional_node)
 
         Enum.reduce(conditional_variables, state, fn var_name, acc_state ->
-          create_data_flow_edge(condition, var_name, :conditional_flow, conditional_node.line, acc_state)
+          create_data_flow_edge(
+            condition,
+            var_name,
+            :conditional_flow,
+            conditional_node.line,
+            acc_state
+          )
         end)
+
       _ ->
         state
     end
@@ -215,7 +235,8 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.EdgeCreator do
       var_info.type == :pattern_match
     end)
     |> Enum.map(fn {{var_name, _scope}, _var_info} -> to_string(var_name) end)
-    |> Enum.take(3)  # Limit to avoid too many edges
+    # Limit to avoid too many edges
+    |> Enum.take(3)
   end
 
   defp find_conditional_branch_variables(state, _conditional_node) do
@@ -225,7 +246,8 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.EdgeCreator do
       var_info.type == :assignment
     end)
     |> Enum.map(fn {{var_name, _scope}, _var_info} -> to_string(var_name) end)
-    |> Enum.take(2)  # Limit for if/else branches
+    # Limit for if/else branches
+    |> Enum.take(2)
   end
 
   defp find_try_block_variables(state, _try_node) do

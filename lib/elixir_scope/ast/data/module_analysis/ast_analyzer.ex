@@ -33,6 +33,7 @@ defmodule ElixirScope.AST.ModuleData.ASTAnalyzer do
     case ast do
       {:defmodule, _, [_module_name, [do: body]]} ->
         extract_function_definitions(body, :public)
+
       _ ->
         []
     end
@@ -46,6 +47,7 @@ defmodule ElixirScope.AST.ModuleData.ASTAnalyzer do
     case ast do
       {:defmodule, _, [_name, [do: body]]} ->
         extract_callback_functions(body)
+
       _ ->
         []
     end
@@ -56,6 +58,7 @@ defmodule ElixirScope.AST.ModuleData.ASTAnalyzer do
     case ast do
       {:defmodule, _, [_name, [do: body]]} ->
         find_use_directive(body, target_module)
+
       _ ->
         false
     end
@@ -71,11 +74,16 @@ defmodule ElixirScope.AST.ModuleData.ASTAnalyzer do
 
   defp check_use_statement({:use, _, [{:__aliases__, _, modules}]}, target_module) do
     ast_module = List.last(modules)
-    target_atom = case target_module do
-      atom when is_atom(atom) ->
-        atom |> Module.split() |> List.last() |> String.to_atom()
-      _ -> target_module
-    end
+
+    target_atom =
+      case target_module do
+        atom when is_atom(atom) ->
+          atom |> Module.split() |> List.last() |> String.to_atom()
+
+        _ ->
+          target_module
+      end
+
     ast_module == target_atom
   end
 
@@ -89,6 +97,7 @@ defmodule ElixirScope.AST.ModuleData.ASTAnalyzer do
     case ast do
       {:defmodule, _, [_name, [do: body]]} ->
         has_controller_use_directive?(body) or has_controller_functions?(body)
+
       _ ->
         false
     end
@@ -124,7 +133,8 @@ defmodule ElixirScope.AST.ModuleData.ASTAnalyzer do
     is_controller_function?(statement)
   end
 
-  defp is_controller_function?({:def, _, [{name, _, _} | _]}) when name in [:index, :show, :new, :create, :edit, :update, :delete] do
+  defp is_controller_function?({:def, _, [{name, _, _} | _]})
+       when name in [:index, :show, :new, :create, :edit, :update, :delete] do
     true
   end
 
@@ -134,6 +144,7 @@ defmodule ElixirScope.AST.ModuleData.ASTAnalyzer do
     case ast do
       {:defmodule, _, [_name, [do: body]]} ->
         has_live_view_use_directive?(body) or has_live_view_functions?(body)
+
       _ ->
         false
     end
@@ -165,7 +176,8 @@ defmodule ElixirScope.AST.ModuleData.ASTAnalyzer do
     is_live_view_function?(statement)
   end
 
-  defp is_live_view_function?({:def, _, [{name, _, _} | _]}) when name in [:mount, :handle_event, :handle_info, :handle_params, :render] do
+  defp is_live_view_function?({:def, _, [{name, _, _} | _]})
+       when name in [:mount, :handle_event, :handle_info, :handle_params, :render] do
     true
   end
 
@@ -175,6 +187,7 @@ defmodule ElixirScope.AST.ModuleData.ASTAnalyzer do
     case ast do
       {:defmodule, _, [_name, [do: body]]} ->
         has_ecto_use_directive?(body) or has_schema_definition?(body)
+
       _ ->
         false
     end

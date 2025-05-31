@@ -27,33 +27,40 @@ defmodule ElixirScope.AST.Enhanced.ProjectPopulator.FileParser do
     end
 
     try do
-      parsed_files = if parallel do
-        files
-        |> Task.async_stream(parse_function,
-           max_concurrency: max_concurrency,
-           timeout: timeout,
-           on_timeout: :kill_task)
-        |> Enum.reduce([], fn
-          {:ok, {:ok, parsed_file}}, acc -> [parsed_file | acc]
-          {:ok, {:error, reason}}, acc ->
-            Logger.warning("Failed to parse file: #{inspect(reason)}")
-            acc
-          {:exit, reason}, acc ->
-            Logger.warning("File parsing timed out: #{inspect(reason)}")
-            acc
-        end)
-        |> Enum.reverse()
-      else
-        Enum.reduce(files, [], fn file, acc ->
-          case parse_function.(file) do
-            {:ok, parsed_file} -> [parsed_file | acc]
-            {:error, reason} ->
-              Logger.warning("Failed to parse #{file}: #{inspect(reason)}")
+      parsed_files =
+        if parallel do
+          files
+          |> Task.async_stream(parse_function,
+            max_concurrency: max_concurrency,
+            timeout: timeout,
+            on_timeout: :kill_task
+          )
+          |> Enum.reduce([], fn
+            {:ok, {:ok, parsed_file}}, acc ->
+              [parsed_file | acc]
+
+            {:ok, {:error, reason}}, acc ->
+              Logger.warning("Failed to parse file: #{inspect(reason)}")
               acc
-          end
-        end)
-        |> Enum.reverse()
-      end
+
+            {:exit, reason}, acc ->
+              Logger.warning("File parsing timed out: #{inspect(reason)}")
+              acc
+          end)
+          |> Enum.reverse()
+        else
+          Enum.reduce(files, [], fn file, acc ->
+            case parse_function.(file) do
+              {:ok, parsed_file} ->
+                [parsed_file | acc]
+
+              {:error, reason} ->
+                Logger.warning("Failed to parse #{file}: #{inspect(reason)}")
+                acc
+            end
+          end)
+          |> Enum.reverse()
+        end
 
       Logger.debug("Successfully parsed #{length(parsed_files)} files")
       {:ok, parsed_files}
@@ -78,6 +85,7 @@ defmodule ElixirScope.AST.Enhanced.ProjectPopulator.FileParser do
                 case validate_ast_syntax(ast) do
                   :ok ->
                     end_time = System.monotonic_time(:microsecond)
+
                     parsed_file = %{
                       file_path: file_path,
                       content: content,
@@ -87,6 +95,7 @@ defmodule ElixirScope.AST.Enhanced.ProjectPopulator.FileParser do
                       file_size: byte_size(content),
                       line_count: count_lines(content)
                     }
+
                     {:ok, parsed_file}
 
                   {:error, reason} ->
@@ -94,6 +103,7 @@ defmodule ElixirScope.AST.Enhanced.ProjectPopulator.FileParser do
                 end
               else
                 end_time = System.monotonic_time(:microsecond)
+
                 parsed_file = %{
                   file_path: file_path,
                   content: content,
@@ -103,6 +113,7 @@ defmodule ElixirScope.AST.Enhanced.ProjectPopulator.FileParser do
                   file_size: byte_size(content),
                   line_count: count_lines(content)
                 }
+
                 {:ok, parsed_file}
               end
 

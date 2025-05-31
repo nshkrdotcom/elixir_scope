@@ -167,6 +167,7 @@ defmodule ElixirScope.Distributed.NodeCoordinator do
       :ok ->
         updated_state = %{state | cluster_nodes: [node | state.cluster_nodes]}
         {:noreply, updated_state}
+
       _ ->
         {:noreply, state}
     end
@@ -212,14 +213,15 @@ defmodule ElixirScope.Distributed.NodeCoordinator do
 
   defp execute_distributed_query(query_params, state) do
     # Execute query on all reachable nodes
-    query_tasks = for node <- state.cluster_nodes do
-      Task.async(fn ->
-        case :rpc.call(node, DataAccess, :query_events, [query_params]) do
-          {:badrpc, reason} -> {:error, {node, reason}}
-          result -> {:ok, {node, result}}
-        end
-      end)
-    end
+    query_tasks =
+      for node <- state.cluster_nodes do
+        Task.async(fn ->
+          case :rpc.call(node, DataAccess, :query_events, [query_params]) do
+            {:badrpc, reason} -> {:error, {node, reason}}
+            result -> {:ok, {node, result}}
+          end
+        end)
+      end
 
     # Collect results with timeout
     results = Task.await_many(query_tasks, 5000)
@@ -242,9 +244,10 @@ defmodule ElixirScope.Distributed.NodeCoordinator do
 
   defp check_for_partitions(state) do
     # Check connectivity to all cluster nodes
-    reachable_nodes = Enum.filter(state.cluster_nodes, fn node ->
-      node == state.local_node or Node.ping(node) == :pong
-    end)
+    reachable_nodes =
+      Enum.filter(state.cluster_nodes, fn node ->
+        node == state.local_node or Node.ping(node) == :pong
+      end)
 
     unreachable_nodes = state.cluster_nodes -- reachable_nodes
 

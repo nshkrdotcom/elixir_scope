@@ -12,11 +12,12 @@ defmodule ElixirScope.AST.QueryBuilder.Optimizer do
   """
   @spec optimize_query(Types.query_t()) :: {:ok, Types.query_t()}
   def optimize_query(%Types{} = query) do
-    optimized_query = query
-    |> add_cache_key()
-    |> estimate_cost()
-    |> generate_optimization_hints()
-    |> apply_optimizations()
+    optimized_query =
+      query
+      |> add_cache_key()
+      |> estimate_cost()
+      |> generate_optimization_hints()
+      |> apply_optimizations()
 
     {:ok, optimized_query}
   end
@@ -35,22 +36,24 @@ defmodule ElixirScope.AST.QueryBuilder.Optimizer do
   """
   @spec estimate_cost(Types.query_t()) :: Types.query_t()
   def estimate_cost(%Types{} = query) do
-    base_cost = case query.from do
-      :functions -> 60
-      :modules -> 35
-      :patterns -> 120
-    end
+    base_cost =
+      case query.from do
+        :functions -> 60
+        :modules -> 35
+        :patterns -> 120
+      end
 
     where_cost = length(query.where || []) * 20
     join_cost = length(query.joins || []) * 40
     complex_ops_count = count_complex_operations(query.where || [])
     complex_cost = complex_ops_count * 80
 
-    order_cost = case query.order_by do
-      nil -> 0
-      list when is_list(list) -> length(list) * 15
-      _ -> 8
-    end
+    order_cost =
+      case query.order_by do
+        nil -> 0
+        list when is_list(list) -> length(list) * 15
+        _ -> 8
+      end
 
     total_cost = base_cost + where_cost + join_cost + complex_cost + order_cost
     %{query | estimated_cost: total_cost}
@@ -63,23 +66,26 @@ defmodule ElixirScope.AST.QueryBuilder.Optimizer do
   def generate_optimization_hints(%Types{} = query) do
     hints = []
 
-    hints = if is_nil(query.limit) and query.estimated_cost > 80 do
-      ["Consider adding a LIMIT clause to reduce memory usage" | hints]
-    else
-      hints
-    end
+    hints =
+      if is_nil(query.limit) and query.estimated_cost > 80 do
+        ["Consider adding a LIMIT clause to reduce memory usage" | hints]
+      else
+        hints
+      end
 
-    hints = if length(query.where || []) >= 3 do
-      ["Complex WHERE conditions detected - ensure proper indexing" | hints]
-    else
-      hints
-    end
+    hints =
+      if length(query.where || []) >= 3 do
+        ["Complex WHERE conditions detected - ensure proper indexing" | hints]
+      else
+        hints
+      end
 
-    hints = if query.estimated_cost > 120 do
-      ["High-cost query detected - results will be cached" | hints]
-    else
-      hints
-    end
+    hints =
+      if query.estimated_cost > 120 do
+        ["High-cost query detected - results will be cached" | hints]
+      else
+        hints
+      end
 
     %{query | optimization_hints: hints}
   end

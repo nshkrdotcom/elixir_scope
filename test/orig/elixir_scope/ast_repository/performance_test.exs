@@ -29,7 +29,8 @@ defmodule ElixirScope.ASTRepository.PerformanceTest do
   alias ElixirScope.ASTRepository.Enhanced.{EnhancedFunctionData}
 
   @moduletag :performance
-  @moduletag timeout: 300_000  # 5 minutes for performance tests
+  # 5 minutes for performance tests
+  @moduletag timeout: 300_000
 
   # Performance test configuration
   @small_scale_modules 10
@@ -47,10 +48,11 @@ defmodule ElixirScope.ASTRepository.PerformanceTest do
 
   setup_all do
     # Start memory manager supervisor which will start all required processes
-    {:ok, _supervisor} = ElixirScope.ASTRepository.MemoryManager.Supervisor.start_link([
-      monitoring_enabled: true,
-      cache_enabled: true
-    ])
+    {:ok, _supervisor} =
+      ElixirScope.ASTRepository.MemoryManager.Supervisor.start_link(
+        monitoring_enabled: true,
+        cache_enabled: true
+      )
 
     # Don't try to manually stop - let the test VM handle it
     :ok
@@ -97,7 +99,6 @@ defmodule ElixirScope.ASTRepository.PerformanceTest do
   #       :ok
   #   end
   # end
-
 
   # Also update the setup block (around line 59) to ensure individual test isolation:
 
@@ -163,7 +164,8 @@ defmodule ElixirScope.ASTRepository.PerformanceTest do
       # assert abs(large_per_module - medium_per_module) / medium_per_module < 0.5
 
       # Memory per module should be relatively consistent
-      small_per_module_safe = max(small_per_module, 1)  # Prevent division by zero
+      # Prevent division by zero
+      small_per_module_safe = max(small_per_module, 1)
       medium_per_module_safe = max(medium_per_module, 1)
 
       # Only check ratios if we have meaningful values
@@ -174,8 +176,9 @@ defmodule ElixirScope.ASTRepository.PerformanceTest do
 
       # Total memory should be under target for 1000 modules
       large_memory_mb = large_memory / (1024 * 1024)
+
       assert large_memory_mb < @max_memory_mb,
-        "Memory usage #{large_memory_mb}MB exceeds target #{@max_memory_mb}MB"
+             "Memory usage #{large_memory_mb}MB exceeds target #{@max_memory_mb}MB"
 
       IO.puts("\n=== Memory Usage Benchmark ===")
       IO.puts("Small scale (#{@small_scale_modules} modules): #{format_bytes(small_memory)}")
@@ -203,7 +206,7 @@ defmodule ElixirScope.ASTRepository.PerformanceTest do
       cleanup_duration = end_time - start_time
 
       assert cleanup_duration < @max_cleanup_time_ms,
-        "Cleanup took #{cleanup_duration}ms, exceeds target #{@max_cleanup_time_ms}ms"
+             "Cleanup took #{cleanup_duration}ms, exceeds target #{@max_cleanup_time_ms}ms"
 
       IO.puts("\n=== Memory Cleanup Benchmark ===")
       IO.puts("Cleanup duration: #{cleanup_duration}ms")
@@ -214,16 +217,18 @@ defmodule ElixirScope.ASTRepository.PerformanceTest do
       # Test each memory pressure level
       pressure_levels = [:level_1, :level_2, :level_3, :level_4]
 
-      results = Enum.map(pressure_levels, fn level ->
-        start_time = System.monotonic_time(:millisecond)
-        :ok = MemoryManager.memory_pressure_handler(level)
-        end_time = System.monotonic_time(:millisecond)
+      results =
+        Enum.map(pressure_levels, fn level ->
+          start_time = System.monotonic_time(:millisecond)
+          :ok = MemoryManager.memory_pressure_handler(level)
+          end_time = System.monotonic_time(:millisecond)
 
-        duration = end_time - start_time
-        {level, duration}
-      end)
+          duration = end_time - start_time
+          {level, duration}
+        end)
 
       IO.puts("\n=== Memory Pressure Handling ===")
+
       Enum.each(results, fn {level, duration} ->
         IO.puts("#{level}: #{duration}ms")
 
@@ -256,7 +261,7 @@ defmodule ElixirScope.ASTRepository.PerformanceTest do
         IO.puts("#{name}: #{Float.round(duration_ms, 2)}ms")
 
         assert duration_ms < @max_query_time_ms,
-          "#{name} took #{duration_ms}ms, exceeds target #{@max_query_time_ms}ms"
+               "#{name} took #{duration_ms}ms, exceeds target #{@max_query_time_ms}ms"
       end)
     end
 
@@ -266,20 +271,21 @@ defmodule ElixirScope.ASTRepository.PerformanceTest do
       store_modules(repo, modules)
 
       # Run concurrent queries
-      tasks = Enum.map(1..@concurrent_processes, fn _i ->
-        Task.async(fn ->
-          start_time = System.monotonic_time(:millisecond)
+      tasks =
+        Enum.map(1..@concurrent_processes, fn _i ->
+          Task.async(fn ->
+            start_time = System.monotonic_time(:millisecond)
 
-          # Perform multiple queries
-          Enum.each(1..div(@query_iterations, @concurrent_processes), fn _j ->
-            module = Enum.random(modules)
-            EnhancedRepository.get_enhanced_module(module.module_name)
+            # Perform multiple queries
+            Enum.each(1..div(@query_iterations, @concurrent_processes), fn _j ->
+              module = Enum.random(modules)
+              EnhancedRepository.get_enhanced_module(module.module_name)
+            end)
+
+            end_time = System.monotonic_time(:millisecond)
+            end_time - start_time
           end)
-
-          end_time = System.monotonic_time(:millisecond)
-          end_time - start_time
         end)
-      end)
 
       durations = Task.await_many(tasks, 60_000)
       avg_duration = Enum.sum(durations) / length(durations)
@@ -293,7 +299,7 @@ defmodule ElixirScope.ASTRepository.PerformanceTest do
 
       # Average should be reasonable
       assert avg_duration < @max_query_time_ms * 2,
-        "Concurrent queries too slow: #{avg_duration}ms"
+             "Concurrent queries too slow: #{avg_duration}ms"
     end
 
     test "cache efficiency meets targets", %{repo: repo} do
@@ -317,25 +323,28 @@ defmodule ElixirScope.ASTRepository.PerformanceTest do
       cache_hits = 0
       cache_misses = 0
 
-      {cache_hits, cache_misses} = Enum.reduce(1..@query_iterations, {cache_hits, cache_misses}, fn _i, {hits, misses} ->
-        module = Enum.random(modules)
+      {cache_hits, cache_misses} =
+        Enum.reduce(1..@query_iterations, {cache_hits, cache_misses}, fn _i, {hits, misses} ->
+          module = Enum.random(modules)
 
-        # Use the actual repository call which will check cache internally
-        start_time = System.monotonic_time(:microsecond)
-        case EnhancedRepository.get_enhanced_module(module.module_name) do
-          {:ok, _} ->
-            end_time = System.monotonic_time(:microsecond)
-            duration = end_time - start_time
-            # Consider it a cache hit if it's very fast (< 1ms)
-            if duration < 1000 do
-              {hits + 1, misses}
-            else
+          # Use the actual repository call which will check cache internally
+          start_time = System.monotonic_time(:microsecond)
+
+          case EnhancedRepository.get_enhanced_module(module.module_name) do
+            {:ok, _} ->
+              end_time = System.monotonic_time(:microsecond)
+              duration = end_time - start_time
+              # Consider it a cache hit if it's very fast (< 1ms)
+              if duration < 1000 do
+                {hits + 1, misses}
+              else
+                {hits, misses + 1}
+              end
+
+            {:error, _} ->
               {hits, misses + 1}
-            end
-          {:error, _} ->
-            {hits, misses + 1}
-        end
-      end)
+          end
+        end)
 
       total_queries = cache_hits + cache_misses
       hit_ratio = if total_queries > 0, do: cache_hits / total_queries, else: 0.0
@@ -347,9 +356,11 @@ defmodule ElixirScope.ASTRepository.PerformanceTest do
       IO.puts("Hit ratio: #{Float.round(hit_ratio * 100, 1)}%")
 
       # Lower the target for now since cache implementation may need work
-      min_hit_ratio = 0.3  # 30% instead of 80%
+      # 30% instead of 80%
+      min_hit_ratio = 0.3
+
       assert hit_ratio >= min_hit_ratio,
-        "Cache hit ratio #{Float.round(hit_ratio * 100, 1)}% below target #{Float.round(min_hit_ratio * 100, 1)}%"
+             "Cache hit ratio #{Float.round(hit_ratio * 100, 1)}% below target #{Float.round(min_hit_ratio * 100, 1)}%"
     end
   end
 
@@ -369,17 +380,19 @@ defmodule ElixirScope.ASTRepository.PerformanceTest do
         modules = generate_test_modules(module_count)
 
         # Measure startup time
-        {startup_time_us, _repo} = :timer.tc(fn ->
-          case EnhancedRepository.start_link([]) do
-            {:ok, repo} ->
-              store_modules(repo, modules)
-              repo
-            {:error, {:already_started, repo}} ->
-              # Repository already started, just store modules
-              store_modules(repo, modules)
-              repo
-          end
-        end)
+        {startup_time_us, _repo} =
+          :timer.tc(fn ->
+            case EnhancedRepository.start_link([]) do
+              {:ok, repo} ->
+                store_modules(repo, modules)
+                repo
+
+              {:error, {:already_started, repo}} ->
+                # Repository already started, just store modules
+                store_modules(repo, modules)
+                repo
+            end
+          end)
 
         startup_time_ms = startup_time_us / 1000
 
@@ -388,7 +401,7 @@ defmodule ElixirScope.ASTRepository.PerformanceTest do
         # Only check large scale against target
         if module_count == @large_scale_modules do
           assert startup_time_ms < @max_startup_time_ms,
-            "Startup time #{startup_time_ms}ms exceeds target #{@max_startup_time_ms}ms"
+                 "Startup time #{startup_time_ms}ms exceeds target #{@max_startup_time_ms}ms"
         end
       end)
     end
@@ -406,21 +419,24 @@ defmodule ElixirScope.ASTRepository.PerformanceTest do
       Enum.each(concurrency_levels, fn concurrency ->
         operations_per_process = div(@query_iterations, concurrency)
 
-        {total_time_us, _results} = :timer.tc(fn ->
-          tasks = Enum.map(1..concurrency, fn _i ->
-            Task.async(fn ->
-              Enum.each(1..operations_per_process, fn _j ->
-                module = Enum.random(modules)
-                EnhancedRepository.get_enhanced_module(module.module_name)
+        {total_time_us, _results} =
+          :timer.tc(fn ->
+            tasks =
+              Enum.map(1..concurrency, fn _i ->
+                Task.async(fn ->
+                  Enum.each(1..operations_per_process, fn _j ->
+                    module = Enum.random(modules)
+                    EnhancedRepository.get_enhanced_module(module.module_name)
+                  end)
+                end)
               end)
-            end)
+
+            Task.await_many(tasks, 60_000)
           end)
 
-          Task.await_many(tasks, 60_000)
-        end)
-
         total_operations = concurrency * operations_per_process
-        throughput = total_operations / (total_time_us / 1_000_000)  # ops/second
+        # ops/second
+        throughput = total_operations / (total_time_us / 1_000_000)
 
         IO.puts("Concurrency #{concurrency}: #{Float.round(throughput, 0)} ops/sec")
       end)
@@ -451,7 +467,8 @@ defmodule ElixirScope.ASTRepository.PerformanceTest do
         if rem(cycle, 3) == 0 do
           case MemoryManager.cleanup_unused_data(max_age: 300) do
             {:ok, _} -> :ok
-            {:error, _} -> :ok  # Continue even if cleanup fails
+            # Continue even if cleanup fails
+            {:error, _} -> :ok
           end
         end
 
@@ -465,8 +482,9 @@ defmodule ElixirScope.ASTRepository.PerformanceTest do
 
             # Memory growth should be bounded (allow reasonable growth)
             max_growth = max(baseline_memory * 2, 1024 * 1024)
+
             assert memory_growth < max_growth,
-              "Memory growth too large: #{format_bytes(memory_growth)} exceeds #{format_bytes(max_growth)}"
+                   "Memory growth too large: #{format_bytes(memory_growth)} exceeds #{format_bytes(max_growth)}"
 
           {:error, reason} ->
             IO.puts("Cycle #{cycle}: Memory monitoring failed: #{inspect(reason)}")
@@ -488,22 +506,26 @@ defmodule ElixirScope.ASTRepository.PerformanceTest do
       simulate_aging_patterns(modules)
 
       # Measure compression performance
-      {compression_time_us, compression_result} = :timer.tc(fn ->
-        case MemoryManager.compress_old_analysis(
-          access_threshold: 2,
-          age_threshold: 300,
-          compression_level: 6
-        ) do
-          {:ok, stats} -> {:ok, stats}
-          {:error, _} ->
-            # Fallback mock result for testing
-            {:ok, %{
-              modules_compressed: 0,
-              compression_ratio: 0.0,
-              space_saved_bytes: 0
-            }}
-        end
-      end)
+      {compression_time_us, compression_result} =
+        :timer.tc(fn ->
+          case MemoryManager.compress_old_analysis(
+                 access_threshold: 2,
+                 age_threshold: 300,
+                 compression_level: 6
+               ) do
+            {:ok, stats} ->
+              {:ok, stats}
+
+            {:error, _} ->
+              # Fallback mock result for testing
+              {:ok,
+               %{
+                 modules_compressed: 0,
+                 compression_ratio: 0.0,
+                 space_saved_bytes: 0
+               }}
+          end
+        end)
 
       {:ok, compression_stats} = compression_result
 
@@ -517,17 +539,17 @@ defmodule ElixirScope.ASTRepository.PerformanceTest do
 
       # Compression should be effective (lower threshold for test data)
       assert compression_stats.compression_ratio >= 0.0,
-        "Compression failed: #{compression_stats.compression_ratio}"
+             "Compression failed: #{compression_stats.compression_ratio}"
 
       # Only check compression effectiveness if modules were actually compressed
       if compression_stats.modules_compressed > 0 do
         assert compression_stats.compression_ratio > 0.1,
-          "Compression ratio too low: #{compression_stats.compression_ratio}"
+               "Compression ratio too low: #{compression_stats.compression_ratio}"
       end
 
       # Compression should be fast
       assert compression_time_ms < 1000,
-        "Compression too slow: #{compression_time_ms}ms"
+             "Compression too slow: #{compression_time_ms}ms"
     end
 
     test "ETS table optimization", %{repo: repo} do
@@ -562,26 +584,29 @@ defmodule ElixirScope.ASTRepository.PerformanceTest do
       modules = generate_test_modules(@medium_scale_modules)
 
       # Measure end-to-end performance
-      {total_time_us, _result} = :timer.tc(fn ->
-        # 1. Store modules
-        store_modules(repo, modules)
+      {total_time_us, _result} =
+        :timer.tc(fn ->
+          # 1. Store modules
+          store_modules(repo, modules)
 
-        # 2. Perform various queries
-        Enum.each(1..100, fn _i ->
-          module = Enum.random(modules)
-          EnhancedRepository.get_enhanced_module(module.module_name)
+          # 2. Perform various queries
+          Enum.each(1..100, fn _i ->
+            module = Enum.random(modules)
+            EnhancedRepository.get_enhanced_module(module.module_name)
+          end)
+
+          # 3. Trigger analysis and optimization
+          case MemoryManager.compress_old_analysis() do
+            {:ok, _} -> :ok
+            # Continue workflow even if compression fails
+            {:error, _} -> :ok
+          end
+
+          MemoryManager.cleanup_unused_data()
+
+          # 4. Memory pressure simulation
+          MemoryManager.memory_pressure_handler(:level_2)
         end)
-
-        # 3. Trigger analysis and optimization
-        case MemoryManager.compress_old_analysis() do
-          {:ok, _} -> :ok
-          {:error, _} -> :ok  # Continue workflow even if compression fails
-        end
-        MemoryManager.cleanup_unused_data()
-
-        # 4. Memory pressure simulation
-        MemoryManager.memory_pressure_handler(:level_2)
-      end)
 
       total_time_ms = total_time_us / 1000
 
@@ -598,17 +623,20 @@ defmodule ElixirScope.ASTRepository.PerformanceTest do
       # Baseline performance measurement
       modules = generate_test_modules(@small_scale_modules)
 
-      baseline_times = Enum.map(1..5, fn _i ->
-        {time_us, _result} = :timer.tc(fn ->
-          store_modules(repo, modules)
+      baseline_times =
+        Enum.map(1..5, fn _i ->
+          {time_us, _result} =
+            :timer.tc(fn ->
+              store_modules(repo, modules)
 
-          Enum.each(modules, fn module ->
-            EnhancedRepository.get_enhanced_module(module.module_name)
-          end)
+              Enum.each(modules, fn module ->
+                EnhancedRepository.get_enhanced_module(module.module_name)
+              end)
+            end)
+
+          # Convert to milliseconds
+          time_us / 1000
         end)
-
-        time_us / 1000  # Convert to milliseconds
-      end)
 
       baseline_avg = Enum.sum(baseline_times) / length(baseline_times)
       baseline_std = calculate_std_dev(baseline_times, baseline_avg)
@@ -618,9 +646,11 @@ defmodule ElixirScope.ASTRepository.PerformanceTest do
       IO.puts("Baseline std dev: #{Float.round(baseline_std, 2)}ms")
 
       # Performance should be consistent (allow higher tolerance for small measurements)
-      tolerance = max(1.0, baseline_avg * 2.0)  # At least 1ms tolerance or 200% of average for small measurements
+      # At least 1ms tolerance or 200% of average for small measurements
+      tolerance = max(1.0, baseline_avg * 2.0)
+
       assert baseline_std < tolerance,
-        "Performance too inconsistent: std dev #{baseline_std}ms exceeds tolerance #{tolerance}ms"
+             "Performance too inconsistent: std dev #{baseline_std}ms exceeds tolerance #{tolerance}ms"
     end
   end
 
@@ -632,7 +662,7 @@ defmodule ElixirScope.ASTRepository.PerformanceTest do
       ast = generate_test_ast(module_name)
 
       # Create enhanced module data with correct function list format
-      EnhancedModuleData.new(module_name, ast, [
+      EnhancedModuleData.new(module_name, ast,
         file_path: "/test/modules/test_module_#{i}.ex",
         functions: generate_function_list(module_name, rem(i, 3) + 2),
         metadata: %{
@@ -640,7 +670,7 @@ defmodule ElixirScope.ASTRepository.PerformanceTest do
           complexity: rem(i, 10) + 1,
           size: rem(i, 1000) + 100
         }
-      ])
+      )
     end)
   end
 
@@ -651,7 +681,7 @@ defmodule ElixirScope.ASTRepository.PerformanceTest do
       # Generate more complex AST with deeper nesting
       ast = generate_complex_ast(module_name, rem(i, 10) + 5)
 
-      EnhancedModuleData.new(module_name, ast, [
+      EnhancedModuleData.new(module_name, ast,
         file_path: "/test/complex/complex_module_#{i}.ex",
         functions: generate_complex_function_list(module_name, rem(i, 8) + 5),
         metadata: %{
@@ -659,34 +689,44 @@ defmodule ElixirScope.ASTRepository.PerformanceTest do
           complexity: rem(i, 20) + 10,
           size: rem(i, 5000) + 1000
         }
-      ])
+      )
     end)
   end
 
   defp generate_test_ast(module_name) do
     # Generate a simple but realistic AST structure
-    {:defmodule, [line: 1], [
-      {:__aliases__, [line: 1], [module_name]},
-      [do: {:__block__, [], [
-        {:def, [line: 5], [{:function_name, [], [{:arg1, [], nil}, {:arg2, [], nil}]}, [do: {:ok, [], nil}]]},
-        {:def, [line: 10], [{:function_name, [], [{:arg1, [], nil}, {:arg2, [], nil}]}, [do: {:ok, [], nil}]]}
-      ]}]
-    ]}
+    {:defmodule, [line: 1],
+     [
+       {:__aliases__, [line: 1], [module_name]},
+       [
+         do:
+           {:__block__, [],
+            [
+              {:def, [line: 5],
+               [{:function_name, [], [{:arg1, [], nil}, {:arg2, [], nil}]}, [do: {:ok, [], nil}]]},
+              {:def, [line: 10],
+               [{:function_name, [], [{:arg1, [], nil}, {:arg2, [], nil}]}, [do: {:ok, [], nil}]]}
+            ]}
+       ]
+     ]}
   end
 
   defp generate_complex_ast(module_name, depth) do
     # Generate more complex AST with nested structures
-    functions = Enum.map(1..depth, fn i ->
-      {:def, [line: i * 10], [
-        {:"complex_function_#{i}", [], generate_function_args(i)},
-        [do: generate_nested_body(i)]
-      ]}
-    end)
+    functions =
+      Enum.map(1..depth, fn i ->
+        {:def, [line: i * 10],
+         [
+           {:"complex_function_#{i}", [], generate_function_args(i)},
+           [do: generate_nested_body(i)]
+         ]}
+      end)
 
-    {:defmodule, [line: 1], [
-      {:__aliases__, [line: 1], [module_name]},
-      [do: {:__block__, [], functions}]
-    ]}
+    {:defmodule, [line: 1],
+     [
+       {:__aliases__, [line: 1], [module_name]},
+       [do: {:__block__, [], functions}]
+     ]}
   end
 
   defp generate_function_args(count) do
@@ -698,13 +738,16 @@ defmodule ElixirScope.ASTRepository.PerformanceTest do
   end
 
   defp generate_nested_body(depth) do
-    {:case, [], [
-      {:variable, [], nil},
-      [do: [
-        {:->, [], [[{:ok, [], []}], generate_nested_body(depth - 1)]},
-        {:->, [], [[{:error, [], []}], {:error, [], nil}]}
-      ]]
-    ]}
+    {:case, [],
+     [
+       {:variable, [], nil},
+       [
+         do: [
+           {:->, [], [[{:ok, [], []}], generate_nested_body(depth - 1)]},
+           {:->, [], [[{:error, [], []}], {:error, [], nil}]}
+         ]
+       ]
+     ]}
   end
 
   defp generate_function_list(module_name, count) do
@@ -759,11 +802,14 @@ defmodule ElixirScope.ASTRepository.PerformanceTest do
 
     Enum.each(modules, fn module ->
       # Some modules accessed recently, others not
-      last_access = if rem(:erlang.phash2(module.module_name), 3) == 0 do
-        current_time - 3600  # 1 hour ago
-      else
-        current_time - 100   # Recent access
-      end
+      last_access =
+        if rem(:erlang.phash2(module.module_name), 3) == 0 do
+          # 1 hour ago
+          current_time - 3600
+        else
+          # Recent access
+          current_time - 100
+        end
 
       access_count = rem(:erlang.phash2(module.module_name), 10) + 1
 
@@ -783,8 +829,10 @@ defmodule ElixirScope.ASTRepository.PerformanceTest do
 
     Enum.each(modules, fn module ->
       age_factor = rem(:erlang.phash2(module.module_name), 5)
-      last_access = current_time - (age_factor * 600)  # 0-40 minutes ago
-      access_count = max(1, 10 - age_factor * 2)       # Fewer accesses for older modules
+      # 0-40 minutes ago
+      last_access = current_time - age_factor * 600
+      # Fewer accesses for older modules
+      access_count = max(1, 10 - age_factor * 2)
 
       :ets.insert(table, {module.module_name, last_access, access_count})
     end)
@@ -795,6 +843,7 @@ defmodule ElixirScope.ASTRepository.PerformanceTest do
       :undefined ->
         # Table doesn't exist, create it
         :ets.new(table_name, [:named_table, :public, :set])
+
       _ ->
         # Table exists
         :ok
@@ -866,13 +915,17 @@ defmodule ElixirScope.ASTRepository.PerformanceTest do
 
   defp format_bytes(bytes) when bytes < 1024, do: "#{bytes}B"
   defp format_bytes(bytes) when bytes < 1024 * 1024, do: "#{Float.round(bytes / 1024, 1)}KB"
-  defp format_bytes(bytes) when bytes < 1024 * 1024 * 1024, do: "#{Float.round(bytes / (1024 * 1024), 1)}MB"
+
+  defp format_bytes(bytes) when bytes < 1024 * 1024 * 1024,
+    do: "#{Float.round(bytes / (1024 * 1024), 1)}MB"
+
   defp format_bytes(bytes), do: "#{Float.round(bytes / (1024 * 1024 * 1024), 1)}GB"
 
   defp calculate_std_dev(values, mean) do
-    variance = Enum.reduce(values, 0, fn value, acc ->
-      acc + :math.pow(value - mean, 2)
-    end) / length(values)
+    variance =
+      Enum.reduce(values, 0, fn value, acc ->
+        acc + :math.pow(value - mean, 2)
+      end) / length(values)
 
     :math.sqrt(variance)
   end

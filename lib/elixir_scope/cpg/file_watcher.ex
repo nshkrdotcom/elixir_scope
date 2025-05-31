@@ -26,10 +26,17 @@ defmodule ElixirScope.AST.Enhanced.FileWatcher do
 
   @default_opts [
     watch_patterns: ["**/*.ex", "**/*.exs"],
-    ignore_patterns: ["**/deps/**", "**/build/**", "**/_build/**", "**/node_modules/**", "**/.git/**"],
+    ignore_patterns: [
+      "**/deps/**",
+      "**/build/**",
+      "**/_build/**",
+      "**/node_modules/**",
+      "**/.git/**"
+    ],
     debounce_ms: 500,
     batch_size: 10,
-    max_file_size: 1_000_000,  # 1MB
+    # 1MB
+    max_file_size: 1_000_000,
     enable_incremental: true,
     enable_batching: true,
     enable_debouncing: true,
@@ -125,7 +132,9 @@ defmodule ElixirScope.AST.Enhanced.FileWatcher do
       synchronizer: Keyword.get(opts, :synchronizer)
     }
 
-    Logger.debug("FileWatcher: State initialized - repository: #{inspect(state.repository)}, synchronizer: #{inspect(state.synchronizer)}")
+    Logger.debug(
+      "FileWatcher: State initialized - repository: #{inspect(state.repository)}, synchronizer: #{inspect(state.synchronizer)}"
+    )
 
     # If watch_dirs is provided, start watching immediately
     case Keyword.get(opts, :watch_dirs) do
@@ -136,9 +145,10 @@ defmodule ElixirScope.AST.Enhanced.FileWatcher do
       [dir | _] = watch_dirs ->
         Logger.debug("FileWatcher: Starting to watch directories: #{inspect(watch_dirs)}")
         # Validate directories exist
-        invalid_dirs = Enum.reject(watch_dirs, fn dir ->
-          File.exists?(dir) and File.dir?(dir)
-        end)
+        invalid_dirs =
+          Enum.reject(watch_dirs, fn dir ->
+            File.exists?(dir) and File.dir?(dir)
+          end)
 
         if length(invalid_dirs) > 0 do
           Logger.error("FileWatcher: Invalid directories found: #{inspect(invalid_dirs)}")
@@ -148,11 +158,12 @@ defmodule ElixirScope.AST.Enhanced.FileWatcher do
           case start_file_watcher(dir, opts) do
             {:ok, watcher_pid} ->
               Logger.info("File Watcher initialized and watching: #{dir}")
-              new_state = %{state |
-                project_path: dir,
-                watcher_pid: watcher_pid
-              }
-              Logger.debug("FileWatcher: Successfully started watching with watcher_pid: #{inspect(watcher_pid)}")
+              new_state = %{state | project_path: dir, watcher_pid: watcher_pid}
+
+              Logger.debug(
+                "FileWatcher: Successfully started watching with watcher_pid: #{inspect(watcher_pid)}"
+              )
+
               {:ok, new_state}
 
             {:error, reason} ->
@@ -186,12 +197,13 @@ defmodule ElixirScope.AST.Enhanced.FileWatcher do
             spawn(fn -> perform_initial_scan(project_path, new_opts) end)
           end
 
-          new_state = %{state |
-            project_path: project_path,
-            watcher_pid: watcher_pid,
-            opts: new_opts,
-            pending_changes: %{},
-            last_scan_time: DateTime.utc_now()
+          new_state = %{
+            state
+            | project_path: project_path,
+              watcher_pid: watcher_pid,
+              opts: new_opts,
+              pending_changes: %{},
+              last_scan_time: DateTime.utc_now()
           }
 
           {:reply, :ok, new_state}
@@ -218,6 +230,7 @@ defmodule ElixirScope.AST.Enhanced.FileWatcher do
       file_changes_detected: state.stats.file_changes_detected,
       last_scan_time: state.last_scan_time
     }
+
     {:reply, {:ok, status}, state}
   end
 
@@ -254,13 +267,18 @@ defmodule ElixirScope.AST.Enhanced.FileWatcher do
   def handle_call({:subscribe, subscriber_pid}, _from, state) do
     Logger.debug("FileWatcher adding subscriber: #{inspect(subscriber_pid)}")
     new_subscribers = [subscriber_pid | state.subscribers]
-    Logger.debug("FileWatcher now has #{length(new_subscribers)} subscribers: #{inspect(new_subscribers)}")
+
+    Logger.debug(
+      "FileWatcher now has #{length(new_subscribers)} subscribers: #{inspect(new_subscribers)}"
+    )
+
     {:reply, :ok, %{state | subscribers: new_subscribers}}
   end
 
   # Handle FileSystem events - the actual format from the FileSystem library
   def handle_info({:file_event, watcher_pid, {path, events}}, %{watcher_pid: watcher_pid} = state) do
     Logger.debug("FileWatcher: Received file event - path: #{path}, events: #{inspect(events)}")
+
     if should_process_file?(path, events, state.opts) do
       Logger.debug("FileWatcher: Processing file event for: #{path}")
       new_state = handle_file_change(path, events, state)
@@ -268,7 +286,11 @@ defmodule ElixirScope.AST.Enhanced.FileWatcher do
       event_type = List.first(events)
       file_extension = Path.extname(path)
       notification = {:file_event, %{type: event_type, path: path, extension: file_extension}}
-      Logger.debug("FileWatcher: Notifying #{length(state.subscribers)} subscribers with: #{inspect(notification)}")
+
+      Logger.debug(
+        "FileWatcher: Notifying #{length(state.subscribers)} subscribers with: #{inspect(notification)}"
+      )
+
       notify_subscribers(state.subscribers, notification)
       {:noreply, new_state}
     else
@@ -279,12 +301,19 @@ defmodule ElixirScope.AST.Enhanced.FileWatcher do
 
   # Handle FileSystem events in alternative format
   def handle_info({:file_event, watcher_pid, path, events}, %{watcher_pid: watcher_pid} = state) do
-    Logger.debug("FileWatcher: Received file event (alt format) - path: #{path}, events: #{inspect(events)}")
+    Logger.debug(
+      "FileWatcher: Received file event (alt format) - path: #{path}, events: #{inspect(events)}"
+    )
+
     if should_process_file?(path, events, state.opts) do
       Logger.debug("FileWatcher: Processing file event (alt format) for: #{path}")
       new_state = handle_file_change(path, events, state)
       # Notify subscribers
-      notify_subscribers(state.subscribers, {:file_event, %{type: List.first(events), path: path, extension: Path.extname(path)}})
+      notify_subscribers(
+        state.subscribers,
+        {:file_event, %{type: List.first(events), path: path, extension: Path.extname(path)}}
+      )
+
       {:noreply, new_state}
     else
       Logger.debug("FileWatcher: Ignoring file event (alt format) for: #{path} (filtered out)")
@@ -303,8 +332,9 @@ defmodule ElixirScope.AST.Enhanced.FileWatcher do
   end
 
   def handle_info(:process_debounced_changes, state) do
-    new_state = %{state | debounce_timer: nil}
-    |> process_pending_changes()
+    new_state =
+      %{state | debounce_timer: nil}
+      |> process_pending_changes()
 
     {:noreply, new_state}
   end
@@ -374,11 +404,7 @@ defmodule ElixirScope.AST.Enhanced.FileWatcher do
       Process.cancel_timer(state.debounce_timer)
     end
 
-    %{state |
-      watcher_pid: nil,
-      debounce_timer: nil,
-      pending_changes: %{}
-    }
+    %{state | watcher_pid: nil, debounce_timer: nil, pending_changes: %{}}
   end
 
   defp should_process_file?(path, events, opts) do
@@ -386,31 +412,38 @@ defmodule ElixirScope.AST.Enhanced.FileWatcher do
     elixir_file? = String.ends_with?(path, [".ex", ".exs"])
 
     # Check ignore patterns
-    ignored? = Enum.any?(Keyword.get(opts, :ignore_patterns, []), fn pattern ->
-      String.contains?(path, pattern)
-    end)
+    ignored? =
+      Enum.any?(Keyword.get(opts, :ignore_patterns, []), fn pattern ->
+        String.contains?(path, pattern)
+      end)
 
     # Check custom file filter if provided
-    custom_filter_ok? = case Keyword.get(opts, :file_filter) do
-      nil -> true  # No custom filter, allow all
-      filter_fn when is_function(filter_fn, 1) -> filter_fn.(path)
-      _ -> true  # Invalid filter, allow all
-    end
+    custom_filter_ok? =
+      case Keyword.get(opts, :file_filter) do
+        # No custom filter, allow all
+        nil -> true
+        filter_fn when is_function(filter_fn, 1) -> filter_fn.(path)
+        # Invalid filter, allow all
+        _ -> true
+      end
 
     # Check file size (skip for deletion events since file may not exist)
-    size_ok? = if :deleted in events do
-      true  # Skip size check for deleted files
-    else
-      case File.stat(path) do
-        {:ok, %{size: size}} -> size <= Keyword.get(opts, :max_file_size, 1_000_000)
-        _ -> false
+    size_ok? =
+      if :deleted in events do
+        # Skip size check for deleted files
+        true
+      else
+        case File.stat(path) do
+          {:ok, %{size: size}} -> size <= Keyword.get(opts, :max_file_size, 1_000_000)
+          _ -> false
+        end
       end
-    end
 
     # Check event types - include :deleted events
-    relevant_event? = Enum.any?(events, fn event ->
-      event in [:created, :modified, :renamed, :deleted]
-    end)
+    relevant_event? =
+      Enum.any?(events, fn event ->
+        event in [:created, :modified, :renamed, :deleted]
+      end)
 
     elixir_file? and not ignored? and size_ok? and relevant_event? and custom_filter_ok?
   end
@@ -431,10 +464,7 @@ defmodule ElixirScope.AST.Enhanced.FileWatcher do
 
     new_pending = Map.put(state.pending_changes, path, change_info)
 
-    new_state = %{state |
-      pending_changes: new_pending,
-      stats: new_stats
-    }
+    new_state = %{state | pending_changes: new_pending, stats: new_stats}
 
     # Handle debouncing
     if Keyword.get(state.opts, :enable_debouncing, true) do
@@ -466,24 +496,27 @@ defmodule ElixirScope.AST.Enhanced.FileWatcher do
       start_time = System.monotonic_time(:microsecond)
 
       # Group changes by type for efficient processing
-      {successful, failed} = if Keyword.get(state.opts, :enable_batching, true) do
-        process_changes_in_batches(state.pending_changes, state)
-      else
-        process_changes_individually(state.pending_changes, state)
-      end
+      {successful, failed} =
+        if Keyword.get(state.opts, :enable_batching, true) do
+          process_changes_in_batches(state.pending_changes, state)
+        else
+          process_changes_individually(state.pending_changes, state)
+        end
 
       end_time = System.monotonic_time(:microsecond)
       duration = end_time - start_time
 
       # Update stats
-      new_stats = state.stats
-      |> update_stats(:changes_processed, length(successful))
-      |> update_stats(:changes_failed, length(failed))
-      |> update_stats(:processing_time, duration)
+      new_stats =
+        state.stats
+        |> update_stats(:changes_processed, length(successful))
+        |> update_stats(:changes_failed, length(failed))
+        |> update_stats(:processing_time, duration)
 
       # Log results
       if length(failed) > 0 do
         Logger.warning("Failed to process #{length(failed)} file changes")
+
         Enum.each(failed, fn {path, reason} ->
           Logger.debug("Failed to process #{path}: #{inspect(reason)}")
         end)
@@ -498,18 +531,17 @@ defmodule ElixirScope.AST.Enhanced.FileWatcher do
       })
 
       # Keep failed changes for retry (with attempt limit)
-      retry_changes = failed
-      |> Enum.filter(fn {_path, _reason} -> true end)  # Could add retry logic here
-      |> Enum.into(%{}, fn {path, _reason} ->
-        change_info = state.pending_changes[path]
-        updated_info = %{change_info | attempts: change_info.attempts + 1}
-        {path, updated_info}
-      end)
+      retry_changes =
+        failed
+        # Could add retry logic here
+        |> Enum.filter(fn {_path, _reason} -> true end)
+        |> Enum.into(%{}, fn {path, _reason} ->
+          change_info = state.pending_changes[path]
+          updated_info = %{change_info | attempts: change_info.attempts + 1}
+          {path, updated_info}
+        end)
 
-      %{state |
-        pending_changes: retry_changes,
-        stats: new_stats
-      }
+      %{state | pending_changes: retry_changes, stats: new_stats}
     end
   end
 
@@ -575,13 +607,20 @@ defmodule ElixirScope.AST.Enhanced.FileWatcher do
     # Use synchronizer if available, otherwise fall back to direct repository access
     if state.synchronizer do
       Logger.debug("FileWatcher: Using synchronizer to handle file deletion: #{path}")
+
       case Synchronizer.sync_file_deletion(state.synchronizer, path) do
         :ok ->
-          Logger.debug("FileWatcher: Successfully synchronized file deletion via synchronizer: #{path}")
+          Logger.debug(
+            "FileWatcher: Successfully synchronized file deletion via synchronizer: #{path}"
+          )
+
           :ok
 
         {:error, reason} ->
-          Logger.error("FileWatcher: Synchronizer failed for file deletion #{path}: #{inspect(reason)}")
+          Logger.error(
+            "FileWatcher: Synchronizer failed for file deletion #{path}: #{inspect(reason)}"
+          )
+
           {:error, {:synchronizer_failed, reason}}
       end
     else
@@ -627,6 +666,7 @@ defmodule ElixirScope.AST.Enhanced.FileWatcher do
     # Use synchronizer if available, otherwise fall back to direct repository access
     if state.synchronizer do
       Logger.debug("FileWatcher: Using synchronizer to handle file modification: #{path}")
+
       case Synchronizer.sync_file(state.synchronizer, path) do
         :ok ->
           Logger.debug("FileWatcher: Successfully synchronized file via synchronizer: #{path}")
@@ -663,6 +703,7 @@ defmodule ElixirScope.AST.Enhanced.FileWatcher do
                           Enum.each(module_data.functions, fn {_key, function_data} ->
                             Repository.store_function(state.repository, function_data)
                           end)
+
                           Logger.debug("Updated module #{module_name} in repository")
                           :ok
 
@@ -696,7 +737,9 @@ defmodule ElixirScope.AST.Enhanced.FileWatcher do
 
     case ProjectPopulator.populate_project(project_path, opts) do
       {:ok, results} ->
-        Logger.info("Initial scan completed: #{results.files_discovered} files, #{map_size(results.modules)} modules")
+        Logger.info(
+          "Initial scan completed: #{results.files_discovered} files, #{map_size(results.modules)} modules"
+        )
 
         EventStore.store_event(:file_watcher, :initial_scan_completed, %{
           project_path: project_path,
@@ -734,11 +777,12 @@ defmodule ElixirScope.AST.Enhanced.FileWatcher do
     # This is a simplified implementation
     case Path.basename(path, ".ex") do
       basename when basename != "" ->
-        module_name = basename
-        |> String.split("_")
-        |> Enum.map(&String.capitalize/1)
-        |> Enum.join("")
-        |> String.to_atom()
+        module_name =
+          basename
+          |> String.split("_")
+          |> Enum.map(&String.capitalize/1)
+          |> Enum.join("")
+          |> String.to_atom()
 
         {:ok, module_name}
 
@@ -755,7 +799,9 @@ defmodule ElixirScope.AST.Enhanced.FileWatcher do
           atom when is_atom(atom) -> {:ok, atom}
           _ -> {:error, :invalid_module_alias}
         end
-      _ -> {:error, :no_module_found}
+
+      _ ->
+        {:error, :no_module_found}
     end
   end
 
@@ -787,10 +833,7 @@ defmodule ElixirScope.AST.Enhanced.FileWatcher do
     new_count = stats.changes_processed + 1
     new_average = if new_count > 0, do: new_total / new_count, else: 0.0
 
-    %{stats |
-      total_processing_time: new_total,
-      average_processing_time: new_average
-    }
+    %{stats | total_processing_time: new_total, average_processing_time: new_average}
   end
 
   defp calculate_uptime() do
@@ -803,6 +846,7 @@ defmodule ElixirScope.AST.Enhanced.FileWatcher do
     case :erlang.process_info(self(), :memory) do
       {:memory, memory_bytes} when is_integer(memory_bytes) ->
         Float.round(memory_bytes / (1024 * 1024), 2)
+
       _ ->
         0.0
     end

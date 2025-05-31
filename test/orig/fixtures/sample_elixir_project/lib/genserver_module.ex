@@ -18,4 +18,4 @@ defmodule MyApp.UserServer do
     new_state = Map.put(state, key, value)
     {:noreply, new_state}
   end
-end 
+end

@@ -3,26 +3,26 @@ defmodule ElixirScope.AST.Parser do
   @moduledoc """
   Enhanced AST parser that assigns unique node IDs to instrumentable AST nodes,
   extracts instrumentation points, and builds correlation indexes for runtime correlation.
-  
+
   This module is the foundation for compile-time AST analysis with runtime correlation.
   """
 
   @doc """
   Assigns unique node IDs to instrumentable AST nodes.
-  
+
   Instrumentable nodes include:
   - Function definitions (def, defp)
   - Pipe operations (|>)
   - Case statements
   - Try-catch blocks
   - Module attributes
-  
+
   Returns {:ok, enhanced_ast} or {:error, reason}.
   """
   @spec assign_node_ids(Macro.t()) :: {:ok, Macro.t()} | {:error, term()}
   def assign_node_ids(nil), do: {:error, :empty_ast}
   def assign_node_ids(ast) when not is_tuple(ast), do: {:error, :invalid_ast}
-  
+
   def assign_node_ids(ast) do
     try do
       {enhanced_ast, _counter} = assign_node_ids_recursive(ast, 0)
@@ -34,7 +34,7 @@ defmodule ElixirScope.AST.Parser do
 
   @doc """
   Extracts instrumentation points from an enhanced AST.
-  
+
   Returns {:ok, instrumentation_points} or {:error, reason}.
   """
   @spec extract_instrumentation_points(Macro.t()) :: {:ok, [map()]} | {:error, term()}
@@ -49,14 +49,14 @@ defmodule ElixirScope.AST.Parser do
 
   @doc """
   Builds a correlation index from enhanced AST and instrumentation points.
-  
+
   Returns {:ok, correlation_index} where correlation_index is a map of
   correlation_id -> ast_node_id.
   """
   @spec build_correlation_index(Macro.t(), [map()]) :: {:ok, map()} | {:error, term()}
   def build_correlation_index(_ast, instrumentation_points) do
     try do
-      correlation_index = 
+      correlation_index =
         instrumentation_points
         |> Enum.with_index()
         |> Enum.map(fn {point, index} ->
@@ -64,7 +64,7 @@ defmodule ElixirScope.AST.Parser do
           {correlation_id, point.ast_node_id}
         end)
         |> Map.new()
-      
+
       {:ok, correlation_index}
     rescue
       error -> {:error, "Failed to build correlation index: #{inspect(error)}"}
@@ -80,55 +80,56 @@ defmodule ElixirScope.AST.Parser do
         {new_meta, new_counter} = add_node_id_to_meta(meta, counter)
         {enhanced_args, final_counter} = assign_node_ids_to_args(args, new_counter)
         {{:def, new_meta, enhanced_args}, final_counter}
-      
+
       {:defp, meta, args} ->
         {new_meta, new_counter} = add_node_id_to_meta(meta, counter)
         {enhanced_args, final_counter} = assign_node_ids_to_args(args, new_counter)
         {{:defp, new_meta, enhanced_args}, final_counter}
-      
+
       # Pipe operations - instrumentable for data flow tracking
       {:|>, meta, args} ->
         {new_meta, new_counter} = add_node_id_to_meta(meta, counter)
         {enhanced_args, final_counter} = assign_node_ids_to_args(args, new_counter)
         {{:|>, new_meta, enhanced_args}, final_counter}
-      
+
       # Case statements - instrumentable for control flow tracking
       {:case, meta, args} ->
         {new_meta, new_counter} = add_node_id_to_meta(meta, counter)
         {enhanced_args, final_counter} = assign_node_ids_to_args(args, new_counter)
         {{:case, new_meta, enhanced_args}, final_counter}
-      
+
       # Try-catch blocks - instrumentable for error tracking
       {:try, meta, args} ->
         {new_meta, new_counter} = add_node_id_to_meta(meta, counter)
         {enhanced_args, final_counter} = assign_node_ids_to_args(args, new_counter)
         {{:try, new_meta, enhanced_args}, final_counter}
-      
+
       # Module attributes - instrumentable for metadata tracking
       {:@, meta, args} ->
         {new_meta, new_counter} = add_node_id_to_meta(meta, counter)
         {enhanced_args, final_counter} = assign_node_ids_to_args(args, new_counter)
         {{:@, new_meta, enhanced_args}, final_counter}
-      
+
       # Generic tuple with metadata - recurse into children
       {form, meta, args} when is_list(meta) ->
         {enhanced_args, new_counter} = assign_node_ids_to_args(args, counter)
         {{form, meta, enhanced_args}, new_counter}
-      
+
       # Generic tuple without metadata - recurse into children
       {form, args} ->
         {enhanced_args, new_counter} = assign_node_ids_to_args(args, counter)
         {{form, enhanced_args}, new_counter}
-      
+
       # Lists - recurse into elements
       list when is_list(list) ->
-        {enhanced_list, new_counter} = 
+        {enhanced_list, new_counter} =
           Enum.reduce(list, {[], counter}, fn item, {acc, cnt} ->
             {enhanced_item, new_cnt} = assign_node_ids_recursive(item, cnt)
             {[enhanced_item | acc], new_cnt}
           end)
+
         {Enum.reverse(enhanced_list), new_counter}
-      
+
       # Atoms, numbers, strings, etc. - no enhancement needed
       other ->
         {other, counter}
@@ -158,82 +159,116 @@ defmodule ElixirScope.AST.Parser do
       # Module definitions - recurse into module body
       {:defmodule, _meta, [_module_name, [do: body]]} ->
         extract_points_recursive(body, acc)
-      
+
       # Block structures - recurse into block contents
       {:__block__, _meta, statements} when is_list(statements) ->
         Enum.reduce(statements, acc, fn statement, statement_acc ->
           extract_points_recursive(statement, statement_acc)
         end)
-      
+
       # Function definitions - match the actual AST structure
       {:def, meta, [{name, _meta2, args} | _rest]} when is_list(args) ->
         case Keyword.get(meta, :ast_node_id) do
-          nil -> extract_from_children(ast, acc)
+          nil ->
+            extract_from_children(ast, acc)
+
           node_id ->
-            point = create_instrumentation_point(node_id, :function_entry, {name, length(args)}, meta, :public)
+            point =
+              create_instrumentation_point(
+                node_id,
+                :function_entry,
+                {name, length(args)},
+                meta,
+                :public
+              )
+
             extract_from_children(ast, [point | acc])
         end
-      
+
       {:def, meta, [{name, _meta2, _args} | _rest]} ->
         case Keyword.get(meta, :ast_node_id) do
-          nil -> extract_from_children(ast, acc)
+          nil ->
+            extract_from_children(ast, acc)
+
           node_id ->
             point = create_instrumentation_point(node_id, :function_entry, {name, 0}, meta, :public)
             extract_from_children(ast, [point | acc])
         end
-      
+
       {:defp, meta, [{name, _meta2, args} | _rest]} when is_list(args) ->
         case Keyword.get(meta, :ast_node_id) do
-          nil -> extract_from_children(ast, acc)
+          nil ->
+            extract_from_children(ast, acc)
+
           node_id ->
-            point = create_instrumentation_point(node_id, :function_entry, {name, length(args)}, meta, :private)
+            point =
+              create_instrumentation_point(
+                node_id,
+                :function_entry,
+                {name, length(args)},
+                meta,
+                :private
+              )
+
             extract_from_children(ast, [point | acc])
         end
-      
+
       {:defp, meta, [{name, _meta2, _args} | _rest]} ->
         case Keyword.get(meta, :ast_node_id) do
-          nil -> extract_from_children(ast, acc)
+          nil ->
+            extract_from_children(ast, acc)
+
           node_id ->
-            point = create_instrumentation_point(node_id, :function_entry, {name, 0}, meta, :private)
+            point =
+              create_instrumentation_point(node_id, :function_entry, {name, 0}, meta, :private)
+
             extract_from_children(ast, [point | acc])
         end
-      
+
       # Pipe operations
       {:|>, meta, _args} ->
         case Keyword.get(meta, :ast_node_id) do
-          nil -> extract_from_children(ast, acc)
+          nil ->
+            extract_from_children(ast, acc)
+
           node_id ->
             point = create_instrumentation_point(node_id, :pipe_operation, nil, meta, :public)
             extract_from_children(ast, [point | acc])
         end
-      
+
       # Case statements
       {:case, meta, _args} ->
         case Keyword.get(meta, :ast_node_id) do
-          nil -> extract_from_children(ast, acc)
+          nil ->
+            extract_from_children(ast, acc)
+
           node_id ->
             point = create_instrumentation_point(node_id, :case_statement, nil, meta, :public)
             extract_from_children(ast, [point | acc])
         end
-      
+
       # Try-catch blocks
       {:try, meta, _args} ->
         case Keyword.get(meta, :ast_node_id) do
-          nil -> extract_from_children(ast, acc)
+          nil ->
+            extract_from_children(ast, acc)
+
           node_id ->
             point = create_instrumentation_point(node_id, :try_block, nil, meta, :public)
             extract_from_children(ast, [point | acc])
         end
-      
+
       # Module attributes
       {:@, meta, _args} ->
         case Keyword.get(meta, :ast_node_id) do
-          nil -> extract_from_children(ast, acc)
+          nil ->
+            extract_from_children(ast, acc)
+
           node_id ->
             point = create_instrumentation_point(node_id, :module_attribute, nil, meta, :public)
             extract_from_children(ast, [point | acc])
         end
-      
+
       # Recurse into other structures
       _ ->
         extract_from_children(ast, acc)
@@ -246,26 +281,27 @@ defmodule ElixirScope.AST.Parser do
         Enum.reduce(args, acc, fn child, child_acc ->
           extract_points_recursive(child, child_acc)
         end)
-      
+
       {_form, args} when is_list(args) ->
         Enum.reduce(args, acc, fn child, child_acc ->
           extract_points_recursive(child, child_acc)
         end)
-      
+
       list when is_list(list) ->
         Enum.reduce(list, acc, fn child, child_acc ->
           extract_points_recursive(child, child_acc)
         end)
-      
+
       # Handle keyword lists (like [do: body])
       keyword_list when is_list(keyword_list) ->
         Enum.reduce(keyword_list, acc, fn
           {_key, value}, child_acc ->
             extract_points_recursive(value, child_acc)
+
           other, child_acc ->
             extract_points_recursive(other, child_acc)
         end)
-      
+
       _ ->
         acc
     end
@@ -282,7 +318,7 @@ defmodule ElixirScope.AST.Parser do
       line: Keyword.get(meta, :line),
       file: Keyword.get(meta, :file)
     }
-    
+
     # Add type-specific metadata
     case type do
       :function_entry ->
@@ -291,21 +327,21 @@ defmodule ElixirScope.AST.Parser do
           capture_args: true,
           capture_return: true
         })
-      
+
       :pipe_operation ->
         Map.merge(base_point, %{
           instrumentation_strategy: :data_flow_tracing,
           capture_input: true,
           capture_output: true
         })
-      
+
       :case_statement ->
         Map.merge(base_point, %{
           instrumentation_strategy: :control_flow_tracing,
           capture_condition: true,
           capture_branches: true
         })
-      
+
       _ ->
         base_point
     end
@@ -352,4 +388,4 @@ defmodule ElixirScope.AST.Parser do
     hash = :crypto.hash(:md5, "#{base}_#{point.ast_node_id}") |> Base.encode16(case: :lower)
     "#{base}_#{String.slice(hash, 0, 8)}"
   end
-end 
+end

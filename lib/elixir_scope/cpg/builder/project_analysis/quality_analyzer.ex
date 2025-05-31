@@ -15,10 +15,13 @@ defmodule ElixirScope.AST.Enhanced.ProjectPopulator.QualityAnalyzer do
   """
   def calculate_module_quality_metrics(ast, functions) do
     %{
-      maintainability_index: 85.0,  # Simplified calculation
-      test_coverage: 0.0,  # Would need test analysis
+      # Simplified calculation
+      maintainability_index: 85.0,
+      # Would need test analysis
+      test_coverage: 0.0,
       documentation_coverage: calculate_documentation_coverage(ast, functions),
-      code_duplication: 0.0  # Would need duplication analysis
+      # Would need duplication analysis
+      code_duplication: 0.0
     }
   end
 
@@ -27,6 +30,7 @@ defmodule ElixirScope.AST.Enhanced.ProjectPopulator.QualityAnalyzer do
   """
   def calculate_documentation_coverage(_ast, _functions) do
     # Simplified documentation coverage calculation
-    75.0  # Placeholder
+    # Placeholder
+    75.0
   end
 end

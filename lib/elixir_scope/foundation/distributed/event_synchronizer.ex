@@ -14,7 +14,8 @@ defmodule ElixirScope.Distributed.EventSynchronizer do
   alias ElixirScope.Distributed.GlobalClock
 
   @sync_batch_size 1000
-  @max_sync_age_ms 300_000  # 5 minutes
+  # 5 minutes
+  @max_sync_age_ms 300_000
 
   @doc """
   Synchronizes events with all nodes in the cluster.
@@ -27,9 +28,10 @@ defmodule ElixirScope.Distributed.EventSynchronizer do
     last_sync_times = get_last_sync_times(other_nodes)
 
     # Sync with each node
-    sync_results = for node <- other_nodes do
-      sync_with_node(node, last_sync_times[node])
-    end
+    sync_results =
+      for node <- other_nodes do
+        sync_with_node(node, last_sync_times[node])
+      end
 
     # Update sync timestamps
     now = GlobalClock.now()
@@ -44,7 +46,7 @@ defmodule ElixirScope.Distributed.EventSynchronizer do
   def sync_with_node(target_node, last_sync_time \\ nil) do
     try do
       # Get events since last sync
-      since_time = last_sync_time || (GlobalClock.now() - @max_sync_age_ms * 1_000_000)
+      since_time = last_sync_time || GlobalClock.now() - @max_sync_age_ms * 1_000_000
       local_events = DataAccess.get_events_since(since_time)
 
       # Send our events and get theirs
@@ -131,6 +133,7 @@ defmodule ElixirScope.Distributed.EventSynchronizer do
     case :ets.whereis(:elixir_scope_sync_state) do
       :undefined ->
         :ets.new(:elixir_scope_sync_state, [:named_table, :public, :set])
+
       _ ->
         :ok
     end
@@ -175,14 +178,16 @@ defmodule ElixirScope.Distributed.EventSynchronizer do
     remote_events
     |> Enum.chunk_every(@sync_batch_size)
     |> Enum.each(fn batch ->
-      processed_batch = Enum.map(batch, fn event ->
-        restore_event_from_sync(event, source_node)
-      end)
+      processed_batch =
+        Enum.map(batch, fn event ->
+          restore_event_from_sync(event, source_node)
+        end)
 
       # Filter out events we already have
-      new_events = Enum.reject(processed_batch, fn event ->
-        DataAccess.event_exists?(event.id)
-      end)
+      new_events =
+        Enum.reject(processed_batch, fn event ->
+          DataAccess.event_exists?(event.id)
+        end)
 
       # Store new events
       if length(new_events) > 0 do
@@ -192,15 +197,16 @@ defmodule ElixirScope.Distributed.EventSynchronizer do
   end
 
   defp restore_event_from_sync(sync_event, _source_node) do
-    restored_data = case sync_event.data do
-      {:compressed, compressed_data} ->
-        compressed_data
-        |> :zlib.uncompress()
-        |> :erlang.binary_to_term()
+    restored_data =
+      case sync_event.data do
+        {:compressed, compressed_data} ->
+          compressed_data
+          |> :zlib.uncompress()
+          |> :erlang.binary_to_term()
 
-      regular_data ->
-        regular_data
-    end
+        regular_data ->
+          regular_data
+      end
 
     %ElixirScope.Events{
       event_id: sync_event.id,

@@ -8,18 +8,27 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.ExpressionProcessors.ControlFlow
 
   # Get dependencies from application config for testability
   defp state_manager do
-    Application.get_env(:elixir_scope, :state_manager,
-      ElixirScope.AST.Enhanced.CFGGenerator.StateManager)
+    Application.get_env(
+      :elixir_scope,
+      :state_manager,
+      ElixirScope.AST.Enhanced.CFGGenerator.StateManager
+    )
   end
 
   defp ast_utilities do
-    Application.get_env(:elixir_scope, :ast_utilities,
-      ElixirScope.AST.Enhanced.CFGGenerator.ASTUtilities)
+    Application.get_env(
+      :elixir_scope,
+      :ast_utilities,
+      ElixirScope.AST.Enhanced.CFGGenerator.ASTUtilities
+    )
   end
 
   defp ast_processor do
-    Application.get_env(:elixir_scope, :ast_processor,
-      ElixirScope.AST.Enhanced.CFGGenerator.ASTProcessor)
+    Application.get_env(
+      :elixir_scope,
+      :ast_processor,
+      ElixirScope.AST.Enhanced.CFGGenerator.ASTProcessor
+    )
   end
 
   @doc """
@@ -85,31 +94,34 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.ExpressionProcessors.ControlFlow
     }
 
     # Create edges: left -> pipe -> right
-    left_to_pipe_edges = Enum.map(left_exits, fn exit_id ->
-      %CFGEdge{
-        from_node_id: exit_id,
-        to_node_id: pipe_id,
-        type: :sequential,
-        condition: nil,
-        probability: 1.0,
-        metadata: %{pipe_stage: :input}
-      }
-    end)
+    left_to_pipe_edges =
+      Enum.map(left_exits, fn exit_id ->
+        %CFGEdge{
+          from_node_id: exit_id,
+          to_node_id: pipe_id,
+          type: :sequential,
+          condition: nil,
+          probability: 1.0,
+          metadata: %{pipe_stage: :input}
+        }
+      end)
 
-    pipe_to_right_edges = Enum.map(right_exits, fn exit_id ->
-      %CFGEdge{
-        from_node_id: pipe_id,
-        to_node_id: exit_id,
-        type: :sequential,
-        condition: nil,
-        probability: 1.0,
-        metadata: %{pipe_stage: :output}
-      }
-    end)
+    pipe_to_right_edges =
+      Enum.map(right_exits, fn exit_id ->
+        %CFGEdge{
+          from_node_id: pipe_id,
+          to_node_id: exit_id,
+          type: :sequential,
+          condition: nil,
+          probability: 1.0,
+          metadata: %{pipe_stage: :output}
+        }
+      end)
 
-    all_nodes = left_nodes
-    |> Map.merge(right_nodes)
-    |> Map.put(pipe_id, pipe_node)
+    all_nodes =
+      left_nodes
+      |> Map.merge(right_nodes)
+      |> Map.put(pipe_id, pipe_node)
 
     all_edges = left_edges ++ right_edges ++ left_to_pipe_edges ++ pipe_to_right_edges
     all_scopes = Map.merge(left_scopes, right_scopes)

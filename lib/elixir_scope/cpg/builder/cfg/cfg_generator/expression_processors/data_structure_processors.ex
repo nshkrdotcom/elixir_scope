@@ -8,13 +8,19 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.ExpressionProcessors.DataStructu
 
   # Get dependencies from application config for testability
   defp state_manager do
-    Application.get_env(:elixir_scope, :state_manager,
-      ElixirScope.AST.Enhanced.CFGGenerator.StateManager)
+    Application.get_env(
+      :elixir_scope,
+      :state_manager,
+      ElixirScope.AST.Enhanced.CFGGenerator.StateManager
+    )
   end
 
   defp ast_utilities do
-    Application.get_env(:elixir_scope, :ast_utilities,
-      ElixirScope.AST.Enhanced.CFGGenerator.ASTUtilities)
+    Application.get_env(
+      :elixir_scope,
+      :ast_utilities,
+      ElixirScope.AST.Enhanced.CFGGenerator.ASTUtilities
+    )
   end
 
   @doc """

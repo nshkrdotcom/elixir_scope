@@ -62,7 +62,7 @@ defmodule TestPhoenixApp.Endpoint do
     # Mock endpoint
     Agent.start_link(fn -> %{} end, name: __MODULE__)
   end
-  
+
   def init(_key, config) do
     {:ok, config}
   end
@@ -89,18 +89,18 @@ defmodule TestPhoenixApp.Router do
   import Phoenix.LiveView.Router
 
   pipeline :browser do
-    plug :accepts, ["html"]
+    plug(:accepts, ["html"])
   end
 
   scope "/", TestPhoenixApp do
-    pipe_through :browser
+    pipe_through(:browser)
 
-    get "/users/:id", UserController, :show
-    post "/users", UserController, :create
-    get "/users/nonexistent", UserController, :error_test
+    get("/users/:id", UserController, :show)
+    post("/users", UserController, :create)
+    get("/users/nonexistent", UserController, :error_test)
 
-    live "/live/counter", CounterLive
-    live "/live/users", UsersLive
+    live("/live/counter", CounterLive)
+    live("/live/users", UsersLive)
   end
 end
 

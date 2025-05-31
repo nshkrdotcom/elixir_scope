@@ -1,8 +1,3 @@
-
-
-
-
-
 # # ORIG_FILE
 # defmodule ElixirScope.Foundation.Telemetry do
 #   @moduledoc """

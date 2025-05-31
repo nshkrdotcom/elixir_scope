@@ -1,5 +1,6 @@
 defmodule ElixirScope.ASTRepository.ProjectPopulatorTest do
-  use ExUnit.Case, async: false  # async: false due to file system operations
+  # async: false due to file system operations
+  use ExUnit.Case, async: false
 
   alias ElixirScope.ASTRepository.Enhanced.{ProjectPopulator, Repository}
   alias ElixirScope.ASTRepository.Enhanced.ProjectPopulator.FileDiscovery
@@ -29,7 +30,8 @@ defmodule ElixirScope.ASTRepository.ProjectPopulatorTest do
     end
 
     test "filters out excluded directories", %{project_path: project_path} do
-      {:ok, files} = FileDiscovery.discover_elixir_files(project_path, exclude_patterns: ["deps", "_build"])
+      {:ok, files} =
+        FileDiscovery.discover_elixir_files(project_path, exclude_patterns: ["deps", "_build"])
 
       # Should not include files from excluded directories
       refute Enum.any?(files, &String.contains?(&1, "deps/"))
@@ -37,18 +39,20 @@ defmodule ElixirScope.ASTRepository.ProjectPopulatorTest do
     end
 
     test "filters by file patterns", %{project_path: project_path} do
-      {:ok, files} = FileDiscovery.discover_elixir_files(project_path,
-        include_patterns: ["**/sample_*.ex"])
+      {:ok, files} =
+        FileDiscovery.discover_elixir_files(project_path,
+          include_patterns: ["**/sample_*.ex"]
+        )
 
       # Should only include files matching pattern
       assert Enum.all?(files, fn file ->
-        Path.basename(file) |> String.starts_with?("sample_")
-      end)
+               Path.basename(file) |> String.starts_with?("sample_")
+             end)
     end
 
     test "handles non-existent project directory" do
       assert {:error, :directory_not_found} =
-        FileDiscovery.discover_elixir_files("/non/existent/path")
+               FileDiscovery.discover_elixir_files("/non/existent/path")
     end
   end
 
@@ -89,7 +93,8 @@ defmodule ElixirScope.ASTRepository.ProjectPopulatorTest do
       {:ok, module_data} = ProjectPopulator.parse_and_analyze_file(file_path)
 
       assert module_data.module_name == SampleGenServer
-      assert map_size(module_data.functions) >= 3  # init, handle_call, handle_cast
+      # init, handle_call, handle_cast
+      assert map_size(module_data.functions) >= 3
       assert module_data.complexity_metrics.combined_complexity > 0
 
       # Should have function data
@@ -137,8 +142,11 @@ defmodule ElixirScope.ASTRepository.ProjectPopulatorTest do
 
     test "handles parallel processing efficiently", %{repository: repo, project_path: project_path} do
       # Test with parallel processing enabled
-      {:ok, result} = ProjectPopulator.populate_project(repo, project_path,
-        parallel_processing: true, max_concurrency: 4)
+      {:ok, result} =
+        ProjectPopulator.populate_project(repo, project_path,
+          parallel_processing: true,
+          max_concurrency: 4
+        )
 
       # Should complete successfully with parallel processing
       assert map_size(result.modules) >= 3
@@ -171,7 +179,7 @@ defmodule ElixirScope.ASTRepository.ProjectPopulatorTest do
     test "handles population errors gracefully", %{repository: repo} do
       # Try to populate non-existent project
       assert {:error, :directory_not_found} =
-        ProjectPopulator.populate_project(repo, "/non/existent/project")
+               ProjectPopulator.populate_project(repo, "/non/existent/project")
     end
 
     test "supports incremental population", %{repository: repo, project_path: project_path} do
@@ -208,52 +216,68 @@ defmodule ElixirScope.ASTRepository.ProjectPopulatorTest do
       %{repository: repo_pid, project_path: @temp_project_dir}
     end
 
-    test "meets performance targets for medium projects", %{repository: repo, project_path: project_path} do
+    test "meets performance targets for medium projects", %{
+      repository: repo,
+      project_path: project_path
+    } do
       # Should complete population in reasonable time
-      {time_us, {:ok, result}} = :timer.tc(fn ->
-        ProjectPopulator.populate_project(repo, project_path)
-      end)
+      {time_us, {:ok, result}} =
+        :timer.tc(fn ->
+          ProjectPopulator.populate_project(repo, project_path)
+        end)
 
       # Should complete in <10s for 50 modules (10,000,000 microseconds)
       assert time_us < 10_000_000
       assert map_size(result.modules) >= 20
 
       # Performance should be reasonable
-      assert result.duration_microseconds < 30_000_000  # 30 seconds max
+      # 30 seconds max
+      assert result.duration_microseconds < 30_000_000
     end
 
     test "handles large projects efficiently", %{repository: repo, project_path: project_path} do
       # Test with batch processing
-      {:ok, result} = ProjectPopulator.populate_project(repo, project_path,
-        batch_size: 10, parallel_processing: true)
+      {:ok, result} =
+        ProjectPopulator.populate_project(repo, project_path,
+          batch_size: 10,
+          parallel_processing: true
+        )
 
       # Should handle large projects efficiently
       assert map_size(result.modules) >= 20
-      assert result.duration_microseconds < 60_000_000  # 60 seconds max
+      # 60 seconds max
+      assert result.duration_microseconds < 60_000_000
     end
 
     test "parallel processing improves performance", %{repository: repo, project_path: project_path} do
       # Sequential processing
-      {time_sequential, _} = :timer.tc(fn ->
-        ProjectPopulator.populate_project(repo, project_path, parallel_processing: false)
-      end)
+      {time_sequential, _} =
+        :timer.tc(fn ->
+          ProjectPopulator.populate_project(repo, project_path, parallel_processing: false)
+        end)
 
       # Clear repository for fair comparison
       # TODO: Implement Repository.clear_all or use alternative
 
       # Parallel processing
-      {time_parallel, _} = :timer.tc(fn ->
-        ProjectPopulator.populate_project(repo, project_path,
-          parallel_processing: true, max_concurrency: 4)
-      end)
+      {time_parallel, _} =
+        :timer.tc(fn ->
+          ProjectPopulator.populate_project(repo, project_path,
+            parallel_processing: true,
+            max_concurrency: 4
+          )
+        end)
 
       # Parallel should be faster (or at least not significantly slower)
       # Adjusted threshold to account for system variability and overhead
       improvement_ratio = time_sequential / time_parallel
-      assert improvement_ratio >= 0.75  # Allow for more overhead and system variability
+      # Allow for more overhead and system variability
+      assert improvement_ratio >= 0.75
 
       # Log the actual performance for debugging
-      IO.puts("Performance test: Sequential=#{time_sequential}μs, Parallel=#{time_parallel}μs, Ratio=#{Float.round(improvement_ratio, 3)}")
+      IO.puts(
+        "Performance test: Sequential=#{time_sequential}μs, Parallel=#{time_parallel}μs, Ratio=#{Float.round(improvement_ratio, 3)}"
+      )
     end
   end
 
@@ -290,19 +314,26 @@ defmodule ElixirScope.ASTRepository.ProjectPopulatorTest do
         def test_function, do: :ok
       end
       """
+
       File.write!(Path.join([mixed_dir, "lib", "valid.ex"]), valid_content)
 
       # Invalid file
-      File.write!(Path.join([mixed_dir, "lib", "invalid.ex"]), "defmodule Invalid do\n  def broken(")
+      File.write!(
+        Path.join([mixed_dir, "lib", "invalid.ex"]),
+        "defmodule Invalid do\n  def broken("
+      )
 
       on_exit(fn -> File.rm_rf!(mixed_dir) end)
 
       {:ok, result} = ProjectPopulator.populate_project(repo, mixed_dir)
 
       # Should process valid files and report errors for invalid ones
-      assert map_size(result.modules) == 1  # Only valid module
-      assert result.files_discovered == 2    # Both files discovered
-      assert result.files_parsed == 1    # Only valid file parsed successfully
+      # Only valid module
+      assert map_size(result.modules) == 1
+      # Both files discovered
+      assert result.files_discovered == 2
+      # Only valid file parsed successfully
+      assert result.files_parsed == 1
     end
 
     test "handles repository storage failures gracefully", %{repository: repo} do
@@ -348,6 +379,7 @@ defmodule ElixirScope.ASTRepository.ProjectPopulatorTest do
       defp process_item(item), do: {:processed, item}
     end
     """
+
     File.write!(Path.join([@temp_project_dir, "lib", "sample_module.ex"]), sample_module)
 
     # Create GenServer module
@@ -380,6 +412,7 @@ defmodule ElixirScope.ASTRepository.ProjectPopulatorTest do
       end
     end
     """
+
     File.write!(Path.join([@temp_project_dir, "lib", "sample_genserver.ex"]), genserver_module)
 
     # Create Phoenix controller
@@ -401,6 +434,7 @@ defmodule ElixirScope.ASTRepository.ProjectPopulatorTest do
       defp get_item(_id), do: {:error, :not_found}
     end
     """
+
     File.write!(Path.join([@temp_project_dir, "lib", "sample_controller.ex"]), controller_module)
   end
 

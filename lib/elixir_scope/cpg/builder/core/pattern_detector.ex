@@ -53,10 +53,11 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.PatternDetector do
   end
 
   defp find_unused_variables(cpg) do
-    unused = case cpg.data_flow_graph do
-      %{unused_variables: unused_vars} when is_list(unused_vars) -> unused_vars
-      _ -> []
-    end
+    unused =
+      case cpg.data_flow_graph do
+        %{unused_variables: unused_vars} when is_list(unused_vars) -> unused_vars
+        _ -> []
+      end
 
     {:ok, unused}
   end
@@ -73,44 +74,52 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.PatternDetector do
   defp find_complex_functions(cpg) do
     threshold = 10
 
-    complex_functions = if cpg.complexity_metrics.combined_complexity > threshold do
-      [%{
-        type: :complex_function,
-        complexity: cpg.complexity_metrics.combined_complexity,
-        threshold: threshold,
-        suggestion: "Consider breaking down this function"
-      }]
-    else
-      []
-    end
+    complex_functions =
+      if cpg.complexity_metrics.combined_complexity > threshold do
+        [
+          %{
+            type: :complex_function,
+            complexity: cpg.complexity_metrics.combined_complexity,
+            threshold: threshold,
+            suggestion: "Consider breaking down this function"
+          }
+        ]
+      else
+        []
+      end
 
     {:ok, complex_functions}
   end
 
   defp find_security_risks(cpg) do
-    risks = case cpg.security_analysis do
-      %{potential_vulnerabilities: vulnerabilities} when is_list(vulnerabilities) ->
-        vulnerabilities
-      _ -> []
-    end
+    risks =
+      case cpg.security_analysis do
+        %{potential_vulnerabilities: vulnerabilities} when is_list(vulnerabilities) ->
+          vulnerabilities
+
+        _ ->
+          []
+      end
 
     {:ok, risks}
   end
 
   defp find_performance_bottlenecks(cpg) do
-    bottlenecks = case cpg.performance_analysis do
-      %{performance_hotspots: hotspots} when is_list(hotspots) -> hotspots
-      _ -> []
-    end
+    bottlenecks =
+      case cpg.performance_analysis do
+        %{performance_hotspots: hotspots} when is_list(hotspots) -> hotspots
+        _ -> []
+      end
 
     {:ok, bottlenecks}
   end
 
   defp find_custom_pattern(cpg, matcher) when is_function(matcher) do
     try do
-      results = cpg.unified_nodes
-      |> Enum.filter(fn {_id, node} -> matcher.(node) end)
-      |> Enum.map(fn {id, node} -> %{node_id: id, node: node} end)
+      results =
+        cpg.unified_nodes
+        |> Enum.filter(fn {_id, node} -> matcher.(node) end)
+        |> Enum.map(fn {id, node} -> %{node_id: id, node: node} end)
 
       {:ok, results}
     rescue

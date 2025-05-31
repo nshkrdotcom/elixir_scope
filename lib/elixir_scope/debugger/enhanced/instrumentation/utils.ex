@@ -70,7 +70,8 @@ defmodule ElixirScope.Capture.Runtime.EnhancedInstrumentation.Utils do
   def sanitize_variable_name(name) do
     name
     |> String.replace(~r/[^a-zA-Z0-9_]/, "_")
-    |> String.slice(0, 50)  # Limit length
+    # Limit length
+    |> String.slice(0, 50)
   end
 
   @doc """
@@ -78,8 +79,11 @@ defmodule ElixirScope.Capture.Runtime.EnhancedInstrumentation.Utils do
   """
   @spec estimate_term_size(term()) :: non_neg_integer()
   def estimate_term_size(term) when is_binary(term), do: byte_size(term)
-  def estimate_term_size(term) when is_list(term), do: length(term) * 8  # rough estimate
-  def estimate_term_size(term) when is_map(term), do: map_size(term) * 16  # rough estimate
+  # rough estimate
+  def estimate_term_size(term) when is_list(term), do: length(term) * 8
+  # rough estimate
+  def estimate_term_size(term) when is_map(term), do: map_size(term) * 16
   def estimate_term_size(term) when is_tuple(term), do: tuple_size(term) * 8
-  def estimate_term_size(_term), do: 8  # default word size
+  # default word size
+  def estimate_term_size(_term), do: 8
 end

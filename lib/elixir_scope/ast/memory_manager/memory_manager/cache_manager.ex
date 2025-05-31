@@ -11,9 +11,12 @@ defmodule ElixirScope.AST.MemoryManager.CacheManager do
   require Logger
 
   # Cache configuration
-  @query_cache_ttl 60_000           # 1 minute
-  @analysis_cache_ttl 300_000       # 5 minutes
-  @cpg_cache_ttl 600_000            # 10 minutes
+  # 1 minute
+  @query_cache_ttl 60_000
+  # 5 minutes
+  @analysis_cache_ttl 300_000
+  # 10 minutes
+  @cpg_cache_ttl 600_000
   @max_cache_entries 1000
 
   # ETS tables for caching
@@ -22,14 +25,14 @@ defmodule ElixirScope.AST.MemoryManager.CacheManager do
   @cpg_cache_table :ast_repo_cpg_cache
 
   @type cache_stats :: %{
-    query_cache_size: non_neg_integer(),
-    analysis_cache_size: non_neg_integer(),
-    cpg_cache_size: non_neg_integer(),
-    total_cache_hits: non_neg_integer(),
-    total_cache_misses: non_neg_integer(),
-    cache_hit_ratio: float(),
-    evictions: non_neg_integer()
-  }
+          query_cache_size: non_neg_integer(),
+          analysis_cache_size: non_neg_integer(),
+          cpg_cache_size: non_neg_integer(),
+          total_cache_hits: non_neg_integer(),
+          total_cache_misses: non_neg_integer(),
+          cache_hit_ratio: float(),
+          evictions: non_neg_integer()
+        }
 
   defstruct [
     :cache_hits,
@@ -116,6 +119,7 @@ defmodule ElixirScope.AST.MemoryManager.CacheManager do
       {:ok, value} ->
         new_state = %{state | cache_hits: state.cache_hits + 1}
         {:reply, {:ok, value}, new_state}
+
       :miss ->
         new_state = %{state | cache_misses: state.cache_misses + 1}
         {:reply, :miss, new_state}
@@ -143,6 +147,7 @@ defmodule ElixirScope.AST.MemoryManager.CacheManager do
       cache_hit_ratio: calculate_hit_ratio(state.cache_hits, state.cache_misses),
       evictions: state.evictions
     }
+
     {:reply, stats, state}
   end
 
@@ -168,9 +173,11 @@ defmodule ElixirScope.AST.MemoryManager.CacheManager do
   defp cache_get_internal(cache_type, key) do
     try do
       table = cache_table_for_type(cache_type)
+
       case :ets.lookup(table, key) do
         [{^key, value, timestamp, _access_count}] ->
           ttl = cache_ttl_for_type(cache_type)
+
           if System.monotonic_time(:millisecond) - timestamp < ttl do
             # Update access count and timestamp
             :ets.update_counter(table, key, {4, 1})
@@ -181,6 +188,7 @@ defmodule ElixirScope.AST.MemoryManager.CacheManager do
             :ets.delete(table, key)
             :miss
           end
+
         [] ->
           :miss
       end
@@ -197,17 +205,21 @@ defmodule ElixirScope.AST.MemoryManager.CacheManager do
 
       # Check cache size and evict if necessary
       cache_size = :ets.info(table, :size)
-      evictions = if cache_size >= @max_cache_entries do
-        evict_lru_entries(table, div(@max_cache_entries, 10))  # Evict 10%
-      else
-        0
-      end
+
+      evictions =
+        if cache_size >= @max_cache_entries do
+          # Evict 10%
+          evict_lru_entries(table, div(@max_cache_entries, 10))
+        else
+          0
+        end
 
       :ets.insert(table, {key, value, timestamp, 1})
       evictions
     rescue
       _error ->
-        0  # Fail silently for cache operations
+        # Fail silently for cache operations
+        0
     end
   end
 
@@ -218,15 +230,17 @@ defmodule ElixirScope.AST.MemoryManager.CacheManager do
       :ok
     rescue
       _error ->
-        :ok  # Fail silently for cache operations
+        # Fail silently for cache operations
+        :ok
     end
   end
 
   defp evict_lru_entries(table, count) do
     # Get entries sorted by access time (oldest first)
-    entries = :ets.tab2list(table)
-    |> Enum.sort_by(fn {_key, _value, timestamp, _access_count} -> timestamp end)
-    |> Enum.take(count)
+    entries =
+      :ets.tab2list(table)
+      |> Enum.sort_by(fn {_key, _value, timestamp, _access_count} -> timestamp end)
+      |> Enum.take(count)
 
     # Remove oldest entries
     Enum.each(entries, fn {key, _value, _timestamp, _access_count} ->
@@ -245,6 +259,7 @@ defmodule ElixirScope.AST.MemoryManager.CacheManager do
 
   defp calculate_hit_ratio(hits, misses) do
     total = hits + misses
+
     if total > 0 do
       hits / total
     else
@@ -255,10 +270,12 @@ defmodule ElixirScope.AST.MemoryManager.CacheManager do
   defp cache_table_for_type(:query), do: @query_cache_table
   defp cache_table_for_type(:analysis), do: @analysis_cache_table
   defp cache_table_for_type(:cpg), do: @cpg_cache_table
-  defp cache_table_for_type(_), do: @query_cache_table  # Default fallback
+  # Default fallback
+  defp cache_table_for_type(_), do: @query_cache_table
 
   defp cache_ttl_for_type(:query), do: @query_cache_ttl
   defp cache_ttl_for_type(:analysis), do: @analysis_cache_ttl
   defp cache_ttl_for_type(:cpg), do: @cpg_cache_ttl
-  defp cache_ttl_for_type(_), do: @query_cache_ttl  # Default fallback
+  # Default fallback
+  defp cache_ttl_for_type(_), do: @query_cache_ttl
 end

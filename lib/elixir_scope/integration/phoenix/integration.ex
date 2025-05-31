@@ -120,7 +120,12 @@ defmodule ElixirScope.Phoenix.Integration do
     )
   end
 
-  def handle_liveview_event([:phoenix, :live_view, :mount, :start], _measurements, metadata, _config) do
+  def handle_liveview_event(
+        [:phoenix, :live_view, :mount, :start],
+        _measurements,
+        metadata,
+        _config
+      ) do
     correlation_id = generate_correlation_id()
 
     # Store correlation ID in socket for downstream use
@@ -146,7 +151,12 @@ defmodule ElixirScope.Phoenix.Integration do
     )
   end
 
-  def handle_liveview_event([:phoenix, :live_view, :handle_event, :start], _measurements, metadata, _config) do
+  def handle_liveview_event(
+        [:phoenix, :live_view, :handle_event, :start],
+        _measurements,
+        metadata,
+        _config
+      ) do
     correlation_id = get_socket_correlation_id(metadata.socket)
 
     InstrumentationRuntime.report_liveview_handle_event_start(
@@ -157,7 +167,12 @@ defmodule ElixirScope.Phoenix.Integration do
     )
   end
 
-  def handle_liveview_event([:phoenix, :live_view, :handle_event, :stop], measurements, metadata, _config) do
+  def handle_liveview_event(
+        [:phoenix, :live_view, :handle_event, :stop],
+        measurements,
+        metadata,
+        _config
+      ) do
     correlation_id = get_socket_correlation_id(metadata.socket)
 
     # Capture state changes
@@ -209,7 +224,12 @@ defmodule ElixirScope.Phoenix.Integration do
     )
   end
 
-  def handle_channel_event([:phoenix, :channel, :handle_in, :start], _measurements, metadata, _config) do
+  def handle_channel_event(
+        [:phoenix, :channel, :handle_in, :start],
+        _measurements,
+        metadata,
+        _config
+      ) do
     correlation_id = generate_correlation_id()
 
     InstrumentationRuntime.report_phoenix_channel_message_start(
@@ -280,7 +300,10 @@ defmodule ElixirScope.Phoenix.Integration do
     rescue
       UndefinedFunctionError ->
         # Fallback if Plug.Conn is not available
-        %{conn | private: Map.put(conn.private || %{}, :elixir_scope_correlation_id, correlation_id)}
+        %{
+          conn
+          | private: Map.put(conn.private || %{}, :elixir_scope_correlation_id, correlation_id)
+        }
     end
   end
 

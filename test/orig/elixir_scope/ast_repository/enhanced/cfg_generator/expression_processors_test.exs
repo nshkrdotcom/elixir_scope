@@ -4,6 +4,7 @@ defmodule ElixirScope.ASTRepository.Enhanced.CFGGenerator.ExpressionProcessorsTe
   import Mox
 
   alias ElixirScope.ASTRepository.Enhanced.CFGGenerator.ExpressionProcessors
+
   alias ElixirScope.ASTRepository.Enhanced.CFGGenerator.ExpressionProcessors.{
     BasicProcessors,
     AssignmentProcessors,
@@ -22,12 +23,23 @@ defmodule ElixirScope.ASTRepository.Enhanced.CFGGenerator.ExpressionProcessorsTe
 
     on_exit(fn ->
       # Reset to real modules after test
-      Application.put_env(:elixir_scope, :state_manager,
-        ElixirScope.ASTRepository.Enhanced.CFGGenerator.StateManager)
-      Application.put_env(:elixir_scope, :ast_utilities,
-        ElixirScope.ASTRepository.Enhanced.CFGGenerator.ASTUtilities)
-      Application.put_env(:elixir_scope, :ast_processor,
-        ElixirScope.ASTRepository.Enhanced.CFGGenerator.ASTProcessor)
+      Application.put_env(
+        :elixir_scope,
+        :state_manager,
+        ElixirScope.ASTRepository.Enhanced.CFGGenerator.StateManager
+      )
+
+      Application.put_env(
+        :elixir_scope,
+        :ast_utilities,
+        ElixirScope.ASTRepository.Enhanced.CFGGenerator.ASTUtilities
+      )
+
+      Application.put_env(
+        :elixir_scope,
+        :ast_processor,
+        ElixirScope.ASTRepository.Enhanced.CFGGenerator.ASTProcessor
+      )
     end)
 
     :ok
@@ -300,6 +312,7 @@ defmodule ElixirScope.ASTRepository.Enhanced.CFGGenerator.ExpressionProcessorsTe
         {:<-, [], [:item, :list]},
         {:>, [], [:item, 0]}
       ]
+
       meta = [line: 15, ast_node_id: "comp_456"]
 
       # Mock StateManager.generate_node_id/2
@@ -334,7 +347,8 @@ defmodule ElixirScope.ASTRepository.Enhanced.CFGGenerator.ExpressionProcessorsTe
       assert comp_node.metadata.clauses == clauses
       assert length(comp_node.metadata.generators) == 1
       assert length(comp_node.metadata.filters) == 1
-      assert comp_node.metadata.complexity_contribution == 2  # 1 generator + 1 filter
+      # 1 generator + 1 filter
+      assert comp_node.metadata.complexity_contribution == 2
 
       assert exits == ["comprehension_10"]
       assert new_state.next_node_id == 11

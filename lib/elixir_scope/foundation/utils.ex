@@ -30,11 +30,13 @@ defmodule ElixirScope.Foundation.Utils do
     <<u0::32, u1::16, u2::16, u3::16, u4::48>> = :crypto.strong_rand_bytes(16)
 
     # Set version (4) and variant bits
-    u2_v4 = u2 &&& 0x0FFF ||| 0x4000
-    u3_var = u3 &&& 0x3FFF ||| 0x8000
+    u2_v4 = (u2 &&& 0x0FFF) ||| 0x4000
+    u3_var = (u3 &&& 0x3FFF) ||| 0x8000
 
-    :io_lib.format("~8.16.0b-~4.16.0b-~4.16.0b-~4.16.0b-~12.16.0b",
-                   [u0, u1, u2_v4, u3_var, u4])
+    :io_lib.format(
+      "~8.16.0b-~4.16.0b-~4.16.0b-~4.16.0b-~12.16.0b",
+      [u0, u1, u2_v4, u3_var, u4]
+    )
     |> IO.iodata_to_binary()
   end
 
@@ -71,7 +73,7 @@ defmodule ElixirScope.Foundation.Utils do
 
   ## Measurement
 
-  @spec measure((() -> t)) :: measurement_result(t) when t: var
+  @spec measure((-> t)) :: measurement_result(t) when t: var
   def measure(fun) when is_function(fun, 0) do
     start_time = monotonic_timestamp()
     result = fun.()
@@ -80,7 +82,7 @@ defmodule ElixirScope.Foundation.Utils do
     {result, end_time - start_time}
   end
 
-  @spec measure_memory((() -> t)) :: {t, {non_neg_integer(), non_neg_integer(), integer()}} when t: var
+  @spec measure_memory((-> t)) :: {t, {non_neg_integer(), non_neg_integer(), integer()}} when t: var
   def measure_memory(fun) when is_function(fun, 0) do
     memory_before = :erlang.memory(:total)
     result = fun.()
@@ -130,12 +132,12 @@ defmodule ElixirScope.Foundation.Utils do
   end
 
   @spec system_stats() :: %{
-    timestamp: integer(),
-    process_count: non_neg_integer(),
-    total_memory: non_neg_integer(),
-    scheduler_count: pos_integer(),
-    otp_release: binary()
-  }
+          timestamp: integer(),
+          process_count: non_neg_integer(),
+          total_memory: non_neg_integer(),
+          scheduler_count: pos_integer(),
+          otp_release: binary()
+        }
   def system_stats do
     %{
       timestamp: monotonic_timestamp(),

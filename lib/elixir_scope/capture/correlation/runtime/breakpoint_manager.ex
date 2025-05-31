@@ -23,7 +23,8 @@ defmodule ElixirScope.AST.RuntimeCorrelator.BreakpointManager do
         ast_path: ["MyGenServer", "handle_call"]
       })
   """
-  @spec create_structural_breakpoint(map()) :: {:ok, String.t(), Types.structural_breakpoint()} | {:error, term()}
+  @spec create_structural_breakpoint(map()) ::
+          {:ok, String.t(), Types.structural_breakpoint()} | {:error, term()}
   def create_structural_breakpoint(spec) do
     breakpoint_id = generate_breakpoint_id("structural")
 
@@ -55,7 +56,8 @@ defmodule ElixirScope.AST.RuntimeCorrelator.BreakpointManager do
         flow_conditions: [:assignment, :pattern_match]
       })
   """
-  @spec create_data_flow_breakpoint(map()) :: {:ok, String.t(), Types.data_flow_breakpoint()} | {:error, term()}
+  @spec create_data_flow_breakpoint(map()) ::
+          {:ok, String.t(), Types.data_flow_breakpoint()} | {:error, term()}
   def create_data_flow_breakpoint(spec) do
     breakpoint_id = generate_breakpoint_id("data_flow")
 
@@ -87,7 +89,8 @@ defmodule ElixirScope.AST.RuntimeCorrelator.BreakpointManager do
         ast_scope: "MyGenServer.handle_call/3"
       })
   """
-  @spec create_semantic_watchpoint(map()) :: {:ok, String.t(), Types.semantic_watchpoint()} | {:error, term()}
+  @spec create_semantic_watchpoint(map()) ::
+          {:ok, String.t(), Types.semantic_watchpoint()} | {:error, term()}
   def create_semantic_watchpoint(spec) do
     watchpoint_id = generate_watchpoint_id()
 
@@ -114,11 +117,12 @@ defmodule ElixirScope.AST.RuntimeCorrelator.BreakpointManager do
   def update_breakpoint_hit(breakpoint_id, additional_metadata \\ %{}) do
     # This would typically update the breakpoint in the main GenServer state
     # For now, return a success indicator
-    {:ok, %{
-      breakpoint_id: breakpoint_id,
-      hit_time: System.monotonic_time(:nanosecond),
-      additional_metadata: additional_metadata
-    }}
+    {:ok,
+     %{
+       breakpoint_id: breakpoint_id,
+       hit_time: System.monotonic_time(:nanosecond),
+       additional_metadata: additional_metadata
+     }}
   end
 
   @doc """
@@ -128,7 +132,9 @@ defmodule ElixirScope.AST.RuntimeCorrelator.BreakpointManager do
   def check_breakpoint_match(event, breakpoints) do
     # Check structural breakpoints
     case check_structural_breakpoints(event, breakpoints.structural) do
-      {:match, bp_id, metadata} -> {:match, bp_id, metadata}
+      {:match, bp_id, metadata} ->
+        {:match, bp_id, metadata}
+
       :no_match ->
         # Check data flow breakpoints
         case check_data_flow_breakpoints(event, breakpoints.data_flow) do
@@ -141,23 +147,28 @@ defmodule ElixirScope.AST.RuntimeCorrelator.BreakpointManager do
   @doc """
   Checks if a variable change matches any active watchpoints.
   """
-  @spec check_watchpoint_match(String.t(), any(), map(), map()) :: {:match, String.t(), map()} | :no_match
+  @spec check_watchpoint_match(String.t(), any(), map(), map()) ::
+          {:match, String.t(), map()} | :no_match
   def check_watchpoint_match(variable_name, value, ast_context, watchpoints) do
     # Find matching watchpoints for this variable
-    matching_watchpoints = Enum.filter(watchpoints, fn {_id, wp} ->
-      wp.enabled and wp.variable == variable_name and
-      matches_ast_scope?(ast_context, wp.ast_scope)
-    end)
+    matching_watchpoints =
+      Enum.filter(watchpoints, fn {_id, wp} ->
+        wp.enabled and wp.variable == variable_name and
+          matches_ast_scope?(ast_context, wp.ast_scope)
+      end)
 
     case matching_watchpoints do
-      [] -> :no_match
+      [] ->
+        :no_match
+
       [{wp_id, watchpoint} | _] ->
-        {:match, wp_id, %{
-          variable: variable_name,
-          value: value,
-          ast_context: ast_context,
-          watchpoint: watchpoint
-        }}
+        {:match, wp_id,
+         %{
+           variable: variable_name,
+           value: value,
+           ast_context: ast_context,
+           watchpoint: watchpoint
+         }}
     end
   end
 
@@ -193,6 +204,7 @@ defmodule ElixirScope.AST.RuntimeCorrelator.BreakpointManager do
   end
 
   defp matches_ast_scope?(_ast_context, nil), do: true
+
   defp matches_ast_scope?(_ast_context, _scope) do
     # Placeholder implementation - would check if ast_context matches scope
     true

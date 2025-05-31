@@ -7,7 +7,8 @@ defmodule ElixirScope.Foundation.Telemetry do
   """
 
   require Logger
-  alias ElixirScope.Foundation.{Utils} #, Error} #, ErrorContext}
+  # , Error} #, ErrorContext}
+  alias ElixirScope.Foundation.{Utils}
 
   @telemetry_events [
     # Configuration events
@@ -37,7 +38,7 @@ defmodule ElixirScope.Foundation.Telemetry do
   @spec status() :: :ok
   def status, do: :ok
 
-  @spec measure_event([atom(), ...], map(), (() -> t)) :: t when t: var
+  @spec measure_event([atom(), ...], map(), (-> t)) :: t when t: var
   def measure_event(event_name, metadata \\ %{}, fun) when is_function(fun, 0) do
     start_time = Utils.monotonic_timestamp()
 
@@ -83,19 +84,19 @@ defmodule ElixirScope.Foundation.Telemetry do
   end
 
   @spec get_metrics() :: %{
-    foundation: %{
-      uptime_ms: integer(),
-      memory_usage: non_neg_integer(),
-      process_count: non_neg_integer()
-    },
-    system: %{
-      timestamp: integer(),
-      process_count: non_neg_integer(),
-      total_memory: non_neg_integer(),
-      scheduler_count: pos_integer(),
-      otp_release: binary()
-    }
-  }
+          foundation: %{
+            uptime_ms: integer(),
+            memory_usage: non_neg_integer(),
+            process_count: non_neg_integer()
+          },
+          system: %{
+            timestamp: integer(),
+            process_count: non_neg_integer(),
+            total_memory: non_neg_integer(),
+            scheduler_count: pos_integer(),
+            otp_release: binary()
+          }
+        }
   def get_metrics do
     %{
       foundation: %{
@@ -120,6 +121,7 @@ defmodule ElixirScope.Foundation.Telemetry do
         %{}
       )
     end
+
     :ok
   end
 
@@ -135,17 +137,18 @@ defmodule ElixirScope.Foundation.Telemetry do
 
   @spec emit_error_event([atom(), ...], map(), {:error, struct()}) :: :ok
   defp emit_error_event(event_name, metadata, {:error, err}) do
-    error_metadata = if err.__struct__ == ElixirScope.Foundation.Error do
-      Map.merge(metadata, %{
-        error_code: err.code,
-        error_message: err.message
-      })
-    else
-      Map.merge(metadata, %{
-        error_type: :external_error,
-        error_message: inspect(err)
-      })
-    end
+    error_metadata =
+      if err.__struct__ == ElixirScope.Foundation.Error do
+        Map.merge(metadata, %{
+          error_code: err.code,
+          error_message: err.message
+        })
+      else
+        Map.merge(metadata, %{
+          error_type: :external_error,
+          error_message: inspect(err)
+        })
+      end
 
     measurements = %{error_count: 1, timestamp: Utils.monotonic_timestamp()}
     error_event_name = event_name ++ [:error]

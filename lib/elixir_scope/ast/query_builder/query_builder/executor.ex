@@ -9,7 +9,8 @@ defmodule ElixirScope.AST.QueryBuilder.Executor do
   @doc """
   Executes a query against the repository.
   """
-  @spec execute_query(pid() | atom(), Types.query_t()) :: {:ok, Types.query_result()} | {:error, term()}
+  @spec execute_query(pid() | atom(), Types.query_t()) ::
+          {:ok, Types.query_result()} | {:error, term()}
   def execute_query(repo, %Types{} = query) do
     case query.from do
       :functions -> execute_function_query(repo, query)
@@ -32,7 +33,9 @@ defmodule ElixirScope.AST.QueryBuilder.Executor do
 
   def validate_repository(repo) when is_atom(repo) do
     case Process.whereis(repo) do
-      nil -> {:error, :repository_not_found}
+      nil ->
+        {:error, :repository_not_found}
+
       pid when is_pid(pid) ->
         if Process.alive?(pid) do
           :ok
@@ -51,6 +54,7 @@ defmodule ElixirScope.AST.QueryBuilder.Executor do
   """
   @spec apply_where_filters(list(map()), list(Types.filter_condition())) :: list(map())
   def apply_where_filters(data, []), do: data
+
   def apply_where_filters(data, conditions) do
     Enum.filter(data, fn item ->
       evaluate_conditions(item, conditions)
@@ -62,18 +66,23 @@ defmodule ElixirScope.AST.QueryBuilder.Executor do
   """
   @spec apply_ordering(list(map()), term()) :: list(map())
   def apply_ordering(data, nil), do: data
+
   def apply_ordering(data, {field, :asc}) do
     Enum.sort_by(data, &Map.get(&1, field, 0))
   end
+
   def apply_ordering(data, {field, :desc}) do
     Enum.sort_by(data, &Map.get(&1, field, 0), :desc)
   end
+
   def apply_ordering(data, {:asc, field}) do
     Enum.sort_by(data, &Map.get(&1, field, 0))
   end
+
   def apply_ordering(data, {:desc, field}) do
     Enum.sort_by(data, &Map.get(&1, field, 0), :desc)
   end
+
   def apply_ordering(data, order_specs) when is_list(order_specs) do
     Enum.reduce(order_specs, data, fn order_spec, acc ->
       apply_ordering(acc, order_spec)
@@ -87,6 +96,7 @@ defmodule ElixirScope.AST.QueryBuilder.Executor do
   def apply_limit_offset(data, nil, 0), do: data
   def apply_limit_offset(data, nil, offset), do: Enum.drop(data, offset)
   def apply_limit_offset(data, limit, 0), do: Enum.take(data, limit)
+
   def apply_limit_offset(data, limit, offset) do
     data |> Enum.drop(offset) |> Enum.take(limit)
   end
@@ -96,6 +106,7 @@ defmodule ElixirScope.AST.QueryBuilder.Executor do
   """
   @spec apply_select(list(map()), :all | list(atom())) :: list(map())
   def apply_select(data, :all), do: data
+
   def apply_select(data, fields) when is_list(fields) do
     Enum.map(data, fn item ->
       Map.take(item, fields)
@@ -146,6 +157,7 @@ defmodule ElixirScope.AST.QueryBuilder.Executor do
     case Map.get(item, field) do
       list when is_list(list) ->
         Enum.any?(list, &(&1 in values))
+
       single_value ->
         single_value in values
     end
@@ -155,6 +167,7 @@ defmodule ElixirScope.AST.QueryBuilder.Executor do
     case Map.get(item, field) do
       list when is_list(list) ->
         not Enum.any?(list, &(&1 in values))
+
       single_value ->
         single_value not in values
     end
@@ -179,7 +192,9 @@ defmodule ElixirScope.AST.QueryBuilder.Executor do
           {:ok, regex} -> Regex.match?(regex, string)
           _ -> false
         end
-      _ -> false
+
+      _ ->
+        false
     end
   end
 
@@ -194,12 +209,13 @@ defmodule ElixirScope.AST.QueryBuilder.Executor do
     Map.get(item, field) != nil
   end
 
-  def evaluate_condition(item, {field, :nil}) do
+  def evaluate_condition(item, {field, nil}) do
     Map.get(item, field) == nil
   end
 
   def evaluate_condition(item, {:similar_to, {module, function, arity}}) do
-    case Map.get(item, :mfa) || {Map.get(item, :module), Map.get(item, :function), Map.get(item, :arity)} do
+    case Map.get(item, :mfa) ||
+           {Map.get(item, :module), Map.get(item, :function), Map.get(item, :arity)} do
       {^module, ^function, ^arity} -> true
       _ -> false
     end
@@ -243,7 +259,8 @@ defmodule ElixirScope.AST.QueryBuilder.Executor do
 
         {:ok, result}
 
-      error -> error
+      error ->
+        error
     end
   end
 
@@ -262,7 +279,8 @@ defmodule ElixirScope.AST.QueryBuilder.Executor do
 
         {:ok, result}
 
-      error -> error
+      error ->
+        error
     end
   end
 
@@ -272,14 +290,16 @@ defmodule ElixirScope.AST.QueryBuilder.Executor do
 
   defp get_all_functions(repo) do
     case validate_repository(repo) do
-      :ok -> {:ok, []}  # Placeholder - would integrate with Enhanced Repository
+      # Placeholder - would integrate with Enhanced Repository
+      :ok -> {:ok, []}
       error -> error
     end
   end
 
   defp get_all_modules(repo) do
     case validate_repository(repo) do
-      :ok -> {:ok, []}  # Placeholder - would integrate with Enhanced Repository
+      # Placeholder - would integrate with Enhanced Repository
+      :ok -> {:ok, []}
       error -> error
     end
   end

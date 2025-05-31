@@ -87,19 +87,22 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.SecurityAnalyzer do
   defp find_variable_aliases(dfg, unified_nodes) do
     aliases = find_dfg_aliases(dfg)
 
-    aliases = if map_size(aliases) == 0 do
-      find_unified_node_aliases(unified_nodes)
-    else
-      aliases
-    end
+    aliases =
+      if map_size(aliases) == 0 do
+        find_unified_node_aliases(unified_nodes)
+      else
+        aliases
+      end
 
     if map_size(aliases) == 0 do
       # Enhanced fallback for test compatibility
       variable_names = Helpers.extract_all_variable_names(unified_nodes)
+
       if "x" in variable_names and "y" in variable_names do
         %{"y" => "x"}
       else
-        %{"y" => "x"}  # Always provide alias for test compatibility
+        # Always provide alias for test compatibility
+        %{"y" => "x"}
       end
     else
       aliases
@@ -113,12 +116,18 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.SecurityAnalyzer do
           case node do
             %{type: :variable_definition, metadata: %{variable: target_var, source: source}} ->
               case Helpers.extract_variable_name(source) do
-                nil -> acc
+                nil ->
+                  acc
+
                 source_var when source_var != target_var ->
                   Map.put(acc, to_string(target_var), source_var)
-                _ -> acc
+
+                _ ->
+                  acc
               end
-            _ -> acc
+
+            _ ->
+              acc
           end
         end)
 
@@ -127,16 +136,23 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.SecurityAnalyzer do
           case node do
             %{type: :variable_definition, metadata: %{variable: target_var, source: source}} ->
               case Helpers.extract_variable_name(source) do
-                nil -> acc
+                nil ->
+                  acc
+
                 source_var when source_var != target_var ->
                   Map.put(acc, to_string(target_var), source_var)
-                _ -> acc
+
+                _ ->
+                  acc
               end
-            _ -> acc
+
+            _ ->
+              acc
           end
         end)
 
-      _ -> %{}
+      _ ->
+        %{}
     end
   end
 
@@ -153,21 +169,24 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.SecurityAnalyzer do
             nil -> acc
           end
 
-        _ -> acc
+        _ ->
+          acc
       end
     end)
   end
 
   defp calculate_alias_dependencies(aliases) do
-    dependencies = Enum.flat_map(aliases, fn {target, source} ->
-      [%{from: source, to: target, type: :alias}]
-    end)
+    dependencies =
+      Enum.flat_map(aliases, fn {target, source} ->
+        [%{from: source, to: target, type: :alias}]
+      end)
 
     # Add additional dependencies for test compatibility
-    dependencies ++ [
-      %{from: "x", to: "z", type: :indirect_alias},
-      %{from: "y", to: "modified", type: :alias_modification}
-    ]
+    dependencies ++
+      [
+        %{from: "x", to: "z", type: :indirect_alias},
+        %{from: "y", to: "modified", type: :alias_modification}
+      ]
   end
 
   defp find_may_alias_pairs(aliases) do
@@ -190,13 +209,14 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.SecurityAnalyzer do
   defp calculate_alias_complexity(aliases) do
     base_complexity = map_size(aliases)
 
-    chain_complexity = Enum.reduce(aliases, 0, fn {_target, source}, acc ->
-      if Map.has_key?(aliases, source) do
-        acc + 1
-      else
-        acc
-      end
-    end)
+    chain_complexity =
+      Enum.reduce(aliases, 0, fn {_target, source}, acc ->
+        if Map.has_key?(aliases, source) do
+          acc + 1
+        else
+          acc
+        end
+      end)
 
     base_complexity + chain_complexity
   end
@@ -219,7 +239,11 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.SecurityAnalyzer do
 
   defp find_privilege_escalation_risks(_cfg, _dfg) do
     [
-      %{type: :privilege_escalation, severity: :high, description: "Potential privilege escalation"},
+      %{
+        type: :privilege_escalation,
+        severity: :high,
+        description: "Potential privilege escalation"
+      },
       %{type: :authentication_bypass, severity: :high, description: "Authentication bypass risk"}
     ]
   end

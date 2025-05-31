@@ -1,6 +1,7 @@
 defmodule ElixirScope.AI.LLM.Providers.VertexTest do
-  use ExUnit.Case, async: false  # Not async because we modify env vars
-  
+  # Not async because we modify env vars
+  use ExUnit.Case, async: false
+
   alias ElixirScope.AI.LLM.Providers.Vertex
   alias ElixirScope.AI.LLM.Response
 
@@ -8,20 +9,20 @@ defmodule ElixirScope.AI.LLM.Providers.VertexTest do
     # Store original env vars
     original_vertex_file = System.get_env("VERTEX_JSON_FILE")
     original_provider = System.get_env("LLM_PROVIDER")
-    
+
     # Clear env vars for clean test state
     System.delete_env("VERTEX_JSON_FILE")
     System.delete_env("LLM_PROVIDER")
-    
+
     on_exit(fn ->
       # Restore original env vars
       if original_vertex_file, do: System.put_env("VERTEX_JSON_FILE", original_vertex_file)
       if original_provider, do: System.put_env("LLM_PROVIDER", original_provider)
-      
+
       # Clear any cached tokens
       Process.delete(:vertex_access_token)
     end)
-    
+
     :ok
   end
 
@@ -45,7 +46,7 @@ defmodule ElixirScope.AI.LLM.Providers.VertexTest do
       # Create a temporary file with invalid JSON
       temp_file = System.tmp_dir!() |> Path.join("invalid_vertex.json")
       File.write!(temp_file, "invalid json")
-      
+
       try do
         System.put_env("VERTEX_JSON_FILE", temp_file)
         assert Vertex.configured?() == false
@@ -57,13 +58,15 @@ defmodule ElixirScope.AI.LLM.Providers.VertexTest do
     test "returns false when credentials file is missing required keys" do
       # Create a temporary file with incomplete credentials
       temp_file = System.tmp_dir!() |> Path.join("incomplete_vertex.json")
+
       incomplete_creds = %{
         "type" => "service_account",
         "project_id" => "test-project"
         # Missing private_key and client_email
       }
+
       File.write!(temp_file, Jason.encode!(incomplete_creds))
-      
+
       try do
         System.put_env("VERTEX_JSON_FILE", temp_file)
         assert Vertex.configured?() == false
@@ -75,14 +78,16 @@ defmodule ElixirScope.AI.LLM.Providers.VertexTest do
     test "returns true when credentials file has all required keys" do
       # Create a temporary file with complete credentials
       temp_file = System.tmp_dir!() |> Path.join("complete_vertex.json")
+
       complete_creds = %{
         "type" => "service_account",
         "project_id" => "test-project",
         "private_key" => "-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----\n",
         "client_email" => "test@test-project.iam.gserviceaccount.com"
       }
+
       File.write!(temp_file, Jason.encode!(complete_creds))
-      
+
       try do
         System.put_env("VERTEX_JSON_FILE", temp_file)
         assert Vertex.configured?() == true
@@ -95,7 +100,7 @@ defmodule ElixirScope.AI.LLM.Providers.VertexTest do
   describe "analyze_code/2 without credentials" do
     test "returns error response when not configured" do
       response = Vertex.analyze_code("def hello, do: :world", %{})
-      
+
       assert %Response{} = response
       assert response.success == false
       assert response.provider == :vertex
@@ -110,7 +115,7 @@ defmodule ElixirScope.AI.LLM.Providers.VertexTest do
   describe "explain_error/2 without credentials" do
     test "returns error response when not configured" do
       response = Vertex.explain_error("undefined function foo/0", %{})
-      
+
       assert %Response{} = response
       assert response.success == false
       assert response.provider == :vertex
@@ -125,7 +130,7 @@ defmodule ElixirScope.AI.LLM.Providers.VertexTest do
   describe "suggest_fix/2 without credentials" do
     test "returns error response when not configured" do
       response = Vertex.suggest_fix("function is too complex", %{})
-      
+
       assert %Response{} = response
       assert response.success == false
       assert response.provider == :vertex
@@ -140,7 +145,7 @@ defmodule ElixirScope.AI.LLM.Providers.VertexTest do
   describe "test_connection/0" do
     test "returns error response when not configured" do
       response = Vertex.test_connection()
-      
+
       assert %Response{} = response
       assert response.success == false
       assert response.provider == :vertex
@@ -156,7 +161,7 @@ defmodule ElixirScope.AI.LLM.Providers.VertexTest do
         Vertex.suggest_fix("problem description", %{}),
         Vertex.test_connection()
       ]
-      
+
       Enum.each(responses, fn response ->
         assert %Response{} = response
         assert is_boolean(response.success)
@@ -173,7 +178,7 @@ defmodule ElixirScope.AI.LLM.Providers.VertexTest do
   describe "error handling" do
     test "handles empty input gracefully" do
       response = Vertex.analyze_code("", %{})
-      
+
       assert %Response{} = response
       assert response.success == false
       assert response.provider == :vertex
@@ -182,7 +187,7 @@ defmodule ElixirScope.AI.LLM.Providers.VertexTest do
     test "handles nil context gracefully" do
       # This should not crash, even though we pass nil instead of a map
       response = Vertex.analyze_code("def test, do: :ok", nil)
-      
+
       assert %Response{} = response
       assert response.success == false
       assert response.provider == :vertex
@@ -191,19 +196,21 @@ defmodule ElixirScope.AI.LLM.Providers.VertexTest do
     test "handles large input gracefully" do
       large_code = String.duplicate("def test_func, do: :ok\n", 1000)
       response = Vertex.analyze_code(large_code, %{})
-      
+
       assert %Response{} = response
-      assert response.success == false  # Will fail due to no credentials
+      # Will fail due to no credentials
+      assert response.success == false
       assert response.provider == :vertex
     end
 
     test "handles special characters in input" do
       special_code = "def test, do: \"Special chars: ñáéíóú 中文 🚀\""
       response = Vertex.analyze_code(special_code, %{})
-      
+
       assert %Response{} = response
-      assert response.success == false  # Will fail due to no credentials
+      # Will fail due to no credentials
+      assert response.success == false
       assert response.provider == :vertex
     end
   end
-end 
+end

@@ -1,7 +1,7 @@
 # test/elixir_scope/capture/instrumentation_runtime_integration_test.exs
 defmodule ElixirScope.Capture.InstrumentationRuntimeIntegrationTest do
   use ExUnit.Case
-  
+
   @moduletag :skip
 
   # TODO: Add aliases when implementing actual tests
@@ -32,7 +32,8 @@ defmodule ElixirScope.Capture.InstrumentationRuntimeIntegrationTest do
       # refute is_nil(function_entry_event)
       # Runtime correlator should link event to AST
       # assert {:ok, ^ast_node_id} = RuntimeCorrelator.find_ast_node(correlator, correlation_id)
-      assert true # Placeholder
+      # Placeholder
+      assert true
     end
 
     test "local variable snapshots include AST node correlation" do
@@ -53,7 +54,8 @@ defmodule ElixirScope.Capture.InstrumentationRuntimeIntegrationTest do
       # refute is_nil(snapshot_event)
       # assert snapshot_event.data.variables == variables
       # assert snapshot_event.data.line == 15
-      assert true # Placeholder
+      # Placeholder
+      assert true
     end
   end
 
@@ -71,7 +73,8 @@ defmodule ElixirScope.Capture.InstrumentationRuntimeIntegrationTest do
       # end)
       # overhead_pct = (correlated_time - baseline_time) / baseline_time * 100
       # assert overhead_pct < 10, "Correlation overhead: #{overhead_pct}%, expected < 10%"
-      assert true # Placeholder
+      # Placeholder
+      assert true
     end
   end
 end

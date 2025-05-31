@@ -26,11 +26,11 @@ defmodule ElixirScope.AITestHelpers do
   """
   def create_historical_dataset(size \\ 1000) do
     for _ <- 1..size do
-      create_mock_execution_data([
+      create_mock_execution_data(
         time: :rand.uniform(1000),
         memory: :rand.uniform(10000),
         cpu: :rand.uniform() * 100
-      ])
+      )
     end
   end
 
@@ -39,24 +39,31 @@ defmodule ElixirScope.AITestHelpers do
   """
   def assert_prediction_quality(prediction, actual, tolerance \\ 0.2) do
     error_rate = abs(prediction - actual) / actual
-    ExUnit.Assertions.assert error_rate <= tolerance,
-           "Prediction error too high: #{error_rate * 100}% (tolerance: #{tolerance * 100}%)"
+
+    ExUnit.Assertions.assert(
+      error_rate <= tolerance,
+      "Prediction error too high: #{error_rate * 100}% (tolerance: #{tolerance * 100}%)"
+    )
   end
 
   @doc """
   Asserts that a probability value is within valid range [0, 1].
   """
   def assert_probability_range(actual, expected, tolerance \\ 0.1) do
-    ExUnit.Assertions.assert abs(actual - expected) <= tolerance,
-           "Expected #{expected} ± #{tolerance}, got #{actual}"
+    ExUnit.Assertions.assert(
+      abs(actual - expected) <= tolerance,
+      "Expected #{expected} ± #{tolerance}, got #{actual}"
+    )
   end
 
   @doc """
   Asserts that a confidence score is valid (between 0 and 1).
   """
   def assert_confidence_score(score) do
-    ExUnit.Assertions.assert score >= 0.0 and score <= 1.0,
-           "Confidence score must be between 0 and 1, got #{score}"
+    ExUnit.Assertions.assert(
+      score >= 0.0 and score <= 1.0,
+      "Confidence score must be between 0 and 1, got #{score}"
+    )
   end
 
   @doc """
@@ -67,11 +74,12 @@ defmodule ElixirScope.AITestHelpers do
       raise ArgumentError, "Predictions and actuals must have same length"
     end
 
-    correct_predictions = 
+    correct_predictions =
       Enum.zip(predictions, actuals)
-      |> Enum.count(fn {pred, actual} -> 
+      |> Enum.count(fn {pred, actual} ->
         error_rate = abs(pred - actual) / actual
-        error_rate <= 0.2  # 20% tolerance
+        # 20% tolerance
+        error_rate <= 0.2
       end)
 
     correct_predictions / length(predictions)
@@ -100,7 +108,7 @@ defmodule ElixirScope.AITestHelpers do
         for i <- 1..size do
           %{
             input: i,
-            output: :math.pow(2, i/10) + :rand.normal(0, 0.5),
+            output: :math.pow(2, i / 10) + :rand.normal(0, 0.5),
             pattern: :exponential
           }
         end
@@ -194,11 +202,13 @@ defmodule ElixirScope.AITestHelpers do
   Validates that AI model outputs conform to expected structure.
   """
   def assert_ai_response_structure(response, expected_keys) do
-    ExUnit.Assertions.assert is_map(response), "Response must be a map"
-    
+    ExUnit.Assertions.assert(is_map(response), "Response must be a map")
+
     for key <- expected_keys do
-      ExUnit.Assertions.assert Map.has_key?(response, key), 
-             "Response missing required key: #{key}"
+      ExUnit.Assertions.assert(
+        Map.has_key?(response, key),
+        "Response missing required key: #{key}"
+      )
     end
   end
 
@@ -207,7 +217,8 @@ defmodule ElixirScope.AITestHelpers do
   """
   def measure_execution_time(fun) when is_function(fun, 0) do
     {time_microseconds, result} = :timer.tc(fun)
-    {time_microseconds / 1000, result}  # Return time in milliseconds
+    # Return time in milliseconds
+    {time_microseconds / 1000, result}
   end
 
   @doc """
@@ -221,19 +232,20 @@ defmodule ElixirScope.AITestHelpers do
   Simulates concurrent AI requests for load testing.
   """
   def simulate_concurrent_requests(request_count, request_fun) when is_function(request_fun, 0) do
-    tasks = for _ <- 1..request_count do
-      Task.async(fn ->
-        start_time = System.monotonic_time(:millisecond)
-        result = request_fun.()
-        end_time = System.monotonic_time(:millisecond)
-        
-        %{
-          result: result,
-          response_time: end_time - start_time,
-          success: match?({:ok, _}, result)
-        }
-      end)
-    end
+    tasks =
+      for _ <- 1..request_count do
+        Task.async(fn ->
+          start_time = System.monotonic_time(:millisecond)
+          result = request_fun.()
+          end_time = System.monotonic_time(:millisecond)
+
+          %{
+            result: result,
+            response_time: end_time - start_time,
+            success: match?({:ok, _}, result)
+          }
+        end)
+      end
 
     Task.await_many(tasks, 10_000)
   end
@@ -269,4 +281,4 @@ defmodule ElixirScope.AITestHelpers do
     index = round(p * (length(sorted) - 1))
     Enum.at(sorted, index)
   end
-end 
+end

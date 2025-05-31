@@ -2,7 +2,7 @@
 defmodule ElixirScope.ASTRepository.ParserTest do
   use ExUnit.Case
   use ExUnitProperties
-  
+
   @moduletag :skip
 
   # TODO: Add alias when implementing actual tests
@@ -32,7 +32,8 @@ defmodule ElixirScope.ASTRepository.ParserTest do
       # All node IDs should be unique
       # node_ids = Enum.map(call_nodes, & &1.ast_node_id)
       # assert length(node_ids) == length(Enum.uniq(node_ids))
-      assert true # Placeholder
+      # Placeholder
+      assert true
     end
 
     test "maps instrumentation points to AST node locations" do
@@ -46,7 +47,8 @@ defmodule ElixirScope.ASTRepository.ParserTest do
       #   |> Enum.filter(&(&1.type == :genserver_callback))
       #   |> Enum.map(& &1.function_name)
       # assert Enum.all?(expected_callbacks, &(&1 in found_callbacks))
-      assert true # Placeholder
+      # Placeholder
+      assert true
     end
   end
 

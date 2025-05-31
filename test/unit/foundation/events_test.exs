@@ -23,10 +23,11 @@ defmodule ElixirScope.Foundation.EventsTest do
       correlation_id = "test-correlation"
       parent_id = 12345
 
-      event = Events.new_event(:test_event, %{},
-        correlation_id: correlation_id,
-        parent_id: parent_id
-      )
+      event =
+        Events.new_event(:test_event, %{},
+          correlation_id: correlation_id,
+          parent_id: parent_id
+        )
 
       assert event.correlation_id == correlation_id
       assert event.parent_id == parent_id
@@ -59,11 +60,12 @@ defmodule ElixirScope.Foundation.EventsTest do
     end
 
     test "creates function entry with caller information" do
-      event = Events.function_entry(TestModule, :test_function, 1, [:arg],
-        caller_module: CallerModule,
-        caller_function: :caller_function,
-        caller_line: 42
-      )
+      event =
+        Events.function_entry(TestModule, :test_function, 1, [:arg],
+          caller_module: CallerModule,
+          caller_function: :caller_function,
+          caller_line: 42
+        )
 
       assert event.data.caller_module == CallerModule
       assert event.data.caller_function == :caller_function
@@ -75,10 +77,16 @@ defmodule ElixirScope.Foundation.EventsTest do
       result = :ok
       duration = 1_000_000
 
-      event = Events.function_exit(
-        TestModule, :test_function, 2, call_id,
-        result, duration, :normal
-      )
+      event =
+        Events.function_exit(
+          TestModule,
+          :test_function,
+          2,
+          call_id,
+          result,
+          duration,
+          :normal
+        )
 
       assert event.event_type == :function_exit
       assert event.data.call_id == call_id

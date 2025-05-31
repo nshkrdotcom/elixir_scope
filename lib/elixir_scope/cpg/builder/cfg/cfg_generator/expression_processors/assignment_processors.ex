@@ -8,18 +8,27 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.ExpressionProcessors.AssignmentP
 
   # Get dependencies from application config for testability
   defp state_manager do
-    Application.get_env(:elixir_scope, :state_manager,
-      ElixirScope.AST.Enhanced.CFGGenerator.StateManager)
+    Application.get_env(
+      :elixir_scope,
+      :state_manager,
+      ElixirScope.AST.Enhanced.CFGGenerator.StateManager
+    )
   end
 
   defp ast_utilities do
-    Application.get_env(:elixir_scope, :ast_utilities,
-      ElixirScope.AST.Enhanced.CFGGenerator.ASTUtilities)
+    Application.get_env(
+      :elixir_scope,
+      :ast_utilities,
+      ElixirScope.AST.Enhanced.CFGGenerator.ASTUtilities
+    )
   end
 
   defp ast_processor do
-    Application.get_env(:elixir_scope, :ast_processor,
-      ElixirScope.AST.Enhanced.CFGGenerator.ASTProcessor)
+    Application.get_env(
+      :elixir_scope,
+      :ast_processor,
+      ElixirScope.AST.Enhanced.CFGGenerator.ASTProcessor
+    )
   end
 
   @doc """
@@ -50,6 +59,7 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.ExpressionProcessors.AssignmentP
       if map_size(expr_nodes) == 0 do
         # Create a simple expression node for the right-hand side
         {expr_node_id, expr_node_state} = state_manager().generate_node_id("expression", expr_state)
+
         expr_node = %CFGNode{
           id: expr_node_id,
           type: :expression,
@@ -61,22 +71,24 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.ExpressionProcessors.AssignmentP
           successors: [],
           metadata: %{expression: expression}
         }
+
         {%{expr_node_id => expr_node}, [], [expr_node_id], %{}, expr_node_state}
       else
         {expr_nodes, expr_edges, expr_exits, expr_scopes, expr_state}
       end
 
     # Connect expression exits to assignment node
-    expr_to_assign_edges = Enum.map(final_expr_exits, fn exit_id ->
-      %CFGEdge{
-        from_node_id: exit_id,
-        to_node_id: assign_id,
-        type: :sequential,
-        condition: nil,
-        probability: 1.0,
-        metadata: %{}
-      }
-    end)
+    expr_to_assign_edges =
+      Enum.map(final_expr_exits, fn exit_id ->
+        %CFGEdge{
+          from_node_id: exit_id,
+          to_node_id: assign_id,
+          type: :sequential,
+          condition: nil,
+          probability: 1.0,
+          metadata: %{}
+        }
+      end)
 
     all_nodes = Map.put(final_expr_nodes, assign_id, assign_node)
     all_edges = final_expr_edges ++ expr_to_assign_edges

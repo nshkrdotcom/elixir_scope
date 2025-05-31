@@ -1,7 +1,7 @@
 # test/elixir_scope/integration/end_to_end_hybrid_test.exs
 defmodule ElixirScope.Integration.EndToEndHybridTest do
   use ExUnit.Case
-  
+
   @moduletag :skip
 
   @moduletag :integration
@@ -15,7 +15,8 @@ defmodule ElixirScope.Integration.EndToEndHybridTest do
       # {:ok, repo} = ElixirScope.ASTRepository.Repository.new()
       # :ok = ElixirScope.ASTRepository.Repository.store_module(repo, parsed)
       # ... (rest of implementation)
-      assert true # Placeholder
+      # Placeholder
+      assert true
     end
   end
 
@@ -40,7 +41,8 @@ defmodule ElixirScope.Integration.EndToEndHybridTest do
       # Performance requirements for large projects
       # assert query_time < 500, "Query took #{query_time}ms, expected < 500ms"
       # assert context_build_time < 2000, "Context building took #{context_build_time}ms, expected < 2s"
-      assert true # Placeholder
+      # Placeholder
+      assert true
     end
   end
 end

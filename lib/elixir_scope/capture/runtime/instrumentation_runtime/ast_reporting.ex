@@ -82,6 +82,7 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.ASTReporting do
           ast_node_id: ast_node_id,
           data: event_data
         }
+
         maybe_forward_to_temporal_bridge(temporal_event)
 
         :ok
@@ -98,7 +99,8 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.ASTReporting do
   expressions during execution.
   Enhanced to support AST node correlation for hybrid architecture.
   """
-  @spec report_expression_value(correlation_id(), String.t(), term(), non_neg_integer(), atom()) :: :ok
+  @spec report_expression_value(correlation_id(), String.t(), term(), non_neg_integer(), atom()) ::
+          :ok
   def report_expression_value(correlation_id, expression, value, line, _source \\ :ast) do
     case Context.get_context() do
       %{enabled: true, buffer: buffer} when not is_nil(buffer) ->
@@ -194,7 +196,13 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.ASTReporting do
   This version includes AST node ID for direct correlation with the AST Repository.
   Used by the enhanced AST transformer for hybrid architecture support.
   """
-  @spec report_ast_function_entry_with_node_id(module(), atom(), list(), correlation_id(), String.t()) :: :ok
+  @spec report_ast_function_entry_with_node_id(
+          module(),
+          atom(),
+          list(),
+          correlation_id(),
+          String.t()
+        ) :: :ok
   def report_ast_function_entry_with_node_id(module, function, args, correlation_id, ast_node_id) do
     case Context.get_context() do
       %{enabled: true, buffer: buffer} when not is_nil(buffer) ->
@@ -232,6 +240,7 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.ASTReporting do
           ast_node_id: ast_node_id,
           data: event_data
         }
+
         maybe_forward_to_temporal_bridge(temporal_event)
 
         :ok
@@ -278,7 +287,12 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.ASTReporting do
   This version includes AST node ID for direct correlation with the AST Repository.
   Used by the enhanced AST transformer for hybrid architecture support.
   """
-  @spec report_ast_function_exit_with_node_id(correlation_id(), term(), non_neg_integer(), String.t()) :: :ok
+  @spec report_ast_function_exit_with_node_id(
+          correlation_id(),
+          term(),
+          non_neg_integer(),
+          String.t()
+        ) :: :ok
   def report_ast_function_exit_with_node_id(correlation_id, return_value, duration_ns, ast_node_id) do
     case Context.get_context() do
       %{enabled: true, buffer: buffer} when not is_nil(buffer) ->
@@ -314,6 +328,7 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.ASTReporting do
           ast_node_id: ast_node_id,
           data: event_data
         }
+
         maybe_forward_to_temporal_bridge(temporal_event)
 
         :ok
@@ -329,7 +344,13 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.ASTReporting do
   This version includes AST node ID for direct correlation with the AST Repository.
   Used to track specific expression evaluations in the hybrid architecture.
   """
-  @spec report_ast_expression_value(correlation_id(), String.t(), term(), non_neg_integer(), String.t()) :: :ok
+  @spec report_ast_expression_value(
+          correlation_id(),
+          String.t(),
+          term(),
+          non_neg_integer(),
+          String.t()
+        ) :: :ok
   def report_ast_expression_value(correlation_id, expression, value, line, ast_node_id) do
     case Context.get_context() do
       %{enabled: true, buffer: buffer} when not is_nil(buffer) ->
@@ -394,7 +415,14 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.ASTReporting do
   Used to track pattern matching operations in the hybrid architecture.
   Provides insights into pattern match success/failure and variable bindings.
   """
-  @spec report_ast_pattern_match(correlation_id(), term(), term(), boolean(), non_neg_integer(), String.t()) :: :ok
+  @spec report_ast_pattern_match(
+          correlation_id(),
+          term(),
+          term(),
+          boolean(),
+          non_neg_integer(),
+          String.t()
+        ) :: :ok
   def report_ast_pattern_match(correlation_id, pattern, value, match_success, line, ast_node_id) do
     case Context.get_context() do
       %{enabled: true, buffer: buffer} when not is_nil(buffer) ->
@@ -428,8 +456,22 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.ASTReporting do
   Used to track which branches of conditionals (if/case/cond) are taken.
   Provides insights into code path execution patterns.
   """
-  @spec report_ast_branch_execution(correlation_id(), atom(), term(), boolean(), non_neg_integer(), String.t()) :: :ok
-  def report_ast_branch_execution(correlation_id, branch_type, condition, branch_taken, line, ast_node_id) do
+  @spec report_ast_branch_execution(
+          correlation_id(),
+          atom(),
+          term(),
+          boolean(),
+          non_neg_integer(),
+          String.t()
+        ) :: :ok
+  def report_ast_branch_execution(
+        correlation_id,
+        branch_type,
+        condition,
+        branch_taken,
+        line,
+        ast_node_id
+      ) do
     case Context.get_context() do
       %{enabled: true, buffer: buffer} when not is_nil(buffer) ->
         Ingestor.ingest_generic_event(
@@ -462,8 +504,22 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.ASTReporting do
   Used to track loop iterations (Enum.map, for comprehensions, etc.).
   Provides insights into iteration patterns and performance.
   """
-  @spec report_ast_loop_iteration(correlation_id(), atom(), non_neg_integer(), term(), non_neg_integer(), String.t()) :: :ok
-  def report_ast_loop_iteration(correlation_id, loop_type, iteration_count, current_value, line, ast_node_id) do
+  @spec report_ast_loop_iteration(
+          correlation_id(),
+          atom(),
+          non_neg_integer(),
+          term(),
+          non_neg_integer(),
+          String.t()
+        ) :: :ok
+  def report_ast_loop_iteration(
+        correlation_id,
+        loop_type,
+        iteration_count,
+        current_value,
+        line,
+        ast_node_id
+      ) do
     case Context.get_context() do
       %{enabled: true, buffer: buffer} when not is_nil(buffer) ->
         Ingestor.ingest_generic_event(
@@ -518,17 +574,20 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.ASTReporting do
     # AST node IDs should follow format: "module:function:line:node_type"
     # Must have exactly 3 colons and 4 parts, no other separators allowed
     case String.split(ast_node_id, ":") do
-      [module, function, line, node_type] when module != "" and function != "" and line != "" and node_type != "" ->
+      [module, function, line, node_type]
+      when module != "" and function != "" and line != "" and node_type != "" ->
         # Verify no invalid characters (like hyphens) in the parts
         if String.contains?(ast_node_id, "-") do
           {:error, :invalid_format}
         else
           {:ok, ast_node_id}
         end
+
       _ ->
         {:error, :invalid_format}
     end
   end
+
   def validate_ast_node_id(_), do: {:error, :not_string}
 
   @doc """
@@ -570,9 +629,13 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.ASTReporting do
         Task.start(fn ->
           ElixirScope.Capture.Runtime.TemporalBridge.correlate_event(bridge, event)
         end)
-        :ok  # Always return :ok regardless of Task result
+
+        # Always return :ok regardless of Task result
+        :ok
+
       {:error, :not_registered} ->
-        :ok  # No bridge registered, continue normally
+        # No bridge registered, continue normally
+        :ok
     end
   rescue
     # If TemporalBridge module doesn't exist or fails, continue gracefully

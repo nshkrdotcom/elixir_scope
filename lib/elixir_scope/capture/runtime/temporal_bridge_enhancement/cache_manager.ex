@@ -42,7 +42,7 @@ defmodule ElixirScope.Capture.Runtime.TemporalBridgeEnhancement.CacheManager do
   Gets a cached state with TTL check.
   """
   @spec get_cached_state(String.t(), non_neg_integer()) ::
-    {:hit, any()} | {:miss, :not_found | :expired | :table_not_found}
+          {:hit, any()} | {:miss, :not_found | :expired | :table_not_found}
   def get_cached_state(session_id, timestamp) do
     cache_key = "#{session_id}:#{timestamp}"
 
@@ -89,7 +89,7 @@ defmodule ElixirScope.Capture.Runtime.TemporalBridgeEnhancement.CacheManager do
   Gets a cached execution trace with TTL check.
   """
   @spec get_cached_trace(String.t(), non_neg_integer(), non_neg_integer()) ::
-    {:hit, any()} | {:miss, :not_found | :expired | :table_not_found}
+          {:hit, any()} | {:miss, :not_found | :expired | :table_not_found}
   def get_cached_trace(session_id, start_time, end_time) do
     cache_key = "trace:#{session_id}:#{start_time}:#{end_time}"
 
@@ -140,13 +140,15 @@ defmodule ElixirScope.Capture.Runtime.TemporalBridgeEnhancement.CacheManager do
     try do
       :ets.delete_all_objects(@ast_state_cache)
     rescue
-      ArgumentError -> :ok  # Table doesn't exist, that's fine
+      # Table doesn't exist, that's fine
+      ArgumentError -> :ok
     end
 
     try do
       :ets.delete_all_objects(@execution_trace_cache)
     rescue
-      ArgumentError -> :ok  # Table doesn't exist, that's fine
+      # Table doesn't exist, that's fine
+      ArgumentError -> :ok
     end
 
     :ok
@@ -157,29 +159,33 @@ defmodule ElixirScope.Capture.Runtime.TemporalBridgeEnhancement.CacheManager do
   """
   @spec get_cache_stats() :: map()
   def get_cache_stats() do
-    state_cache_size = try do
-      :ets.info(@ast_state_cache, :size) || 0
-    rescue
-      ArgumentError -> 0
-    end
+    state_cache_size =
+      try do
+        :ets.info(@ast_state_cache, :size) || 0
+      rescue
+        ArgumentError -> 0
+      end
 
-    trace_cache_size = try do
-      :ets.info(@execution_trace_cache, :size) || 0
-    rescue
-      ArgumentError -> 0
-    end
+    trace_cache_size =
+      try do
+        :ets.info(@execution_trace_cache, :size) || 0
+      rescue
+        ArgumentError -> 0
+      end
 
-    state_cache_memory = try do
-      :ets.info(@ast_state_cache, :memory) || 0
-    rescue
-      ArgumentError -> 0
-    end
+    state_cache_memory =
+      try do
+        :ets.info(@ast_state_cache, :memory) || 0
+      rescue
+        ArgumentError -> 0
+      end
 
-    trace_cache_memory = try do
-      :ets.info(@execution_trace_cache, :memory) || 0
-    rescue
-      ArgumentError -> 0
-    end
+    trace_cache_memory =
+      try do
+        :ets.info(@execution_trace_cache, :memory) || 0
+      rescue
+        ArgumentError -> 0
+      end
 
     %{
       state_cache_size: state_cache_size,

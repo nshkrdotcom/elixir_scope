@@ -1,5 +1,6 @@
 defmodule ElixirScope.Foundation.ConfigTest do
-  use ExUnit.Case, async: false  # Config tests must be synchronous
+  # Config tests must be synchronous
+  use ExUnit.Case, async: false
   @moduletag :foundation
 
   alias ElixirScope.Foundation.{Config, Error}
@@ -20,7 +21,9 @@ defmodule ElixirScope.Foundation.ConfigTest do
           case original_config do
             %Config{ai: %{planning: %{sampling_rate: rate}}} ->
               Config.update([:ai, :planning, :sampling_rate], rate)
-            _ -> :ok
+
+            _ ->
+              :ok
           end
         end
       catch
@@ -79,7 +82,8 @@ defmodule ElixirScope.Foundation.ConfigTest do
           planning: %{
             default_strategy: :balanced,
             performance_target: 0.01,
-            sampling_rate: 1.5  # Invalid: > 1.0
+            # Invalid: > 1.0
+            sampling_rate: 1.5
           }
         }
       }
@@ -136,7 +140,9 @@ defmodule ElixirScope.Foundation.ConfigTest do
     # Calls should return service unavailable error
     assert {:error, %Error{code: :service_unavailable}} = Config.get()
     assert {:error, %Error{code: :service_unavailable}} = Config.get([:ai, :provider])
-    assert {:error, %Error{code: :service_unavailable}} = Config.update([:ai, :planning, :sampling_rate], 0.5)
+
+    assert {:error, %Error{code: :service_unavailable}} =
+             Config.update([:ai, :planning, :sampling_rate], 0.5)
 
     # Restart for cleanup
     TestHelpers.ensure_config_available()

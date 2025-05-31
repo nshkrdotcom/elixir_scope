@@ -16,7 +16,8 @@ defmodule ElixirScope.AST.RuntimeCorrelator.Config do
   @event_correlation_target 1
   @ast_context_lookup_target 10
   @runtime_query_enhancement_target 50
-  @memory_overhead_target 0.10  # 10% of base EventStore
+  # 10% of base EventStore
+  @memory_overhead_target 0.10
 
   # Timeout Values (in milliseconds)
   @correlation_timeout 5_000
@@ -25,23 +26,32 @@ defmodule ElixirScope.AST.RuntimeCorrelator.Config do
   @cache_cleanup_timeout 10_000
 
   # Cache Settings
-  @cache_ttl 300_000  # 5 minutes in milliseconds
-  @max_cache_size 10_000  # Maximum entries per cache
-  @cache_cleanup_interval 60_000  # 1 minute in milliseconds
+  # 5 minutes in milliseconds
+  @cache_ttl 300_000
+  # Maximum entries per cache
+  @max_cache_size 10_000
+  # 1 minute in milliseconds
+  @cache_cleanup_interval 60_000
 
   # Trace Settings
-  @max_trace_events 100_000  # Maximum events per trace
-  @trace_compression_threshold 50_000  # Compress traces larger than this
-  @max_variable_history 1_000  # Maximum history entries per variable
+  # Maximum events per trace
+  @max_trace_events 100_000
+  # Compress traces larger than this
+  @trace_compression_threshold 50_000
+  # Maximum history entries per variable
+  @max_variable_history 1_000
 
   # Breakpoint Settings
   @max_breakpoints_per_type 100
   @max_watchpoints 50
-  @breakpoint_hit_limit 1_000  # Maximum hits before auto-disable
+  # Maximum hits before auto-disable
+  @breakpoint_hit_limit 1_000
 
   # Performance Monitoring
-  @performance_sample_rate 0.1  # 10% of events sampled for performance
-  @slow_operation_threshold 100  # Operations slower than 100ms are flagged
+  # 10% of events sampled for performance
+  @performance_sample_rate 0.1
+  # Operations slower than 100ms are flagged
+  @slow_operation_threshold 100
 
   # API Functions
 
@@ -145,15 +155,19 @@ defmodule ElixirScope.AST.RuntimeCorrelator.Config do
     # In development, use more aggressive caching and shorter TTLs
     case Mix.env() do
       :dev ->
-        put_in(base_config, [:cache, :ttl_ms], 60_000)  # 1 minute in dev
+        # 1 minute in dev
+        put_in(base_config, [:cache, :ttl_ms], 60_000)
 
       :test ->
         base_config
-        |> put_in([:cache, :ttl_ms], 5_000)  # 5 seconds in test
-        |> put_in([:timeouts, :correlation], 1_000)  # Shorter timeouts in test
+        # 5 seconds in test
+        |> put_in([:cache, :ttl_ms], 5_000)
+        # Shorter timeouts in test
+        |> put_in([:timeouts, :correlation], 1_000)
 
       :prod ->
-        base_config  # Use default production settings
+        # Use default production settings
+        base_config
 
       _ ->
         base_config

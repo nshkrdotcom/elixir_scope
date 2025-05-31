@@ -31,7 +31,7 @@ defmodule ElixirScope.ASTRepository.PatternMatcher.ValidatorsTest do
       }
 
       assert {:error, :invalid_confidence_threshold} =
-        Validators.normalize_pattern_spec(input)
+               Validators.normalize_pattern_spec(input)
     end
 
     test "rejects missing pattern type for AST patterns" do
@@ -41,12 +41,12 @@ defmodule ElixirScope.ASTRepository.PatternMatcher.ValidatorsTest do
       }
 
       assert {:error, :missing_pattern_type} =
-        Validators.normalize_pattern_spec(input)
+               Validators.normalize_pattern_spec(input)
     end
 
     test "rejects non-map input" do
       assert {:error, :invalid_pattern_spec} =
-        Validators.normalize_pattern_spec("invalid")
+               Validators.normalize_pattern_spec("invalid")
     end
   end
 
@@ -62,7 +62,7 @@ defmodule ElixirScope.ASTRepository.PatternMatcher.ValidatorsTest do
 
     test "rejects known invalid repositories" do
       assert {:error, :repository_not_found} =
-        Validators.validate_repository(:mock_repo)
+               Validators.validate_repository(:mock_repo)
     end
   end
 end

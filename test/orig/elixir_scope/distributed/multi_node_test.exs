@@ -21,7 +21,7 @@ defmodule ElixirScope.Distributed.MultiNodeTest do
         end)
 
         {:ok, nodes: nodes}
-      
+
       {:error, :no_distributed_support} ->
         {:ok, skip: true}
     end
@@ -68,10 +68,14 @@ defmodule ElixirScope.Distributed.MultiNodeTest do
       else
         %{nodes: [node1, node2]} = context
         # Spawn process on node2 from node1
-        _spawn_result = :rpc.call(node1, Node, :spawn, [node2, fn ->
-          Process.sleep(100)
-          :ok
-        end])
+        _spawn_result =
+          :rpc.call(node1, Node, :spawn, [
+            node2,
+            fn ->
+              Process.sleep(100)
+              :ok
+            end
+          ])
 
         Process.sleep(200)
 
@@ -205,8 +209,9 @@ defmodule ElixirScope.Distributed.MultiNodeTest do
         traced_time = measure_distributed_operation_time(nodes, true)
 
         # Verify overhead is acceptable
-        overhead_percent = ((traced_time - baseline_time) / baseline_time) * 100
-        assert overhead_percent < 10.0  # Less than 10% overhead
+        overhead_percent = (traced_time - baseline_time) / baseline_time * 100
+        # Less than 10% overhead
+        assert overhead_percent < 10.0
       end
     end
 
@@ -219,11 +224,12 @@ defmodule ElixirScope.Distributed.MultiNodeTest do
         # Generate high-frequency events across nodes
         start_time = System.monotonic_time(:millisecond)
 
-        tasks = for node <- nodes do
-          Task.async(fn ->
-            :rpc.call(node, TestEventGenerator, :generate_high_frequency, [1000])
-          end)
-        end
+        tasks =
+          for node <- nodes do
+            Task.async(fn ->
+              :rpc.call(node, TestEventGenerator, :generate_high_frequency, [1000])
+            end)
+          end
 
         Task.await_many(tasks, 10_000)
 
@@ -231,15 +237,18 @@ defmodule ElixirScope.Distributed.MultiNodeTest do
         duration = end_time - start_time
 
         # Verify performance is acceptable
-        assert duration < 5000  # Should complete within 5 seconds
+        # Should complete within 5 seconds
+        assert duration < 5000
 
         # Verify no events were dropped
-        total_events = Enum.reduce(nodes, 0, fn node, acc ->
-          count = :rpc.call(node, DataAccess, :count_events, [])
-          acc + count
-        end)
+        total_events =
+          Enum.reduce(nodes, 0, fn node, acc ->
+            count = :rpc.call(node, DataAccess, :count_events, [])
+            acc + count
+          end)
 
-        assert total_events >= 3000  # 1000 events per node
+        # 1000 events per node
+        assert total_events >= 3000
       end
     end
   end
@@ -249,28 +258,32 @@ defmodule ElixirScope.Distributed.MultiNodeTest do
   defp start_test_nodes() do
     if Node.alive?() do
       try do
-        nodes = Enum.map(@test_nodes, fn node_name ->
-          # Use Node.spawn_link as a simple alternative to :slave.start
-          case Node.spawn_link(node_name, fn -> 
-            ElixirScope.start()
-            receive do
-              :stop -> :ok
+        nodes =
+          Enum.map(@test_nodes, fn node_name ->
+            # Use Node.spawn_link as a simple alternative to :slave.start
+            case Node.spawn_link(node_name, fn ->
+                   ElixirScope.start()
+
+                   receive do
+                     :stop -> :ok
+                   end
+                 end) do
+              pid when is_pid(pid) ->
+                node_name
+
+              _ ->
+                throw({:node_start_failed, node_name, :spawn_failed})
             end
-          end) do
-            pid when is_pid(pid) -> 
-              node_name
-            _ -> 
-              throw({:node_start_failed, node_name, :spawn_failed})
-          end
-        end)
-        
+          end)
+
         # Configure distributed tracing
         NodeCoordinator.setup_cluster(nodes)
-        
+
         {:ok, nodes}
       catch
         {:node_start_failed, _node_name, _reason} ->
           {:error, :no_distributed_support}
+
         :error, :not_alive ->
           {:error, :no_distributed_support}
       end
@@ -327,11 +340,12 @@ defmodule ElixirScope.Distributed.MultiNodeTest do
 
   defp perform_distributed_benchmark(nodes) do
     # Simulate typical distributed operations
-    tasks = for node <- nodes do
-      Task.async(fn ->
-        :rpc.call(node, TestDistributedBenchmark, :run_operations, [100])
-      end)
-    end
+    tasks =
+      for node <- nodes do
+        Task.async(fn ->
+          :rpc.call(node, TestDistributedBenchmark, :run_operations, [100])
+        end)
+      end
 
     Task.await_many(tasks, 10_000)
   end

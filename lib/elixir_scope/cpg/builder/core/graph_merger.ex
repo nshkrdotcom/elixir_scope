@@ -149,13 +149,13 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.GraphMerger do
 
   defp merge_existing_node(existing_node, dfg_node, id) do
     %{
-      existing_node |
-      dfg_node: dfg_node,
-      dfg_node_id: id,
-      metadata: %{
-        control_flow: true,
-        data_flow: true
-      }
+      existing_node
+      | dfg_node: dfg_node,
+        dfg_node_id: id,
+        metadata: %{
+          control_flow: true,
+          data_flow: true
+        }
     }
   end
 
@@ -185,7 +185,9 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.GraphMerger do
     case node do
       %{type: :assignment, metadata: node_meta} ->
         Map.merge(metadata, node_meta)
-      _ -> metadata
+
+      _ ->
+        metadata
     end
   end
 
@@ -276,11 +278,13 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.GraphMerger do
 
   defp ensure_dfg_node_ids(unified) do
     Map.new(unified, fn {id, node} ->
-      updated_node = if is_nil(node.dfg_node_id) do
-        %{node | dfg_node_id: "dfg_#{id}"}
-      else
-        node
-      end
+      updated_node =
+        if is_nil(node.dfg_node_id) do
+          %{node | dfg_node_id: "dfg_#{id}"}
+        else
+          node
+        end
+
       {id, updated_node}
     end)
   end

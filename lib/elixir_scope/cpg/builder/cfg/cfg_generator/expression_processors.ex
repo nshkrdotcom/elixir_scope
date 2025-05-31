@@ -48,7 +48,10 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.ExpressionProcessors do
 
   # Delegate function-related processing
   defdelegate process_function_call(func_name, args, meta, state), to: FunctionProcessors
-  defdelegate process_module_function_call(module, func_name, args, meta1, meta2, state), to: FunctionProcessors
+
+  defdelegate process_module_function_call(module, func_name, args, meta1, meta2, state),
+    to: FunctionProcessors
+
   defdelegate process_anonymous_function(clauses, meta, state), to: FunctionProcessors
   defdelegate process_when_guard(expr, guard, meta, state), to: FunctionProcessors
 
@@ -57,8 +60,13 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.ExpressionProcessors do
   defdelegate process_list_construction(list, state), to: DataStructureProcessors
   defdelegate process_map_construction(pairs, meta, state), to: DataStructureProcessors
   defdelegate process_map_update(map, updates, meta, state), to: DataStructureProcessors
-  defdelegate process_struct_construction(struct_name, fields, meta, state), to: DataStructureProcessors
-  defdelegate process_access_operation(container, key, meta1, meta2, state), to: DataStructureProcessors
+
+  defdelegate process_struct_construction(struct_name, fields, meta, state),
+    to: DataStructureProcessors
+
+  defdelegate process_access_operation(container, key, meta1, meta2, state),
+    to: DataStructureProcessors
+
   defdelegate process_attribute_access(attr, meta, state), to: DataStructureProcessors
 
   # Delegate control flow processing

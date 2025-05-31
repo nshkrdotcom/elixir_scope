@@ -10,7 +10,8 @@ defmodule ElixirScope.Capture.Runtime.EnhancedInstrumentation.BreakpointManager 
   require Logger
   alias ElixirScope.Capture.Runtime.EnhancedInstrumentation.{Storage, DebuggerInterface, Utils}
 
-  @breakpoint_eval_timeout 100  # microseconds
+  # microseconds
+  @breakpoint_eval_timeout 100
 
   # Public API
 
@@ -106,7 +107,9 @@ defmodule ElixirScope.Capture.Runtime.EnhancedInstrumentation.BreakpointManager 
     duration = end_time - start_time
 
     if duration > @breakpoint_eval_timeout do
-      Logger.warning("Structural breakpoint evaluation took #{duration}µs (target: #{@breakpoint_eval_timeout}µs)")
+      Logger.warning(
+        "Structural breakpoint evaluation took #{duration}µs (target: #{@breakpoint_eval_timeout}µs)"
+      )
     end
 
     :ok
@@ -138,7 +141,8 @@ defmodule ElixirScope.Capture.Runtime.EnhancedInstrumentation.BreakpointManager 
     performance_breakpoints = Storage.get_performance_breakpoints()
 
     Enum.each(performance_breakpoints, fn breakpoint ->
-      threshold = Map.get(breakpoint.metadata, :duration_threshold_ns, 1_000_000)  # 1ms default
+      # 1ms default
+      threshold = Map.get(breakpoint.metadata, :duration_threshold_ns, 1_000_000)
 
       if duration_ns > threshold do
         trigger_performance_breakpoint(breakpoint, ast_node_id, duration_ns)
@@ -193,11 +197,18 @@ defmodule ElixirScope.Capture.Runtime.EnhancedInstrumentation.BreakpointManager 
   defp matches_structural_pattern?(module, function, _args, breakpoint) do
     # Simple pattern matching - in practice this would be more sophisticated
     case breakpoint.ast_path do
-      [] -> true  # Match any
-      [target_module] -> module == String.to_atom(target_module)
+      # Match any
+      [] ->
+        true
+
+      [target_module] ->
+        module == String.to_atom(target_module)
+
       [target_module, target_function] ->
         module == String.to_atom(target_module) and function == String.to_atom(target_function)
-      _ -> false
+
+      _ ->
+        false
     end
   end
 
@@ -233,7 +244,9 @@ defmodule ElixirScope.Capture.Runtime.EnhancedInstrumentation.BreakpointManager 
     Logger.info("Duration: #{duration_ns / 1_000_000}ms")
 
     # Trigger debugger break
-    DebuggerInterface.trigger_debugger_break(:performance, breakpoint, ast_node_id, %{duration_ns: duration_ns})
+    DebuggerInterface.trigger_debugger_break(:performance, breakpoint, ast_node_id, %{
+      duration_ns: duration_ns
+    })
   end
 
   # Validation Functions

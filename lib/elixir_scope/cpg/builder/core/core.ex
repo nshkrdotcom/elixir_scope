@@ -10,14 +10,26 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.Core do
   require Logger
 
   alias ElixirScope.AST.Enhanced.{
-    CPGData, CFGData, DFGData, CFGGenerator, DFGGenerator,
-    UnifiedAnalysis, PatternAnalysis, DependencyAnalysis,
-    NodeMappings, QueryIndexes
+    CPGData,
+    CFGData,
+    DFGData,
+    CFGGenerator,
+    DFGGenerator,
+    UnifiedAnalysis,
+    PatternAnalysis,
+    DependencyAnalysis,
+    NodeMappings,
+    QueryIndexes
   }
 
   alias ElixirScope.AST.Enhanced.CPGBuilder.{
-    Validator, GraphMerger, ComplexityAnalyzer, SecurityAnalyzer,
-    PerformanceAnalyzer, QualityAnalyzer, Helpers
+    Validator,
+    GraphMerger,
+    ComplexityAnalyzer,
+    SecurityAnalyzer,
+    PerformanceAnalyzer,
+    QualityAnalyzer,
+    Helpers
   }
 
   @doc """
@@ -28,9 +40,10 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.Core do
   def build_cpg(ast, opts \\ []) do
     timeout = calculate_timeout(ast)
 
-    task = Task.async(fn ->
-      build_cpg_impl(ast, opts)
-    end)
+    task =
+      Task.async(fn ->
+        build_cpg_impl(ast, opts)
+      end)
 
     case Task.yield(task, timeout) || Task.shutdown(task) do
       {:ok, result} -> result
@@ -46,7 +59,9 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.Core do
       {:ok, new_cpg} ->
         merged_cpg = merge_cpgs(original_cpg, new_cpg)
         {:ok, merged_cpg}
-      error -> error
+
+      error ->
+        error
     end
   end
 
@@ -57,25 +72,31 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.Core do
          false <- Validator.check_for_interprocedural_analysis(ast),
          {:ok, cfg} <- CFGGenerator.generate_cfg(ast, opts),
          {:ok, dfg} <- generate_dfg_with_checks(ast, opts) do
-
       build_unified_cpg(ast, cfg, dfg, opts)
     else
       {:error, reason} = error ->
         Logger.error("CPG Builder: Generation failed: #{inspect(reason)}")
         error
+
       true ->
         {:error, :interprocedural_not_implemented}
     end
   rescue
     e ->
       Logger.error("CPG Builder: Exception caught: #{Exception.message(e)}")
-      Logger.error("CPG Builder: Exception stacktrace: #{Exception.format_stacktrace(__STACKTRACE__)}")
+
+      Logger.error(
+        "CPG Builder: Exception stacktrace: #{Exception.format_stacktrace(__STACKTRACE__)}"
+      )
+
       {:error, {:cpg_generation_failed, Exception.message(e)}}
   end
 
   defp generate_dfg_with_checks(ast, opts) do
     case Validator.check_for_dfg_issues(ast) do
-      true -> {:error, :dfg_generation_failed}
+      true ->
+        {:error, :dfg_generation_failed}
+
       false ->
         case DFGGenerator.generate_dfg(ast, opts) do
           {:error, :circular_dependency} -> {:error, :dfg_generation_failed}
@@ -90,7 +111,9 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.Core do
     unified_edges = GraphMerger.merge_edges(cfg.edges, dfg.edges)
 
     # Perform analyses
-    complexity_metrics = ComplexityAnalyzer.calculate_combined_complexity(cfg, dfg, unified_nodes, unified_edges)
+    complexity_metrics =
+      ComplexityAnalyzer.calculate_combined_complexity(cfg, dfg, unified_nodes, unified_edges)
+
     path_analysis = ComplexityAnalyzer.perform_path_sensitive_analysis(cfg, dfg, unified_nodes)
     security_analysis = SecurityAnalyzer.perform_analysis(cfg, dfg, unified_nodes, unified_edges)
     performance_analysis = PerformanceAnalyzer.perform_analysis(cfg, dfg, complexity_metrics)
@@ -148,11 +171,16 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.Core do
 
   defp calculate_timeout(ast) do
     complexity = Helpers.estimate_ast_complexity(ast)
+
     case complexity do
-      c when c > 100 -> 60_000  # 60 seconds
-      c when c > 50 -> 30_000   # 30 seconds
-      c when c > 20 -> 20_000   # 20 seconds
-      _ -> 10_000               # 10 seconds
+      # 60 seconds
+      c when c > 100 -> 60_000
+      # 30 seconds
+      c when c > 50 -> 30_000
+      # 20 seconds
+      c when c > 20 -> 20_000
+      # 10 seconds
+      _ -> 10_000
     end
   end
 

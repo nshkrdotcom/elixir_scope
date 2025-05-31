@@ -48,6 +48,7 @@ defmodule ElixirScope.Capture.Runtime.EnhancedInstrumentation do
   alias ElixirScope.AST.RuntimeCorrelator
   alias ElixirScope.AST.EnhancedRepository
   alias ElixirScope.Events
+
   alias ElixirScope.Capture.Runtime.EnhancedInstrumentation.{
     BreakpointManager,
     WatchpointManager,
@@ -55,8 +56,10 @@ defmodule ElixirScope.Capture.Runtime.EnhancedInstrumentation do
     Storage
   }
 
-  @type breakpoint_condition :: :any | :pattern_match_failure | :exception | :slow_execution | :high_memory
-  @type flow_condition :: :assignment | :pattern_match | :function_call | :pipe_operator | :case_clause
+  @type breakpoint_condition ::
+          :any | :pattern_match_failure | :exception | :slow_execution | :high_memory
+  @type flow_condition ::
+          :assignment | :pattern_match | :function_call | :pipe_operator | :case_clause
 
   defstruct [
     :ast_repo,
@@ -100,7 +103,10 @@ defmodule ElixirScope.Capture.Runtime.EnhancedInstrumentation do
     # Register event hooks with InstrumentationRuntime
     register_event_hooks()
 
-    Logger.info("EnhancedInstrumentation started with AST correlation: #{state.ast_correlation_enabled}")
+    Logger.info(
+      "EnhancedInstrumentation started with AST correlation: #{state.ast_correlation_enabled}"
+    )
+
     {:ok, state}
   end
 
@@ -226,7 +232,10 @@ defmodule ElixirScope.Capture.Runtime.EnhancedInstrumentation do
   """
   @spec report_enhanced_function_entry(module(), atom(), list(), String.t(), String.t()) :: :ok
   def report_enhanced_function_entry(module, function, args, correlation_id, ast_node_id) do
-    GenServer.cast(__MODULE__, {:enhanced_function_entry, module, function, args, correlation_id, ast_node_id})
+    GenServer.cast(
+      __MODULE__,
+      {:enhanced_function_entry, module, function, args, correlation_id, ast_node_id}
+    )
   end
 
   @doc """
@@ -234,7 +243,10 @@ defmodule ElixirScope.Capture.Runtime.EnhancedInstrumentation do
   """
   @spec report_enhanced_function_exit(String.t(), term(), non_neg_integer(), String.t()) :: :ok
   def report_enhanced_function_exit(correlation_id, return_value, duration_ns, ast_node_id) do
-    GenServer.cast(__MODULE__, {:enhanced_function_exit, correlation_id, return_value, duration_ns, ast_node_id})
+    GenServer.cast(
+      __MODULE__,
+      {:enhanced_function_exit, correlation_id, return_value, duration_ns, ast_node_id}
+    )
   end
 
   @doc """
@@ -242,7 +254,10 @@ defmodule ElixirScope.Capture.Runtime.EnhancedInstrumentation do
   """
   @spec report_enhanced_variable_snapshot(String.t(), map(), non_neg_integer(), String.t()) :: :ok
   def report_enhanced_variable_snapshot(correlation_id, variables, line, ast_node_id) do
-    GenServer.cast(__MODULE__, {:enhanced_variable_snapshot, correlation_id, variables, line, ast_node_id})
+    GenServer.cast(
+      __MODULE__,
+      {:enhanced_variable_snapshot, correlation_id, variables, line, ast_node_id}
+    )
   end
 
   # GenServer Callbacks
@@ -296,17 +311,26 @@ defmodule ElixirScope.Capture.Runtime.EnhancedInstrumentation do
     {:reply, {:ok, stats}, state}
   end
 
-  def handle_cast({:enhanced_function_entry, module, function, args, correlation_id, ast_node_id}, state) do
+  def handle_cast(
+        {:enhanced_function_entry, module, function, args, correlation_id, ast_node_id},
+        state
+      ) do
     EventHandler.handle_function_entry(module, function, args, correlation_id, ast_node_id, state)
     {:noreply, state}
   end
 
-  def handle_cast({:enhanced_function_exit, correlation_id, return_value, duration_ns, ast_node_id}, state) do
+  def handle_cast(
+        {:enhanced_function_exit, correlation_id, return_value, duration_ns, ast_node_id},
+        state
+      ) do
     EventHandler.handle_function_exit(correlation_id, return_value, duration_ns, ast_node_id, state)
     {:noreply, state}
   end
 
-  def handle_cast({:enhanced_variable_snapshot, correlation_id, variables, line, ast_node_id}, state) do
+  def handle_cast(
+        {:enhanced_variable_snapshot, correlation_id, variables, line, ast_node_id},
+        state
+      ) do
     EventHandler.handle_variable_snapshot(correlation_id, variables, line, ast_node_id, state)
     {:noreply, state}
   end

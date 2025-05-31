@@ -16,4 +16,4 @@ defmodule TestModule do
     result = x + y
     result * 2
   end
-end 
+end

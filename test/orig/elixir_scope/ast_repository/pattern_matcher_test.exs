@@ -73,7 +73,7 @@ defmodule ElixirScope.ASTRepository.PatternMatcherTest do
       }
 
       assert {:error, :missing_pattern_type} =
-        PatternMatcher.match_ast_pattern(:non_existent_repo, pattern_spec)
+               PatternMatcher.match_ast_pattern(:non_existent_repo, pattern_spec)
     end
 
     test "validates pattern specifications" do
@@ -84,7 +84,7 @@ defmodule ElixirScope.ASTRepository.PatternMatcherTest do
       }
 
       assert {:error, :invalid_confidence_threshold} =
-        PatternMatcher.match_ast_pattern(:mock_repo, pattern_spec)
+               PatternMatcher.match_ast_pattern(:mock_repo, pattern_spec)
     end
   end
 
@@ -96,7 +96,7 @@ defmodule ElixirScope.ASTRepository.PatternMatcherTest do
       }
 
       assert {:error, :pattern_not_found} =
-        PatternMatcher.match_behavioral_pattern(:mock_repo, pattern_spec)
+               PatternMatcher.match_behavioral_pattern(:mock_repo, pattern_spec)
     end
   end
 
@@ -108,7 +108,7 @@ defmodule ElixirScope.ASTRepository.PatternMatcherTest do
       }
 
       assert {:error, :pattern_not_found} =
-        PatternMatcher.match_anti_pattern(:mock_repo, pattern_spec)
+               PatternMatcher.match_anti_pattern(:mock_repo, pattern_spec)
     end
   end
 
@@ -164,10 +164,14 @@ defmodule ElixirScope.ASTRepository.PatternMatcherTest do
 
     test "handles complex AST patterns with variables" do
       pattern_spec = %{
-        pattern: quote(do: case _ do
-          {:ok, result} -> result
-          {:error, _} -> nil
-        end),
+        pattern:
+          quote(
+            do:
+              case _ do
+                {:ok, result} -> result
+                {:error, _} -> nil
+              end
+          ),
         confidence_threshold: 0.8,
         match_variables: true,
         context_sensitive: true
@@ -342,10 +346,11 @@ defmodule ElixirScope.ASTRepository.PatternMatcherTest do
       # Verify that default patterns are loaded
       # This is tested indirectly through pattern matching attempts
 
-      genserver_result = PatternMatcher.match_behavioral_pattern(:mock_repo, %{
-        pattern_type: :genserver,
-        confidence_threshold: 0.8
-      })
+      genserver_result =
+        PatternMatcher.match_behavioral_pattern(:mock_repo, %{
+          pattern_type: :genserver,
+          confidence_threshold: 0.8
+        })
 
       # Should fail with mock repo, but not because pattern doesn't exist
       assert {:error, _} = genserver_result
@@ -428,7 +433,8 @@ defmodule ElixirScope.ASTRepository.PatternMatcherTest do
       # Would need actual matches to test fully
 
       pattern_spec = %{
-        pattern_type: :sql_injection,  # Critical severity
+        # Critical severity
+        pattern_type: :sql_injection,
         confidence_threshold: 0.8
       }
 
@@ -454,14 +460,17 @@ defmodule ElixirScope.ASTRepository.PatternMatcherTest do
     test "handles pattern matching timeouts" do
       # Test with complex pattern that might timeout
       complex_pattern_spec = %{
-        pattern: quote(do:
-          case very_complex_expression do
-            {:ok, %{nested: %{deeply: %{structured: data}}}} ->
-              process_complex_data(data)
-            _ ->
-              handle_error()
-          end
-        ),
+        pattern:
+          quote(
+            do:
+              case very_complex_expression do
+                {:ok, %{nested: %{deeply: %{structured: data}}}} ->
+                  process_complex_data(data)
+
+                _ ->
+                  handle_error()
+              end
+          ),
         confidence_threshold: 0.8,
         context_sensitive: true
       }
@@ -483,7 +492,8 @@ defmodule ElixirScope.ASTRepository.PatternMatcherTest do
       end_time = System.monotonic_time(:millisecond)
 
       # Should complete within reasonable time even with mock repo
-      assert (end_time - start_time) < 1000  # Less than 1 second
+      # Less than 1 second
+      assert end_time - start_time < 1000
       assert {:error, _} = result
     end
   end
@@ -492,21 +502,22 @@ defmodule ElixirScope.ASTRepository.PatternMatcherTest do
     test "comprehensive security analysis" do
       # Test multiple security-related patterns
       security_patterns = [
-        :sql_injection,
+        :sql_injection
         # Could add more security patterns here
       ]
 
-      results = Enum.map(security_patterns, fn pattern_type ->
-        PatternMatcher.match_anti_pattern(:mock_repo, %{
-          pattern_type: pattern_type,
-          confidence_threshold: 0.7
-        })
-      end)
+      results =
+        Enum.map(security_patterns, fn pattern_type ->
+          PatternMatcher.match_anti_pattern(:mock_repo, %{
+            pattern_type: pattern_type,
+            confidence_threshold: 0.7
+          })
+        end)
 
       # All should fail with mock repo but validate pattern handling
       assert Enum.all?(results, fn result ->
-        match?({:error, _}, result)
-      end)
+               match?({:error, _}, result)
+             end)
     end
 
     test "comprehensive OTP pattern analysis" do
@@ -516,38 +527,42 @@ defmodule ElixirScope.ASTRepository.PatternMatcherTest do
         :supervisor
       ]
 
-      results = Enum.map(otp_patterns, fn pattern_type ->
-        PatternMatcher.match_behavioral_pattern(:mock_repo, %{
-          pattern_type: pattern_type,
-          confidence_threshold: 0.8
-        })
-      end)
+      results =
+        Enum.map(otp_patterns, fn pattern_type ->
+          PatternMatcher.match_behavioral_pattern(:mock_repo, %{
+            pattern_type: pattern_type,
+            confidence_threshold: 0.8
+          })
+        end)
 
       assert Enum.all?(results, fn result ->
-        match?({:error, _}, result)
-      end)
+               match?({:error, _}, result)
+             end)
     end
 
     test "mixed pattern analysis workflow" do
       # Test a workflow that combines different pattern types
 
       # 1. Look for behavioral patterns
-      behavioral_result = PatternMatcher.match_behavioral_pattern(:mock_repo, %{
-        pattern_type: :genserver,
-        confidence_threshold: 0.8
-      })
+      behavioral_result =
+        PatternMatcher.match_behavioral_pattern(:mock_repo, %{
+          pattern_type: :genserver,
+          confidence_threshold: 0.8
+        })
 
       # 2. Look for anti-patterns
-      anti_pattern_result = PatternMatcher.match_anti_pattern(:mock_repo, %{
-        pattern_type: :god_function,
-        confidence_threshold: 0.7
-      })
+      anti_pattern_result =
+        PatternMatcher.match_anti_pattern(:mock_repo, %{
+          pattern_type: :god_function,
+          confidence_threshold: 0.7
+        })
 
       # 3. Look for AST patterns
-      ast_result = PatternMatcher.match_ast_pattern(:mock_repo, %{
-        pattern: quote(do: Enum.map(_, _)),
-        confidence_threshold: 0.6
-      })
+      ast_result =
+        PatternMatcher.match_ast_pattern(:mock_repo, %{
+          pattern: quote(do: Enum.map(_, _)),
+          confidence_threshold: 0.6
+        })
 
       # All should fail with mock repo
       assert {:error, _} = behavioral_result

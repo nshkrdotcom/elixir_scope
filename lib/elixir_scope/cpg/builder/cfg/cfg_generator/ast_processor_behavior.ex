@@ -11,7 +11,8 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.ASTProcessorBehaviour do
   @type edges_list :: [CFGEdge.t()]
   @type exits_list :: [String.t()]
   @type scopes_map :: %{String.t() => ScopeInfo.t()}
-  @type process_result :: {nodes_map(), edges_list(), exits_list(), scopes_map(), State.t()} | {:error, any()}
+  @type process_result ::
+          {nodes_map(), edges_list(), exits_list(), scopes_map(), State.t()} | {:error, any()}
 
   @doc """
   Processes a function body AST and returns CFG components.

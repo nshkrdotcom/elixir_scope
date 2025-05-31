@@ -2,13 +2,13 @@
 defmodule ElixirScope.LayerIntegration do
   @moduledoc """
   Integration module for coordinating between the 9 layers.
-  
+
   This module provides the main API for cross-layer communication
   and ensures proper dependency flow between layers.
   """
-  
+
   alias ElixirScope.{Foundation, AST, Graph, CPG, Analysis, Query, Capture, Intelligence, Debugger}
-  
+
   @doc """
   Initialize all layers in proper dependency order.
   """
@@ -27,7 +27,7 @@ defmodule ElixirScope.LayerIntegration do
       error -> {:error, {:layer_initialization_failed, error}}
     end
   end
-  
+
   @doc """
   Coordinate a full analysis workflow across all layers.
   """
@@ -36,17 +36,18 @@ defmodule ElixirScope.LayerIntegration do
          {:ok, cpg_data} <- CPG.build_from_ast(ast_data),
          {:ok, analysis_results} <- Analysis.analyze_cpg(cpg_data),
          {:ok, enhanced_results} <- Intelligence.enhance_analysis(analysis_results) do
-      {:ok, %{
-        ast: ast_data,
-        cpg: cpg_data,
-        analysis: analysis_results,
-        intelligence: enhanced_results
-      }}
+      {:ok,
+       %{
+         ast: ast_data,
+         cpg: cpg_data,
+         analysis: analysis_results,
+         intelligence: enhanced_results
+       }}
     else
       error -> {:error, {:workflow_failed, error}}
     end
   end
-  
+
   @doc """
   Start an enhanced debugging session.
   """

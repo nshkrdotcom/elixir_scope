@@ -195,8 +195,8 @@ defmodule ElixirScope.Capture.Runtime.EnhancedInstrumentation.DebuggerInterface 
         # and wait for debugger commands
         Logger.info("⏸️  Execution paused at breakpoint: #{break_event.breakpoint_id}")
 
-        # For now, just log and continue
-        # wait_for_debugger_action()
+      # For now, just log and continue
+      # wait_for_debugger_action()
 
       :log_and_continue ->
         Logger.info("📝 Breakpoint hit, continuing: #{break_event.breakpoint_id}")
@@ -207,10 +207,11 @@ defmodule ElixirScope.Capture.Runtime.EnhancedInstrumentation.DebuggerInterface 
   end
 
   defp add_to_break_history(break_event) do
-    current_history = case Storage.get_data(:break_history) do
-      {:ok, history} -> history
-      {:error, :not_found} -> []
-    end
+    current_history =
+      case Storage.get_data(:break_history) do
+        {:ok, history} -> history
+        {:error, :not_found} -> []
+      end
 
     # Keep last 50 break events
     updated_history = [break_event | current_history] |> Enum.take(50)

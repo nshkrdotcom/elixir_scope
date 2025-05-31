@@ -39,11 +39,13 @@ defmodule ElixirScope.AST.RuntimeCorrelator.Utils do
   @doc """
   Validates that required fields are present in a map.
   """
-  @spec validate_required_fields(map(), list(atom() | String.t())) :: :ok | {:error, {:missing_fields, list()}}
+  @spec validate_required_fields(map(), list(atom() | String.t())) ::
+          :ok | {:error, {:missing_fields, list()}}
   def validate_required_fields(map, required_fields) when is_map(map) do
-    missing_fields = Enum.filter(required_fields, fn field ->
-      is_nil(safe_extract(map, field))
-    end)
+    missing_fields =
+      Enum.filter(required_fields, fn field ->
+        is_nil(safe_extract(map, field))
+      end)
 
     case missing_fields do
       [] -> :ok
@@ -61,6 +63,7 @@ defmodule ElixirScope.AST.RuntimeCorrelator.Utils do
     case to_string(module) do
       "Elixir." <> rest ->
         rest |> String.split(".") |> List.last()
+
       module_str ->
         module_str |> String.split(".") |> List.last()
     end
@@ -74,12 +77,14 @@ defmodule ElixirScope.AST.RuntimeCorrelator.Utils do
   @spec safe_to_integer(any(), integer()) :: integer()
   def safe_to_integer(value, default \\ 0)
   def safe_to_integer(value, default) when is_integer(value), do: value
+
   def safe_to_integer(value, default) when is_binary(value) do
     case Integer.parse(value) do
       {int, _} -> int
       :error -> default
     end
   end
+
   def safe_to_integer(_, default), do: default
 
   @doc """
@@ -87,6 +92,7 @@ defmodule ElixirScope.AST.RuntimeCorrelator.Utils do
   """
   @spec calculate_stats(list(number())) :: map() | {:error, :empty_list}
   def calculate_stats([]), do: {:error, :empty_list}
+
   def calculate_stats(numbers) when is_list(numbers) do
     count = length(numbers)
     sum = Enum.sum(numbers)
@@ -96,13 +102,16 @@ defmodule ElixirScope.AST.RuntimeCorrelator.Utils do
 
     # Calculate median
     sorted = Enum.sort(numbers)
-    median = case rem(count, 2) do
-      0 ->
-        mid_idx = div(count, 2)
-        (Enum.at(sorted, mid_idx - 1) + Enum.at(sorted, mid_idx)) / 2
-      1 ->
-        Enum.at(sorted, div(count, 2))
-    end
+
+    median =
+      case rem(count, 2) do
+        0 ->
+          mid_idx = div(count, 2)
+          (Enum.at(sorted, mid_idx - 1) + Enum.at(sorted, mid_idx)) / 2
+
+        1 ->
+          Enum.at(sorted, div(count, 2))
+      end
 
     %{
       count: count,
@@ -139,12 +148,13 @@ defmodule ElixirScope.AST.RuntimeCorrelator.Utils do
   @spec format_timestamp(integer(), atom()) :: String.t()
   def format_timestamp(timestamp, unit \\ :nanosecond) do
     # Convert to microseconds for DateTime
-    microseconds = case unit do
-      :nanosecond -> div(timestamp, 1000)
-      :microsecond -> timestamp
-      :millisecond -> timestamp * 1000
-      :second -> timestamp * 1_000_000
-    end
+    microseconds =
+      case unit do
+        :nanosecond -> div(timestamp, 1000)
+        :microsecond -> timestamp
+        :millisecond -> timestamp * 1000
+        :second -> timestamp * 1_000_000
+      end
 
     case DateTime.from_unix(microseconds, :microsecond) do
       {:ok, datetime} -> DateTime.to_iso8601(datetime)

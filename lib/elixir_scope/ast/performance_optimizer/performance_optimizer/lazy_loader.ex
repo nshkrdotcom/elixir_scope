@@ -13,7 +13,8 @@ defmodule ElixirScope.AST.PerformanceOptimizer.LazyLoader do
   alias ElixirScope.AST.{MemoryManager, EnhancedRepository}
 
   @function_cache_prefix "function:"
-  @lazy_loading_threshold 1000  # bytes
+  # bytes
+  @lazy_loading_threshold 1000
 
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
@@ -52,7 +53,8 @@ defmodule ElixirScope.AST.PerformanceOptimizer.LazyLoader do
   @doc """
   Stores function with lazy analysis optimization.
   """
-  @spec store_function_lazy(atom(), atom(), non_neg_integer(), term(), keyword()) :: {:ok, term()} | {:error, term()}
+  @spec store_function_lazy(atom(), atom(), non_neg_integer(), term(), keyword()) ::
+          {:ok, term()} | {:error, term()}
   def store_function_lazy(module_name, function_name, arity, ast, opts) do
     ast_size = estimate_ast_size(ast)
 
@@ -68,13 +70,21 @@ defmodule ElixirScope.AST.PerformanceOptimizer.LazyLoader do
   defp apply_lazy_loading(function_data) do
     cond do
       is_nil(function_data.cfg_data) and should_load_cfg?(function_data) ->
-        case EnhancedRepository.get_cfg(function_data.module_name, function_data.function_name, function_data.arity) do
+        case EnhancedRepository.get_cfg(
+               function_data.module_name,
+               function_data.function_name,
+               function_data.arity
+             ) do
           {:ok, cfg} -> %{function_data | cfg_data: cfg}
           _ -> function_data
         end
 
       is_nil(function_data.dfg_data) and should_load_dfg?(function_data) ->
-        case EnhancedRepository.get_dfg(function_data.module_name, function_data.function_name, function_data.arity) do
+        case EnhancedRepository.get_dfg(
+               function_data.module_name,
+               function_data.function_name,
+               function_data.arity
+             ) do
           {:ok, dfg} -> %{function_data | dfg_data: dfg}
           _ -> function_data
         end
@@ -86,14 +96,22 @@ defmodule ElixirScope.AST.PerformanceOptimizer.LazyLoader do
 
   defp should_load_cfg?(function_data) do
     complexity = get_function_complexity(function_data)
-    access_count = get_access_count({function_data.module_name, function_data.function_name, function_data.arity})
+
+    access_count =
+      get_access_count(
+        {function_data.module_name, function_data.function_name, function_data.arity}
+      )
 
     complexity > 5 or access_count > 10
   end
 
   defp should_load_dfg?(function_data) do
     has_variables = function_has_variables?(function_data.ast)
-    access_count = get_access_count({function_data.module_name, function_data.function_name, function_data.arity})
+
+    access_count =
+      get_access_count(
+        {function_data.module_name, function_data.function_name, function_data.arity}
+      )
 
     has_variables and access_count > 5
   end

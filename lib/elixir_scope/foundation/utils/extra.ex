@@ -1,8 +1,3 @@
-
-
-
-
-
 # defmodule ElixirScope.Foundation.Utils do
 #   @moduledoc """
 #   Core utility functions for ElixirScope Foundation layer.

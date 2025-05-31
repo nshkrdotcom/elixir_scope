@@ -5,10 +5,11 @@ defmodule ElixirScope.Foundation.TelemetryTest do
 
   describe "telemetry measurement" do
     test "measures event execution time" do
-      result = Telemetry.measure_event([:test, :operation], %{component: :foundation}, fn ->
-        :timer.sleep(5)
-        :test_result
-      end)
+      result =
+        Telemetry.measure_event([:test, :operation], %{component: :foundation}, fn ->
+          :timer.sleep(5)
+          :test_result
+        end)
 
       assert result == :test_result
     end

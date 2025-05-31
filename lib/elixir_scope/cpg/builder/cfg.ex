@@ -71,8 +71,14 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator do
   """
 
   alias ElixirScope.AST.Enhanced.{
-    CFGData, CFGNode, CFGEdge, ComplexityMetrics, ScopeInfo,
-    PathAnalysis, LoopAnalysis, BranchCoverage
+    CFGData,
+    CFGNode,
+    CFGEdge,
+    ComplexityMetrics,
+    ScopeInfo,
+    PathAnalysis,
+    LoopAnalysis,
+    BranchCoverage
   }
 
   alias ElixirScope.AST.Enhanced.CFGGenerator.{
@@ -110,15 +116,20 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator do
 
             {nodes, edges, exits, scopes, _final_state} ->
               # Calculate complexity metrics
-              complexity_metrics = ComplexityCalculator.calculate_complexity_metrics(nodes, edges, scopes)
+              complexity_metrics =
+                ComplexityCalculator.calculate_complexity_metrics(nodes, edges, scopes)
 
               # Analyze paths
               entry_nodes = get_entry_nodes(nodes)
-              entry_node = case entry_nodes do
-                [first | _] -> first
-                [] -> state.entry_node
-              end
-              path_analysis = PathAnalyzer.analyze_paths(nodes, edges, [state.entry_node], exits, opts)
+
+              entry_node =
+                case entry_nodes do
+                  [first | _] -> first
+                  [] -> state.entry_node
+                end
+
+              path_analysis =
+                PathAnalyzer.analyze_paths(nodes, edges, [state.entry_node], exits, opts)
 
               cfg = %CFGData{
                 function_key: Keyword.get(opts, :function_key, extract_function_key(function_ast)),
@@ -152,6 +163,7 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator do
 
   # Utility functions that are used by multiple modules
   defp get_entry_nodes(nodes) when map_size(nodes) == 0, do: []
+
   defp get_entry_nodes(nodes) do
     # Find nodes with no predecessors
     nodes
@@ -159,7 +171,8 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator do
     |> Enum.filter(fn node -> length(node.predecessors) == 0 end)
     |> Enum.map(& &1.id)
     |> case do
-      [] -> [nodes |> Map.keys() |> List.first()]  # Fallback to first node
+      # Fallback to first node
+      [] -> [nodes |> Map.keys() |> List.first()]
       entry_nodes -> entry_nodes
     end
   end

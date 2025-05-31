@@ -20,7 +20,9 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder do
   """
 
   alias ElixirScope.AST.Enhanced.CPGBuilder.{
-    Core, QueryProcessor, PatternDetector
+    Core,
+    QueryProcessor,
+    PatternDetector
   }
 
   @doc """

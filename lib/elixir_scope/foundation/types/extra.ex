@@ -1,8 +1,3 @@
-
-
-
-
-
 # defmodule ElixirScope.Foundation.Types do
 #   @moduledoc """
 #   Core type definitions for ElixirScope Foundation layer.

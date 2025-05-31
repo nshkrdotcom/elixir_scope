@@ -204,15 +204,21 @@ defmodule ElixirScope.AST.PatternMatcher do
   @doc """
   Matches behavioral patterns (OTP, design patterns).
   """
-  @spec match_behavioral_pattern(pid() | atom(), map()) :: {:ok, Types.pattern_result()} | {:error, term()}
+  @spec match_behavioral_pattern(pid() | atom(), map()) ::
+          {:ok, Types.pattern_result()} | {:error, term()}
   def match_behavioral_pattern(repo, pattern_spec) do
-    GenServer.call(__MODULE__, {:match_behavioral_pattern, repo, pattern_spec}, @pattern_match_timeout)
+    GenServer.call(
+      __MODULE__,
+      {:match_behavioral_pattern, repo, pattern_spec},
+      @pattern_match_timeout
+    )
   end
 
   @doc """
   Matches anti-patterns and code smells.
   """
-  @spec match_anti_pattern(pid() | atom(), map()) :: {:ok, Types.pattern_result()} | {:error, term()}
+  @spec match_anti_pattern(pid() | atom(), map()) ::
+          {:ok, Types.pattern_result()} | {:error, term()}
   def match_anti_pattern(repo, pattern_spec) do
     GenServer.call(__MODULE__, {:match_anti_pattern, repo, pattern_spec}, @pattern_match_timeout)
   end

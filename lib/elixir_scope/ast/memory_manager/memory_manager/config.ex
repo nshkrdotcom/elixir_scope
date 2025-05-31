@@ -14,25 +14,35 @@ defmodule ElixirScope.AST.MemoryManager.Config do
   def default_config() do
     %{
       # Memory monitoring configuration
-      memory_check_interval: 30_000,      # 30 seconds
+      # 30 seconds
+      memory_check_interval: 30_000,
       monitoring_enabled: true,
 
       # Cleanup configuration
-      cleanup_interval: 300_000,          # 5 minutes
-      default_max_age: 3600,              # 1 hour
+      # 5 minutes
+      cleanup_interval: 300_000,
+      # 1 hour
+      default_max_age: 3600,
       cleanup_enabled: true,
 
       # Compression configuration
-      compression_interval: 600_000,      # 10 minutes
-      compression_level: 6,               # zlib compression level
+      # 10 minutes
+      compression_interval: 600_000,
+      # zlib compression level
+      compression_level: 6,
       compression_enabled: true,
-      access_threshold: 5,                # Minimum accesses to avoid compression
-      age_threshold: 1800,                # 30 minutes before compression eligible
+      # Minimum accesses to avoid compression
+      access_threshold: 5,
+      # 30 minutes before compression eligible
+      age_threshold: 1800,
 
       # Cache configuration
-      query_cache_ttl: 60_000,           # 1 minute
-      analysis_cache_ttl: 300_000,       # 5 minutes
-      cpg_cache_ttl: 600_000,            # 10 minutes
+      # 1 minute
+      query_cache_ttl: 60_000,
+      # 5 minutes
+      analysis_cache_ttl: 300_000,
+      # 10 minutes
+      cpg_cache_ttl: 600_000,
       max_cache_entries: 1000,
       cache_enabled: true,
 
@@ -43,10 +53,14 @@ defmodule ElixirScope.AST.MemoryManager.Config do
       memory_pressure_level_4: 98,
 
       # Performance targets
-      target_memory_usage_mb: 500,       # <500MB for 1000 modules
-      target_query_response_ms: 100,     # <100ms for 95th percentile
-      target_cache_hit_ratio: 0.80,      # >80% for repeated queries
-      target_cleanup_duration_ms: 10,    # <10ms per cleanup cycle
+      # <500MB for 1000 modules
+      target_memory_usage_mb: 500,
+      # <100ms for 95th percentile
+      target_query_response_ms: 100,
+      # >80% for repeated queries
+      target_cache_hit_ratio: 0.80,
+      # <10ms per cleanup cycle
+      target_cleanup_duration_ms: 10,
 
       # Logging and debugging
       log_level: :info,
@@ -80,6 +94,7 @@ defmodule ElixirScope.AST.MemoryManager.Config do
       :ok ->
         store_runtime_config(updates)
         {:ok, new_config}
+
       {:error, reason} ->
         {:error, reason}
     end
@@ -211,10 +226,14 @@ defmodule ElixirScope.AST.MemoryManager.Config do
       case Map.get(config, key) do
         value when is_integer(value) and value >= min and value <= max ->
           {:cont, :ok}
+
         value when is_integer(value) ->
           {:halt, {:error, {:invalid_interval, key, value, min, max}}}
+
         nil ->
-          {:cont, :ok}  # Optional field
+          # Optional field
+          {:cont, :ok}
+
         value ->
           {:halt, {:error, {:invalid_type, key, value, :integer}}}
       end
@@ -251,10 +270,14 @@ defmodule ElixirScope.AST.MemoryManager.Config do
       case Map.get(config, key) do
         value when is_integer(value) and value >= min and value <= max ->
           {:cont, :ok}
+
         value when is_integer(value) ->
           {:halt, {:error, {:invalid_cache_config, key, value, min, max}}}
+
         nil ->
-          {:cont, :ok}  # Optional field
+          # Optional field
+          {:cont, :ok}
+
         value ->
           {:halt, {:error, {:invalid_type, key, value, :integer}}}
       end
@@ -272,10 +295,14 @@ defmodule ElixirScope.AST.MemoryManager.Config do
       case Map.get(config, key) do
         value when is_number(value) and value >= min and value <= max ->
           {:cont, :ok}
+
         value when is_number(value) ->
           {:halt, {:error, {:invalid_target, key, value, min, max}}}
+
         nil ->
-          {:cont, :ok}  # Optional field
+          # Optional field
+          {:cont, :ok}
+
         value ->
           {:halt, {:error, {:invalid_type, key, value, :number}}}
       end

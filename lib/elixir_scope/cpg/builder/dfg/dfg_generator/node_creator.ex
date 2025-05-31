@@ -18,33 +18,38 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.NodeCreator do
       id: node_id,
       type: type,
       ast_node_id: extract_ast_node_from_metadata(metadata),
-      variable: case extract_variable_name_from_metadata(metadata) do
-        nil -> nil
-        var_name -> %VariableVersion{
-          name: var_name,
-          version: 0,
-          ssa_name: var_name,
-          scope_id: StateManager.scope_to_string(state.current_scope),
-          definition_node: node_id,
-          type_info: nil,
-          is_parameter: type == :parameter,
-          is_captured: false,
-          metadata: %{}
-        }
-      end,
-      operation: case type do
-        :call -> Map.get(metadata, :function)
-        :pipe_operation -> :pipe
-        _ -> nil
-      end,
+      variable:
+        case extract_variable_name_from_metadata(metadata) do
+          nil ->
+            nil
+
+          var_name ->
+            %VariableVersion{
+              name: var_name,
+              version: 0,
+              ssa_name: var_name,
+              scope_id: StateManager.scope_to_string(state.current_scope),
+              definition_node: node_id,
+              type_info: nil,
+              is_parameter: type == :parameter,
+              is_captured: false,
+              metadata: %{}
+            }
+        end,
+      operation:
+        case type do
+          :call -> Map.get(metadata, :function)
+          :pipe_operation -> :pipe
+          _ -> nil
+        end,
       line: line,
       metadata: metadata
     }
 
     new_state = %{
-      state |
-      nodes: Map.put(state.nodes, node_id, node),
-      node_counter: state.node_counter + 1
+      state
+      | nodes: Map.put(state.nodes, node_id, node),
+        node_counter: state.node_counter + 1
     }
 
     {new_state, node_id}
@@ -92,23 +97,30 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.NodeCreator do
   """
   def add_phi_nodes_to_state(state, phi_nodes) do
     # Convert phi nodes to actual DFG nodes and add them to the state
-    {state, phi_node_structs} = Enum.reduce(phi_nodes, {state, []}, fn phi_node, {state, acc} ->
-      line = Map.get(phi_node, :line, 1)  # Default line if not present
-      {new_state, node_id} = create_dfg_node(state, :phi, line, %{
-        variable: phi_node.variable,
-        branches: phi_node.branches,
-        conditional_node: Map.get(phi_node, :conditional_node),
-        case_node: Map.get(phi_node, :case_node)
-      })
-      phi_struct = %{
-        node_id: node_id,
-        type: :phi,
-        line: line,
-        variable: phi_node.variable,
-        branches: phi_node.branches
-      }
-      {new_state, [phi_struct | acc]}
-    end)
+    {state, phi_node_structs} =
+      Enum.reduce(phi_nodes, {state, []}, fn phi_node, {state, acc} ->
+        # Default line if not present
+        line = Map.get(phi_node, :line, 1)
+
+        {new_state, node_id} =
+          create_dfg_node(state, :phi, line, %{
+            variable: phi_node.variable,
+            branches: phi_node.branches,
+            conditional_node: Map.get(phi_node, :conditional_node),
+            case_node: Map.get(phi_node, :case_node)
+          })
+
+        phi_struct = %{
+          node_id: node_id,
+          type: :phi,
+          line: line,
+          variable: phi_node.variable,
+          branches: phi_node.branches
+        }
+
+        {new_state, [phi_struct | acc]}
+      end)
+
     {state, Enum.reverse(phi_node_structs)}
   end
 
@@ -116,7 +128,12 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.NodeCreator do
   Creates nodes for comprehensions.
   """
   def create_comprehension_node(state, comprehension_type, line, comprehension_info) do
-    create_dfg_node(state, :comprehension, line, Map.put(comprehension_info, :type, comprehension_type))
+    create_dfg_node(
+      state,
+      :comprehension,
+      line,
+      Map.put(comprehension_info, :type, comprehension_type)
+    )
   end
 
   @doc """

@@ -8,13 +8,19 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.ExpressionProcessors.FunctionPro
 
   # Get dependencies from application config for testability
   defp state_manager do
-    Application.get_env(:elixir_scope, :state_manager,
-      ElixirScope.AST.Enhanced.CFGGenerator.StateManager)
+    Application.get_env(
+      :elixir_scope,
+      :state_manager,
+      ElixirScope.AST.Enhanced.CFGGenerator.StateManager
+    )
   end
 
   defp ast_utilities do
-    Application.get_env(:elixir_scope, :ast_utilities,
-      ElixirScope.AST.Enhanced.CFGGenerator.ASTUtilities)
+    Application.get_env(
+      :elixir_scope,
+      :ast_utilities,
+      ElixirScope.AST.Enhanced.CFGGenerator.ASTUtilities
+    )
   end
 
   @doc """
@@ -24,11 +30,25 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.ExpressionProcessors.FunctionPro
     line = ast_utilities().get_line_number(meta)
 
     # Check if this is a guard function
-    node_type = if func_name in [:is_map, :is_list, :is_atom, :is_binary, :is_integer, :is_float, :is_number, :is_boolean, :is_tuple, :is_pid, :is_reference, :is_function] do
-      :guard_check
-    else
-      :function_call
-    end
+    node_type =
+      if func_name in [
+           :is_map,
+           :is_list,
+           :is_atom,
+           :is_binary,
+           :is_integer,
+           :is_float,
+           :is_number,
+           :is_boolean,
+           :is_tuple,
+           :is_pid,
+           :is_reference,
+           :is_function
+         ] do
+        :guard_check
+      else
+        :function_call
+      end
 
     {call_id, updated_state} = state_manager().generate_node_id("function_call", state)
 

@@ -3,7 +3,7 @@ defmodule ElixirScope.CompileTime.Orchestrator do
   @moduledoc """
   Orchestrates compile-time AST instrumentation by generating detailed plans
   based on user requests and AI analysis.
-  
+
   This module:
   - Takes high-level instrumentation requests
   - Analyzes target modules using AI.CodeAnalyzer
@@ -16,9 +16,9 @@ defmodule ElixirScope.CompileTime.Orchestrator do
 
   @doc """
   Generates an AST instrumentation plan for the given target and options.
-  
+
   ## Examples
-  
+
       # Basic function instrumentation
       plan = generate_plan(MyModule, %{functions: [:my_func]})
       
@@ -50,17 +50,16 @@ defmodule ElixirScope.CompileTime.Orchestrator do
   """
   def generate_function_plan(module, function, arity, opts \\ %{}) do
     target = {module, function, arity}
-    
-    enhanced_opts = Map.merge(opts, %{
-      functions: [function],
-      granularity: Map.get(opts, :granularity, :function_boundaries),
-      on_demand: true
-    })
-    
+
+    enhanced_opts =
+      Map.merge(opts, %{
+        functions: [function],
+        granularity: Map.get(opts, :granularity, :function_boundaries),
+        on_demand: true
+      })
+
     generate_plan(target, enhanced_opts)
   end
-
-
 
   # Private functions
 
@@ -68,10 +67,10 @@ defmodule ElixirScope.CompileTime.Orchestrator do
     case target do
       module when is_atom(module) ->
         analyze_module(module, opts)
-      
+
       {module, function, arity} ->
         analyze_function(module, function, arity, opts)
-      
+
       _ ->
         {:error, {:invalid_target, target}}
     end
@@ -88,6 +87,7 @@ defmodule ElixirScope.CompileTime.Orchestrator do
               {:ok, analysis} -> {:ok, analysis}
               {:error, _reason} -> {:ok, create_basic_module_analysis(module)}
             end
+
           {:error, _} ->
             {:ok, create_basic_module_analysis(module)}
         end
@@ -117,72 +117,78 @@ defmodule ElixirScope.CompileTime.Orchestrator do
       capture_locals: Map.get(opts, :capture_locals, []),
       trace_expressions: Map.get(opts, :trace_expressions, []),
       custom_injections: Map.get(opts, :custom_injections, []),
-
       analysis: analysis,
       created_at: System.monotonic_time(:nanosecond)
     }
-    
+
     {:ok, plan}
   end
 
   defp enhance_plan_with_ai(base_plan, analysis, opts) do
     # Use AI analysis to enhance the instrumentation plan
-    enhanced_plan = case Map.get(opts, :granularity) do
-      :locals ->
-        enhance_for_local_variable_capture(base_plan, analysis)
-      
-      :expressions ->
-        enhance_for_expression_tracing(base_plan, analysis)
-      
-      :lines ->
-        enhance_for_line_level_tracing(base_plan, analysis)
-      
-      _ ->
-        base_plan
-    end
-    
+    enhanced_plan =
+      case Map.get(opts, :granularity) do
+        :locals ->
+          enhance_for_local_variable_capture(base_plan, analysis)
+
+        :expressions ->
+          enhance_for_expression_tracing(base_plan, analysis)
+
+        :lines ->
+          enhance_for_line_level_tracing(base_plan, analysis)
+
+        _ ->
+          base_plan
+      end
+
     {:ok, enhanced_plan}
   end
 
   defp enhance_for_local_variable_capture(plan, analysis) do
     # AI suggests which local variables are most interesting to capture
-    suggested_locals = case analysis do
-      %{local_variables: vars} when is_list(vars) ->
-        # Filter to most relevant variables based on AI analysis
-        Enum.filter(vars, fn var ->
-          var.complexity > 1 or var.mutation_count > 0
-        end)
-        |> Enum.map(& &1.name)
-      
-      _ -> plan.capture_locals
-    end
-    
+    suggested_locals =
+      case analysis do
+        %{local_variables: vars} when is_list(vars) ->
+          # Filter to most relevant variables based on AI analysis
+          Enum.filter(vars, fn var ->
+            var.complexity > 1 or var.mutation_count > 0
+          end)
+          |> Enum.map(& &1.name)
+
+        _ ->
+          plan.capture_locals
+      end
+
     Map.put(plan, :capture_locals, suggested_locals ++ plan.capture_locals)
   end
 
   defp enhance_for_expression_tracing(plan, analysis) do
     # AI suggests which expressions are worth tracing
-    suggested_expressions = case analysis do
-      %{complex_expressions: exprs} when is_list(exprs) ->
-        Enum.map(exprs, & &1.name)
-      
-      _ -> plan.trace_expressions
-    end
-    
+    suggested_expressions =
+      case analysis do
+        %{complex_expressions: exprs} when is_list(exprs) ->
+          Enum.map(exprs, & &1.name)
+
+        _ ->
+          plan.trace_expressions
+      end
+
     Map.put(plan, :trace_expressions, suggested_expressions ++ plan.trace_expressions)
   end
 
   defp enhance_for_line_level_tracing(plan, analysis) do
     # AI suggests specific lines that are worth instrumenting
-    suggested_lines = case analysis do
-      %{critical_lines: lines} when is_list(lines) ->
-        Enum.map(lines, fn line ->
-          {line.number, :after, create_line_instrumentation(line)}
-        end)
-      
-      _ -> []
-    end
-    
+    suggested_lines =
+      case analysis do
+        %{critical_lines: lines} when is_list(lines) ->
+          Enum.map(lines, fn line ->
+            {line.number, :after, create_line_instrumentation(line)}
+          end)
+
+        _ ->
+          []
+      end
+
     Map.put(plan, :custom_injections, suggested_lines ++ plan.custom_injections)
   end
 
@@ -203,11 +209,12 @@ defmodule ElixirScope.CompileTime.Orchestrator do
       module when is_atom(module) ->
         # Get all public functions or those specified in opts
         Map.get(opts, :functions, get_module_functions(module))
-      
+
       {_module, function, _arity} ->
         [function]
-      
-      _ -> []
+
+      _ ->
+        []
     end
   end
 
@@ -232,18 +239,18 @@ defmodule ElixirScope.CompileTime.Orchestrator do
                 {:ok, content} -> {:ok, content}
                 {:error, _} -> {:error, :source_not_available}
               end
-            _ -> {:error, :source_not_available}
+
+            _ ->
+              {:error, :source_not_available}
           end
-        _ -> {:error, :source_not_available}
+
+        _ ->
+          {:error, :source_not_available}
       end
     rescue
       _ -> {:error, :source_not_available}
     end
   end
-
-
-
-
 
   defp create_basic_module_analysis(module) do
     %{
@@ -282,9 +289,10 @@ defmodule ElixirScope.CompileTime.Orchestrator do
   end
 
   defp get_plan_storage_path(plan) do
-    base_path = Application.get_env(:elixir_scope, :compile_time_tracing, [])
-                |> Keyword.get(:plan_storage_path, "_build/elixir_scope/ast_plans")
-    
+    base_path =
+      Application.get_env(:elixir_scope, :compile_time_tracing, [])
+      |> Keyword.get(:plan_storage_path, "_build/elixir_scope/ast_plans")
+
     plan_file = "#{plan.plan_id}.plan"
     Path.join(base_path, plan_file)
   end
@@ -295,8 +303,9 @@ defmodule ElixirScope.CompileTime.Orchestrator do
       source_file_changes: get_source_files_for_target(plan.target),
       config_changes: [:elixir_scope],
       dependency_changes: [:elixir_scope],
-      ttl: Application.get_env(:elixir_scope, :compile_time_tracing, [])
-           |> Keyword.get(:plan_cache_ttl, 3600)
+      ttl:
+        Application.get_env(:elixir_scope, :compile_time_tracing, [])
+        |> Keyword.get(:plan_cache_ttl, 3600)
     }
   end
 
@@ -307,9 +316,12 @@ defmodule ElixirScope.CompileTime.Orchestrator do
           path when is_list(path) -> [List.to_string(path)]
           _ -> []
         end
-      
-      {module, _, _} -> get_source_files_for_target(module)
-      _ -> []
+
+      {module, _, _} ->
+        get_source_files_for_target(module)
+
+      _ ->
+        []
     end
   end
-end 
+end

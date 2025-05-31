@@ -58,7 +58,7 @@ defmodule ElixirScope.Capture.Runtime.EnhancedInstrumentation.Storage do
   @spec get_breakpoints_by_type(atom()) :: list(map())
   def get_breakpoints_by_type(type) do
     :ets.select(@breakpoint_table, [
-      {{:'$1', {type, :'$2'}}, [], [:'$2']}
+      {{:"$1", {type, :"$2"}}, [], [:"$2"]}
     ])
   end
 
@@ -68,8 +68,9 @@ defmodule ElixirScope.Capture.Runtime.EnhancedInstrumentation.Storage do
   @spec list_breakpoints_by_type(atom()) :: map()
   def list_breakpoints_by_type(type) do
     :ets.select(@breakpoint_table, [
-      {{:'$1', {type, :'$2'}}, [], [{{:'$1', :'$2'}}]}
-    ]) |> Enum.into(%{})
+      {{:"$1", {type, :"$2"}}, [], [{{:"$1", :"$2"}}]}
+    ])
+    |> Enum.into(%{})
   end
 
   @doc """
@@ -78,8 +79,9 @@ defmodule ElixirScope.Capture.Runtime.EnhancedInstrumentation.Storage do
   @spec count_breakpoints_by_type(atom()) :: non_neg_integer()
   def count_breakpoints_by_type(type) do
     :ets.select(@breakpoint_table, [
-      {{:'$1', {type, :'$2'}}, [], [:'$1']}
-    ]) |> length()
+      {{:"$1", {type, :"$2"}}, [], [:"$1"]}
+    ])
+    |> length()
   end
 
   @doc """
@@ -88,9 +90,8 @@ defmodule ElixirScope.Capture.Runtime.EnhancedInstrumentation.Storage do
   @spec get_performance_breakpoints() :: list(map())
   def get_performance_breakpoints() do
     :ets.select(@breakpoint_table, [
-      {{:'$1', {:structural, :'$2'}},
-       [{:==, {:map_get, :condition, :'$2'}, :slow_execution}],
-       [:'$2']}
+      {{:"$1", {:structural, :"$2"}}, [{:==, {:map_get, :condition, :"$2"}, :slow_execution}],
+       [:"$2"]}
     ])
   end
 
@@ -189,9 +190,14 @@ defmodule ElixirScope.Capture.Runtime.EnhancedInstrumentation.Storage do
     all_alerts = :ets.tab2list(@alert_table)
 
     if length(all_alerts) > keep_count do
-      sorted_alerts = Enum.sort_by(all_alerts, fn {_id, alert} ->
-        alert.timestamp
-      end, :desc)
+      sorted_alerts =
+        Enum.sort_by(
+          all_alerts,
+          fn {_id, alert} ->
+            alert.timestamp
+          end,
+          :desc
+        )
 
       {_keep, delete} = Enum.split(sorted_alerts, keep_count)
 

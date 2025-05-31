@@ -5,6 +5,7 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.VariableTracker do
   """
 
   alias ElixirScope.AST.Enhanced.{Mutation, ShadowInfo, LifetimeInfo}
+
   alias ElixirScope.AST.Enhanced.DFGGenerator.{
     StateManager,
     NodeCreator,
@@ -29,26 +30,31 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.VariableTracker do
     }
 
     # Check for variable reassignment (mutation)
-    state = case find_variable_in_scope(var_name, state) do
-      {_scope, existing_var_info} ->
-        # Variable already exists - this is a mutation/reassignment
-        mutation_edge = EdgeCreator.create_data_flow_edge(existing_var_info, var_name, :mutation, line, state)
-        mutation_edge
-      nil ->
-        # New variable definition
-        state
-    end
+    state =
+      case find_variable_in_scope(var_name, state) do
+        {_scope, existing_var_info} ->
+          # Variable already exists - this is a mutation/reassignment
+          mutation_edge =
+            EdgeCreator.create_data_flow_edge(existing_var_info, var_name, :mutation, line, state)
+
+          mutation_edge
+
+        nil ->
+          # New variable definition
+          state
+      end
 
     # Check for variable shadowing
     state = check_variable_shadowing(var_name, var_info, state)
 
     # Create DFG node for variable definition
-    {state, _node_id} = NodeCreator.create_dfg_node(state, :variable_definition, line, %{
-      variable: var_name,
-      definition_type: type,
-      source: source,
-      scope_id: StateManager.scope_to_string(state.current_scope),
-    })
+    {state, _node_id} =
+      NodeCreator.create_dfg_node(state, :variable_definition, line, %{
+        variable: var_name,
+        definition_type: type,
+        source: source,
+        scope_id: StateManager.scope_to_string(state.current_scope)
+      })
 
     # Update variable tracking on the UPDATED state
     variables = Map.put(state.variables, {var_name, state.current_scope}, var_info)
@@ -76,11 +82,12 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.VariableTracker do
   Traces a variable through the data flow graph.
   """
   def trace_variable(dfg, variable_name) do
-    variable_nodes = dfg.nodes
-    |> Enum.filter(fn {_id, node} ->
-      node.variable_name == variable_name
-    end)
-    |> Enum.map(fn {id, node} -> {id, node} end)
+    variable_nodes =
+      dfg.nodes
+      |> Enum.filter(fn {_id, node} ->
+        node.variable_name == variable_name
+      end)
+      |> Enum.map(fn {id, node} -> {id, node} end)
 
     # Find data flow path for this variable
     trace_variable_path(dfg.edges, variable_nodes, [])
@@ -93,9 +100,13 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.VariableTracker do
     dfg.variables
     |> Enum.filter(fn variable_name ->
       case get_variable_definition(dfg, variable_name) do
-        nil -> true  # No definition found
+        # No definition found
+        nil ->
+          true
+
         definition_node ->
           uses = get_variable_uses(dfg, variable_name)
+
           Enum.any?(uses, fn use_node ->
             not reachable_from?(dfg.edges, definition_node.id, use_node.id)
           end)
@@ -119,31 +130,35 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.VariableTracker do
   def calculate_variable_lifetimes(variables) do
     variables
     |> Enum.reduce(%{}, fn {{var_name, _scope}, var_info}, acc ->
-      lifetime = case var_info.uses do
-        [] ->
-          # Defined but never used
-          %LifetimeInfo{
-            start_line: var_info.line,
-            end_line: var_info.line,
-            scope_duration: 1,
-            usage_frequency: 0
-          }
-        uses ->
-          # Used variables
-          end_line = Enum.max(uses)
-          %LifetimeInfo{
-            start_line: var_info.line,
-            end_line: end_line,
-            scope_duration: end_line - var_info.line + 1,
-            usage_frequency: length(uses)
-          }
-      end
+      lifetime =
+        case var_info.uses do
+          [] ->
+            # Defined but never used
+            %LifetimeInfo{
+              start_line: var_info.line,
+              end_line: var_info.line,
+              scope_duration: 1,
+              usage_frequency: 0
+            }
+
+          uses ->
+            # Used variables
+            end_line = Enum.max(uses)
+
+            %LifetimeInfo{
+              start_line: var_info.line,
+              end_line: end_line,
+              scope_duration: end_line - var_info.line + 1,
+              usage_frequency: length(uses)
+            }
+        end
 
       # Use birth_line and death_line for test compatibility
-      lifetime_with_aliases = Map.merge(lifetime, %{
-        birth_line: lifetime.start_line,
-        death_line: lifetime.end_line
-      })
+      lifetime_with_aliases =
+        Map.merge(lifetime, %{
+          birth_line: lifetime.start_line,
+          death_line: lifetime.end_line
+        })
 
       Map.put(acc, to_string(var_name), lifetime_with_aliases)
     end)
@@ -177,23 +192,25 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.VariableTracker do
 
     used_vars = extract_used_variables_in_scope(state)
 
-    captured = used_vars
-    |> Enum.filter(fn var_name ->
-      not Map.has_key?(current_scope_vars, var_name)
-    end)
-    |> Enum.map(fn var_name ->
-      to_string(var_name)
-    end)
+    captured =
+      used_vars
+      |> Enum.filter(fn var_name ->
+        not Map.has_key?(current_scope_vars, var_name)
+      end)
+      |> Enum.map(fn var_name ->
+        to_string(var_name)
+      end)
 
     # Also check the captures that were collected during analysis
-    collected_captures = state.captures
-    |> Enum.map(fn
-      %{variable: var_name} -> to_string(var_name)
-      var_name when is_binary(var_name) -> var_name
-      var_name when is_atom(var_name) -> to_string(var_name)
-      _ -> nil
-    end)
-    |> Enum.filter(& &1)
+    collected_captures =
+      state.captures
+      |> Enum.map(fn
+        %{variable: var_name} -> to_string(var_name)
+        var_name when is_binary(var_name) -> var_name
+        var_name when is_atom(var_name) -> to_string(var_name)
+        _ -> nil
+      end)
+      |> Enum.filter(& &1)
 
     result = (captured ++ collected_captures) |> Enum.uniq()
     result
@@ -220,7 +237,9 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.VariableTracker do
 
   defp check_variable_shadowing(var_name, var_info, state) do
     case find_variable_in_parent_scopes(var_name, state) do
-      nil -> state
+      nil ->
+        state
+
       {parent_scope, parent_var_info} ->
         # Variable is being shadowed - create both a Mutation struct and ShadowingInfo
         mutation = %Mutation{
@@ -249,9 +268,10 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.VariableTracker do
           }
         }
 
-        %{state |
-          mutations: [mutation | state.mutations],
-          shadowing_info: [shadowing_info | state.shadowing_info]
+        %{
+          state
+          | mutations: [mutation | state.mutations],
+            shadowing_info: [shadowing_info | state.shadowing_info]
         }
     end
   end
@@ -267,18 +287,22 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.VariableTracker do
             %{name: name} -> [name]
             _ -> []
           end
+
         :variable_reference ->
           case node.metadata do
             %{variable: var_name} -> [to_string(var_name)]
             _ -> []
           end
+
         :call ->
           # Extract variables used in function arguments
           case node.metadata do
             %{arguments: args} -> extract_variables_from_args(args)
             _ -> []
           end
-        _ -> []
+
+        _ ->
+          []
       end
     end)
     |> Enum.uniq()
@@ -293,12 +317,13 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.VariableTracker do
         [to_string(var_name)]
       else
         # Also check if variable is used in other variable definitions
-        used_in_other_vars = Enum.any?(state.variables, fn {{_other_name, _other_scope}, other_info} ->
-          case extract_dependent_variables(other_info.source) do
-            [] -> false
-            deps -> to_string(var_name) in deps
-          end
-        end)
+        used_in_other_vars =
+          Enum.any?(state.variables, fn {{_other_name, _other_scope}, other_info} ->
+            case extract_dependent_variables(other_info.source) do
+              [] -> false
+              deps -> to_string(var_name) in deps
+            end
+          end)
 
         if used_in_other_vars, do: [to_string(var_name)], else: []
       end
@@ -335,6 +360,7 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.VariableTracker do
       {_op, _, args} when is_list(args) and length(args) > 0 ->
         # Extract variables from arguments only
         Enum.flat_map(args, &extract_dependent_variables/1)
+
       {var_name, _, nil} when is_atom(var_name) ->
         # Only treat as variable if it's not a known function/operator and not a parameter reference
         if is_variable_name?(var_name) and not is_parameter_reference?(var_name) do
@@ -342,6 +368,7 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.VariableTracker do
         else
           []
         end
+
       {var_name, _, _context} when is_atom(var_name) ->
         # Only treat as variable if it's not a known function/operator and not a parameter reference
         if is_variable_name?(var_name) and not is_parameter_reference?(var_name) do
@@ -349,12 +376,23 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.VariableTracker do
         else
           []
         end
+
       # Special handling for tuple access and other destructuring patterns
-      {:tuple_access, _source, _index} -> []
-      {:map_access, _source, _key} -> []
-      {:list_head, _source} -> []
-      {:list_tail, _source} -> []
-      {:keyword_access, _source, _key} -> []
+      {:tuple_access, _source, _index} ->
+        []
+
+      {:map_access, _source, _key} ->
+        []
+
+      {:list_head, _source} ->
+        []
+
+      {:list_tail, _source} ->
+        []
+
+      {:keyword_access, _source, _key} ->
+        []
+
       _ ->
         []
     end
@@ -371,23 +409,62 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.VariableTracker do
     # Variables typically start with lowercase or underscore
     # Single letter variables like a, b, c, x, y, z are almost always variables
     atom_str = to_string(atom)
+
     case atom_str do
-      "_" <> _ -> true  # underscore variables
+      # underscore variables
+      "_" <> _ ->
+        true
+
       <<first::utf8>> when first >= ?a and first <= ?z ->
         # Single letter - almost always a variable
         true
+
       <<first::utf8, _rest::binary>> when first >= ?a and first <= ?z ->
         # Multi-letter lowercase - could be variable, but exclude known functions
         not is_known_function?(atom)
-      _ -> false
+
+      _ ->
+        false
     end
   end
 
   # Helper to identify known function names that should not be treated as variables
   defp is_known_function?(atom) do
-    atom in [:combine, :process, :transform, :input, :output, :expensive_computation,
-             :+, :-, :*, :/, :==, :!=, :<, :>, :<=, :>=, :and, :or, :not, :++, :--, :|>, :=,
-             :def, :defp, :if, :case, :cond, :try, :receive, :for, :with, :fn]
+    atom in [
+      :combine,
+      :process,
+      :transform,
+      :input,
+      :output,
+      :expensive_computation,
+      :+,
+      :-,
+      :*,
+      :/,
+      :==,
+      :!=,
+      :<,
+      :>,
+      :<=,
+      :>=,
+      :and,
+      :or,
+      :not,
+      :++,
+      :--,
+      :|>,
+      :=,
+      :def,
+      :defp,
+      :if,
+      :case,
+      :cond,
+      :try,
+      :receive,
+      :for,
+      :with,
+      :fn
+    ]
   end
 
   # Simplified helper functions for compatibility
@@ -404,11 +481,17 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.VariableTracker do
     dfg.nodes
     |> Enum.find(fn node ->
       case node do
-        %{type: :variable_definition, variable: %{name: ^variable_name}} -> true
-        %{type: :variable_definition, metadata: %{variable: var}} when var == variable_name -> true
+        %{type: :variable_definition, variable: %{name: ^variable_name}} ->
+          true
+
+        %{type: :variable_definition, metadata: %{variable: var}} when var == variable_name ->
+          true
+
         %{type: :variable_definition, metadata: %{variable: var}} when is_atom(var) ->
           to_string(var) == variable_name
-        _ -> false
+
+        _ ->
+          false
       end
     end)
   end
@@ -417,11 +500,17 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.VariableTracker do
     dfg.nodes
     |> Enum.filter(fn node ->
       case node do
-        %{type: :variable_use, variable: %{name: ^variable_name}} -> true
-        %{type: :variable_use, metadata: %{variable: var}} when var == variable_name -> true
+        %{type: :variable_use, variable: %{name: ^variable_name}} ->
+          true
+
+        %{type: :variable_use, metadata: %{variable: var}} when var == variable_name ->
+          true
+
         %{type: :variable_use, metadata: %{variable: var}} when is_atom(var) ->
           to_string(var) == variable_name
-        _ -> false
+
+        _ ->
+          false
       end
     end)
   end

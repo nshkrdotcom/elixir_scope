@@ -44,5 +44,5 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.ASTUtilitiesBehaviour do
   Analyzes comprehension clauses to separate generators and filters.
   """
   @callback analyze_comprehension_clauses(clauses :: comprehension_clauses()) ::
-    {generators :: list(term()), filters :: list(term())}
+              {generators :: list(term()), filters :: list(term())}
 end

@@ -20,11 +20,12 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.OptimizationAnalyzer do
   """
   def generate_phi_nodes(state) do
     # Look for variables that are assigned in different branches
-    conditional_nodes = state.nodes
-    |> Map.values()
-    |> Enum.filter(fn node ->
-      node.type in [:case, :conditional, :if]
-    end)
+    conditional_nodes =
+      state.nodes
+      |> Map.values()
+      |> Enum.filter(fn node ->
+        node.type in [:case, :conditional, :if]
+      end)
 
     Enum.flat_map(conditional_nodes, fn conditional_node ->
       # For each conditional node, find variables assigned in different branches
@@ -35,6 +36,7 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.OptimizationAnalyzer do
             %{expression: expr, branches: branch_count} when branch_count > 1 ->
               # Create phi nodes for variables that might be assigned in different case branches
               pattern_vars = extract_pattern_variables_from_case(expr)
+
               Enum.map(pattern_vars, fn var_name ->
                 %{
                   type: :phi,
@@ -43,7 +45,9 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.OptimizationAnalyzer do
                   case_node: conditional_node.id
                 }
               end)
-            _ -> []
+
+            _ ->
+              []
           end
 
         :conditional ->
@@ -52,18 +56,23 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.OptimizationAnalyzer do
             %{condition: _condition} ->
               # Find variables that are assigned in both branches of the conditional
               branch_vars = find_variables_assigned_in_conditional_branches(state, conditional_node)
+
               Enum.map(branch_vars, fn var_name ->
                 %{
                   type: :phi,
                   variable: var_name,
-                  branches: 2,  # if/else
+                  # if/else
+                  branches: 2,
                   conditional_node: conditional_node.id
                 }
               end)
-            _ -> []
+
+            _ ->
+              []
           end
 
-        _ -> []
+        _ ->
+          []
       end
     end)
   end
@@ -73,16 +82,17 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.OptimizationAnalyzer do
   """
   def find_common_subexpressions(state) do
     # Look for repeated expensive function calls
-    function_calls = state.nodes
-    |> Map.values()
-    |> Enum.filter(fn node -> node.type == :call end)
-    |> Enum.group_by(fn node ->
-      case node.metadata do
-        %{function: func, arguments: args} -> {func, args}
-        _ -> nil
-      end
-    end)
-    |> Enum.filter(fn {key, nodes} -> key != nil and length(nodes) > 1 end)
+    function_calls =
+      state.nodes
+      |> Map.values()
+      |> Enum.filter(fn node -> node.type == :call end)
+      |> Enum.group_by(fn node ->
+        case node.metadata do
+          %{function: func, arguments: args} -> {func, args}
+          _ -> nil
+        end
+      end)
+      |> Enum.filter(fn {key, nodes} -> key != nil and length(nodes) > 1 end)
 
     Enum.map(function_calls, fn {{func, _args}, nodes} ->
       %{
@@ -116,14 +126,15 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.OptimizationAnalyzer do
   """
   def find_inlining_opportunities(state) do
     # Look for simple variable assignments that could be inlined
-    simple_assignments = state.variables
-    |> Enum.filter(fn {{_var_name, _scope}, var_info} ->
-      var_info.type == :assignment and is_simple_expression?(var_info.source)
-    end)
-    |> Enum.filter(fn {{var_name, _scope}, var_info} ->
-      # Only suggest inlining if variable is used only once
-      length(var_info.uses) == 1
-    end)
+    simple_assignments =
+      state.variables
+      |> Enum.filter(fn {{_var_name, _scope}, var_info} ->
+        var_info.type == :assignment and is_simple_expression?(var_info.source)
+      end)
+      |> Enum.filter(fn {{var_name, _scope}, var_info} ->
+        # Only suggest inlining if variable is used only once
+        length(var_info.uses) == 1
+      end)
 
     Enum.map(simple_assignments, fn {{var_name, _scope}, _var_info} ->
       %{
@@ -140,9 +151,10 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.OptimizationAnalyzer do
   """
   def find_loop_optimizations(state) do
     # Look for comprehensions that could be optimized
-    comprehension_nodes = state.nodes
-    |> Map.values()
-    |> Enum.filter(fn node -> node.type == :comprehension end)
+    comprehension_nodes =
+      state.nodes
+      |> Map.values()
+      |> Enum.filter(fn node -> node.type == :comprehension end)
 
     Enum.map(comprehension_nodes, fn comp_node ->
       %{
@@ -159,18 +171,19 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.OptimizationAnalyzer do
   """
   def find_memoization_opportunities(state) do
     # Look for expensive function calls in loops or called multiple times
-    expensive_calls = state.nodes
-    |> Map.values()
-    |> Enum.filter(fn node ->
-      node.type == :call and is_expensive_function?(node)
-    end)
-    |> Enum.group_by(fn node ->
-      case node.metadata do
-        %{function: func, arguments: args} -> {func, args}
-        _ -> nil
-      end
-    end)
-    |> Enum.filter(fn {key, nodes} -> key != nil and length(nodes) > 1 end)
+    expensive_calls =
+      state.nodes
+      |> Map.values()
+      |> Enum.filter(fn node ->
+        node.type == :call and is_expensive_function?(node)
+      end)
+      |> Enum.group_by(fn node ->
+        case node.metadata do
+          %{function: func, arguments: args} -> {func, args}
+          _ -> nil
+        end
+      end)
+      |> Enum.filter(fn {key, nodes} -> key != nil and length(nodes) > 1 end)
 
     Enum.map(expensive_calls, fn {{func, _args}, nodes} ->
       %{
@@ -205,20 +218,25 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.OptimizationAnalyzer do
     # assigned in different scopes that are likely from conditional branches
 
     # Group variables by name
-    variables_by_name = state.variables
-    |> Enum.group_by(fn {{var_name, _scope}, _var_info} -> var_name end)
+    variables_by_name =
+      state.variables
+      |> Enum.group_by(fn {{var_name, _scope}, _var_info} -> var_name end)
 
     # Find variables that have multiple definitions (likely from different branches)
-    result = variables_by_name
-    |> Enum.filter(fn {_var_name, var_instances} ->
-      # Check if we have multiple assignments of the same variable
-      assignment_count = Enum.count(var_instances, fn {{_name, _scope}, var_info} ->
-        var_info.type == :assignment
+    result =
+      variables_by_name
+      |> Enum.filter(fn {_var_name, var_instances} ->
+        # Check if we have multiple assignments of the same variable
+        assignment_count =
+          Enum.count(var_instances, fn {{_name, _scope}, var_info} ->
+            var_info.type == :assignment
+          end)
+
+        assignment_count >= 2
       end)
-      assignment_count >= 2
-    end)
-    |> Enum.map(fn {var_name, _instances} -> to_string(var_name) end)
-    |> Enum.take(5)  # Limit to avoid too many phi nodes
+      |> Enum.map(fn {var_name, _instances} -> to_string(var_name) end)
+      # Limit to avoid too many phi nodes
+      |> Enum.take(5)
 
     result
   end
@@ -228,7 +246,8 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.OptimizationAnalyzer do
     # This is a simplified implementation
     case expr do
       {var_name, _, nil} when is_atom(var_name) -> [to_string(var_name)]
-      _ -> ["result"]  # Default phi variable for case results
+      # Default phi variable for case results
+      _ -> ["result"]
     end
   end
 
@@ -248,19 +267,28 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.OptimizationAnalyzer do
     case node.metadata do
       %{function: func} ->
         # Consider certain functions as expensive
-        func in [:expensive_computation, :complex_calculation, :database_query,
-                :file_read, :network_request, :crypto_operation]
-      _ -> false
+        func in [
+          :expensive_computation,
+          :complex_calculation,
+          :database_query,
+          :file_read,
+          :network_request,
+          :crypto_operation
+        ]
+
+      _ ->
+        false
     end
   end
 
   defp calculate_cyclomatic_complexity(state) do
     # Count decision points (if, case, try, etc.)
-    decision_nodes = state.nodes
-    |> Map.values()
-    |> Enum.count(fn node ->
-      node.type in [:conditional, :case, :try_expression, :with_expression]
-    end)
+    decision_nodes =
+      state.nodes
+      |> Map.values()
+      |> Enum.count(fn node ->
+        node.type in [:conditional, :case, :try_expression, :with_expression]
+      end)
 
     # Base complexity is 1, plus 1 for each decision point
     1 + decision_nodes
@@ -287,9 +315,14 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.OptimizationAnalyzer do
     # Safe rounding with validation
     cond do
       not is_number(result) ->
-        3.0  # Default to minimum for tests
-      result != result ->  # NaN check
-        3.0  # Default to minimum for tests
+        # Default to minimum for tests
+        3.0
+
+      # NaN check
+      result != result ->
+        # Default to minimum for tests
+        3.0
+
       true ->
         Float.round(result, 2)
     end

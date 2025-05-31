@@ -27,7 +27,11 @@ defmodule ElixirScope.Foundation.UtilsTest do
 
       assert is_binary(corr_id)
       assert String.length(corr_id) == 36
-      assert Regex.match?(~r/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/, corr_id)
+
+      assert Regex.match?(
+               ~r/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+               corr_id
+             )
     end
 
     test "extracts timestamp from ID" do
@@ -53,11 +57,13 @@ defmodule ElixirScope.Foundation.UtilsTest do
 
       assert is_integer(timestamp)
       # Should be a reasonable timestamp (after 2020)
-      assert timestamp > 1_577_836_800_000_000_000  # 2020-01-01 in nanoseconds
+      # 2020-01-01 in nanoseconds
+      assert timestamp > 1_577_836_800_000_000_000
     end
 
     test "formats timestamps correctly" do
-      timestamp_ns = 1_609_459_200_000_000_000  # 2021-01-01 00:00:00 UTC
+      # 2021-01-01 00:00:00 UTC
+      timestamp_ns = 1_609_459_200_000_000_000
       formatted = Utils.format_timestamp(timestamp_ns)
 
       assert is_binary(formatted)
@@ -67,22 +73,26 @@ defmodule ElixirScope.Foundation.UtilsTest do
 
   describe "measurement utilities" do
     test "measures execution time" do
-      sleep_time = 10  # milliseconds
+      # milliseconds
+      sleep_time = 10
 
-      {result, duration} = Utils.measure(fn ->
-        :timer.sleep(sleep_time)
-        :test_result
-      end)
+      {result, duration} =
+        Utils.measure(fn ->
+          :timer.sleep(sleep_time)
+          :test_result
+        end)
 
       assert result == :test_result
       assert is_integer(duration)
-      assert duration >= sleep_time * 1_000_000  # Convert to nanoseconds
+      # Convert to nanoseconds
+      assert duration >= sleep_time * 1_000_000
     end
 
     test "measures memory usage" do
-      {result, {mem_before, mem_after, diff}} = Utils.measure_memory(fn ->
-        Enum.to_list(1..1000)
-      end)
+      {result, {mem_before, mem_after, diff}} =
+        Utils.measure_memory(fn ->
+          Enum.to_list(1..1000)
+        end)
 
       assert is_list(result)
       assert length(result) == 1000

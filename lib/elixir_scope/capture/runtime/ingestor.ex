@@ -22,8 +22,14 @@ defmodule ElixirScope.Capture.Runtime.Ingestor do
   defdelegate ingest_phoenix_request_start(buffer, correlation_id, method, path, params, remote_ip),
     to: ElixirScope.Capture.Runtime.Ingestor.Phoenix
 
-  defdelegate ingest_phoenix_request_complete(buffer, correlation_id, status_code, content_type, duration_ms),
-    to: ElixirScope.Capture.Runtime.Ingestor.Phoenix
+  defdelegate ingest_phoenix_request_complete(
+                buffer,
+                correlation_id,
+                status_code,
+                content_type,
+                duration_ms
+              ),
+              to: ElixirScope.Capture.Runtime.Ingestor.Phoenix
 
   defdelegate ingest_phoenix_controller_entry(buffer, correlation_id, controller, action, metadata),
     to: ElixirScope.Capture.Runtime.Ingestor.Phoenix
@@ -52,11 +58,24 @@ defmodule ElixirScope.Capture.Runtime.Ingestor do
   defdelegate ingest_liveview_mount_complete(buffer, correlation_id, module, socket_assigns),
     to: ElixirScope.Capture.Runtime.Ingestor.LiveView
 
-  defdelegate ingest_liveview_handle_event_start(buffer, correlation_id, event, params, socket_assigns),
-    to: ElixirScope.Capture.Runtime.Ingestor.LiveView
+  defdelegate ingest_liveview_handle_event_start(
+                buffer,
+                correlation_id,
+                event,
+                params,
+                socket_assigns
+              ),
+              to: ElixirScope.Capture.Runtime.Ingestor.LiveView
 
-  defdelegate ingest_liveview_handle_event_complete(buffer, correlation_id, event, params, before_assigns, result),
-    to: ElixirScope.Capture.Runtime.Ingestor.LiveView
+  defdelegate ingest_liveview_handle_event_complete(
+                buffer,
+                correlation_id,
+                event,
+                params,
+                before_assigns,
+                result
+              ),
+              to: ElixirScope.Capture.Runtime.Ingestor.LiveView
 
   defdelegate ingest_liveview_assigns(buffer, callback_name, socket),
     to: ElixirScope.Capture.Runtime.Ingestor.LiveView
@@ -82,14 +101,27 @@ defmodule ElixirScope.Capture.Runtime.Ingestor do
   defdelegate ingest_phoenix_channel_message_start(buffer, correlation_id, event, payload, socket),
     to: ElixirScope.Capture.Runtime.Ingestor.Channel
 
-  defdelegate ingest_phoenix_channel_message_complete(buffer, correlation_id, event, payload, result),
-    to: ElixirScope.Capture.Runtime.Ingestor.Channel
+  defdelegate ingest_phoenix_channel_message_complete(
+                buffer,
+                correlation_id,
+                event,
+                payload,
+                result
+              ),
+              to: ElixirScope.Capture.Runtime.Ingestor.Channel
 
   defdelegate ingest_ecto_query_start(buffer, correlation_id, query, params, metadata, repo),
     to: ElixirScope.Capture.Runtime.Ingestor.Ecto
 
-  defdelegate ingest_ecto_query_complete(buffer, correlation_id, query, params, result, duration_us),
-    to: ElixirScope.Capture.Runtime.Ingestor.Ecto
+  defdelegate ingest_ecto_query_complete(
+                buffer,
+                correlation_id,
+                query,
+                params,
+                result,
+                duration_us
+              ),
+              to: ElixirScope.Capture.Runtime.Ingestor.Ecto
 
   defdelegate ingest_genserver_callback_start(buffer, callback_name, pid, capture_state),
     to: ElixirScope.Capture.Runtime.Ingestor.GenServer
@@ -115,14 +147,15 @@ defmodule ElixirScope.Capture.Runtime.Ingestor do
   @buffer_agent_name __MODULE__.BufferAgent
 
   # Pre-compile common event patterns for speed
-  @compile {:inline, [
-    ingest_function_call: 6,
-    ingest_function_return: 4,
-    ingest_process_spawn: 3,
-    ingest_message_send: 4,
-    ingest_state_change: 4,
-    ingest_generic_event: 7
-  ]}
+  @compile {:inline,
+            [
+              ingest_function_call: 6,
+              ingest_function_return: 4,
+              ingest_process_spawn: 3,
+              ingest_message_send: 4,
+              ingest_state_change: 4,
+              ingest_generic_event: 7
+            ]}
 
   @doc """
   Gets the current buffer for runtime components.
@@ -147,7 +180,9 @@ defmodule ElixirScope.Capture.Runtime.Ingestor do
   @spec set_buffer(RingBuffer.t()) :: :ok
   def set_buffer(buffer) do
     case Agent.start_link(fn -> buffer end, name: @buffer_agent_name) do
-      {:ok, _pid} -> :ok
+      {:ok, _pid} ->
+        :ok
+
       {:error, {:already_started, _pid}} ->
         Agent.update(@buffer_agent_name, fn _ -> buffer end)
         :ok
@@ -161,119 +196,128 @@ defmodule ElixirScope.Capture.Runtime.Ingestor do
   and forwards them to the existing ingestion pipeline.
   """
   @spec ingest_generic_event(
-    RingBuffer.t(),
-    atom(),
-    map(),
-    pid(),
-    term(),
-    non_neg_integer(),
-    non_neg_integer()
-  ) :: ingest_result()
-  def ingest_generic_event(buffer, event_type, event_data, pid, correlation_id, timestamp, wall_time) do
-    event = case event_type do
-      :function_entry ->
-        %Events.FunctionEntry{
-          timestamp: timestamp,
-          wall_time: wall_time,
-          module: Map.get(event_data, :module),
-          function: Map.get(event_data, :function),
-          arity: Map.get(event_data, :arity, 0),
-          args: Utils.truncate_data(Map.get(event_data, :args, [])),
-          call_id: Utils.generate_id(),
-          pid: pid,
-          correlation_id: correlation_id
-        }
+          RingBuffer.t(),
+          atom(),
+          map(),
+          pid(),
+          term(),
+          non_neg_integer(),
+          non_neg_integer()
+        ) :: ingest_result()
+  def ingest_generic_event(
+        buffer,
+        event_type,
+        event_data,
+        pid,
+        correlation_id,
+        timestamp,
+        wall_time
+      ) do
+    event =
+      case event_type do
+        :function_entry ->
+          %Events.FunctionEntry{
+            timestamp: timestamp,
+            wall_time: wall_time,
+            module: Map.get(event_data, :module),
+            function: Map.get(event_data, :function),
+            arity: Map.get(event_data, :arity, 0),
+            args: Utils.truncate_data(Map.get(event_data, :args, [])),
+            call_id: Utils.generate_id(),
+            pid: pid,
+            correlation_id: correlation_id
+          }
 
-      :function_exit ->
-        %Events.FunctionExit{
-          timestamp: timestamp,
-          wall_time: wall_time,
-          module: Map.get(event_data, :module),
-          function: Map.get(event_data, :function),
-          arity: Map.get(event_data, :arity, 0),
-          result: Utils.truncate_data(Map.get(event_data, :return_value)),
-          duration_ns: Map.get(event_data, :duration_ns, 0),
-          call_id: Map.get(event_data, :call_id, Utils.generate_id()),
-          exit_reason: Map.get(event_data, :exit_reason, :normal),
-          pid: pid,
-          correlation_id: correlation_id
-        }
+        :function_exit ->
+          %Events.FunctionExit{
+            timestamp: timestamp,
+            wall_time: wall_time,
+            module: Map.get(event_data, :module),
+            function: Map.get(event_data, :function),
+            arity: Map.get(event_data, :arity, 0),
+            result: Utils.truncate_data(Map.get(event_data, :return_value)),
+            duration_ns: Map.get(event_data, :duration_ns, 0),
+            call_id: Map.get(event_data, :call_id, Utils.generate_id()),
+            exit_reason: Map.get(event_data, :exit_reason, :normal),
+            pid: pid,
+            correlation_id: correlation_id
+          }
 
-      :state_change ->
-        %Events.StateChange{
-          server_pid: pid,
-          callback: Map.get(event_data, :callback, :unknown),
-          old_state: Utils.truncate_data(Map.get(event_data, :old_state)),
-          new_state: Utils.truncate_data(Map.get(event_data, :new_state)),
-          state_diff: Map.get(event_data, :state_diff),
-          trigger_message: Map.get(event_data, :trigger_message),
-          trigger_call_id: Map.get(event_data, :trigger_call_id),
-          pid: pid,
-          correlation_id: correlation_id,
-          timestamp: timestamp,
-          wall_time: wall_time
-        }
+        :state_change ->
+          %Events.StateChange{
+            server_pid: pid,
+            callback: Map.get(event_data, :callback, :unknown),
+            old_state: Utils.truncate_data(Map.get(event_data, :old_state)),
+            new_state: Utils.truncate_data(Map.get(event_data, :new_state)),
+            state_diff: Map.get(event_data, :state_diff),
+            trigger_message: Map.get(event_data, :trigger_message),
+            trigger_call_id: Map.get(event_data, :trigger_call_id),
+            pid: pid,
+            correlation_id: correlation_id,
+            timestamp: timestamp,
+            wall_time: wall_time
+          }
 
-      :state_snapshot ->
-        %Events.StateSnapshot{
-          server_pid: pid,
-          state: Utils.truncate_data(Map.get(event_data, :state)),
-          session_id: Map.get(event_data, :session_id),
-          checkpoint_type: Map.get(event_data, :checkpoint_type, :manual),
-          sequence_number: Map.get(event_data, :sequence_number, 0),
-          pid: pid,
-          correlation_id: correlation_id,
-          timestamp: timestamp,
-          wall_time: wall_time
-        }
+        :state_snapshot ->
+          %Events.StateSnapshot{
+            server_pid: pid,
+            state: Utils.truncate_data(Map.get(event_data, :state)),
+            session_id: Map.get(event_data, :session_id),
+            checkpoint_type: Map.get(event_data, :checkpoint_type, :manual),
+            sequence_number: Map.get(event_data, :sequence_number, 0),
+            pid: pid,
+            correlation_id: correlation_id,
+            timestamp: timestamp,
+            wall_time: wall_time
+          }
 
-      :process_exit ->
-        %Events.ProcessExit{
-          exited_pid: pid,
-          exit_reason: Map.get(event_data, :reason),
-          lifetime_ns: Map.get(event_data, :lifetime_ns, 0),
-          message_count: Map.get(event_data, :message_count),
-          final_state: Map.get(event_data, :final_state),
-          pid: pid,
-          reason: Map.get(event_data, :reason),
-          correlation_id: correlation_id,
-          timestamp: timestamp,
-          wall_time: wall_time
-        }
+        :process_exit ->
+          %Events.ProcessExit{
+            exited_pid: pid,
+            exit_reason: Map.get(event_data, :reason),
+            lifetime_ns: Map.get(event_data, :lifetime_ns, 0),
+            message_count: Map.get(event_data, :message_count),
+            final_state: Map.get(event_data, :final_state),
+            pid: pid,
+            reason: Map.get(event_data, :reason),
+            correlation_id: correlation_id,
+            timestamp: timestamp,
+            wall_time: wall_time
+          }
 
-      :message_received ->
-        %Events.MessageReceived{
-          pid: pid,
-          message: Utils.truncate_data(Map.get(event_data, :message)),
-          correlation_id: correlation_id,
-          timestamp: timestamp,
-          wall_time: wall_time
-        }
+        :message_received ->
+          %Events.MessageReceived{
+            pid: pid,
+            message: Utils.truncate_data(Map.get(event_data, :message)),
+            correlation_id: correlation_id,
+            timestamp: timestamp,
+            wall_time: wall_time
+          }
 
-      :message_sent ->
-        %Events.MessageSent{
-          from_pid: pid,
-          to_pid: Map.get(event_data, :to_pid),
-          message: Utils.truncate_data(Map.get(event_data, :message)),
-          correlation_id: correlation_id,
-          timestamp: timestamp,
-          wall_time: wall_time
-        }
+        :message_sent ->
+          %Events.MessageSent{
+            from_pid: pid,
+            to_pid: Map.get(event_data, :to_pid),
+            message: Utils.truncate_data(Map.get(event_data, :message)),
+            correlation_id: correlation_id,
+            timestamp: timestamp,
+            wall_time: wall_time
+          }
 
-      _ ->
-        # Fallback for unknown event types
-        %Events.FunctionEntry{
-          timestamp: timestamp,
-          wall_time: wall_time,
-          module: :unknown,
-          function: event_type,
-          arity: 0,
-          args: [event_data],
-          call_id: Utils.generate_id(),
-          pid: pid,
-          correlation_id: correlation_id
-        }
-    end
+        _ ->
+          # Fallback for unknown event types
+          %Events.FunctionEntry{
+            timestamp: timestamp,
+            wall_time: wall_time,
+            module: :unknown,
+            function: event_type,
+            arity: 0,
+            args: [event_data],
+            call_id: Utils.generate_id(),
+            pid: pid,
+            correlation_id: correlation_id
+          }
+      end
 
     RingBuffer.write(buffer, event)
   end
@@ -284,13 +328,13 @@ defmodule ElixirScope.Capture.Runtime.Ingestor do
   This is the most common event type and is heavily optimized.
   """
   @spec ingest_function_call(
-    RingBuffer.t(),
-    module(),
-    atom(),
-    list(),
-    pid(),
-    term()
-  ) :: ingest_result()
+          RingBuffer.t(),
+          module(),
+          atom(),
+          list(),
+          pid(),
+          term()
+        ) :: ingest_result()
   def ingest_function_call(buffer, module, function, args, caller_pid, correlation_id) do
     event = %Events.FunctionExecution{
       id: Utils.generate_id(),
@@ -312,11 +356,11 @@ defmodule ElixirScope.Capture.Runtime.Ingestor do
   Ingests a function return event.
   """
   @spec ingest_function_return(
-    RingBuffer.t(),
-    term(),
-    non_neg_integer(),
-    term()
-  ) :: ingest_result()
+          RingBuffer.t(),
+          term(),
+          non_neg_integer(),
+          term()
+        ) :: ingest_result()
   def ingest_function_return(buffer, return_value, duration_ns, correlation_id) do
     event = %Events.FunctionExecution{
       id: Utils.generate_id(),
@@ -373,7 +417,8 @@ defmodule ElixirScope.Capture.Runtime.Ingestor do
   def ingest_state_change(buffer, server_pid, old_state, new_state) do
     event = %Events.StateChange{
       server_pid: server_pid,
-      callback: :unknown,  # This would be passed as parameter in real usage
+      # This would be passed as parameter in real usage
+      callback: :unknown,
       old_state: Utils.truncate_data(old_state),
       new_state: Utils.truncate_data(new_state),
       state_diff: compute_state_diff(old_state, new_state),
@@ -408,7 +453,8 @@ defmodule ElixirScope.Capture.Runtime.Ingestor do
   def ingest_error(buffer, error_type, error_message, stacktrace) do
     event = %Events.ErrorEvent{
       error_type: error_type,
-      error_class: :unknown,  # Could be extracted from error in real usage
+      # Could be extracted from error in real usage
+      error_class: :unknown,
       error_message: Utils.truncate_data(error_message),
       stacktrace: Utils.truncate_data(stacktrace),
       context: nil,
@@ -424,7 +470,8 @@ defmodule ElixirScope.Capture.Runtime.Ingestor do
   This is more efficient than individual ingestion for large numbers of events
   to process at once.
   """
-  @spec ingest_batch(RingBuffer.t(), [Events.event()]) :: {:ok, non_neg_integer()} | {:error, term()}
+  @spec ingest_batch(RingBuffer.t(), [Events.event()]) ::
+          {:ok, non_neg_integer()} | {:error, term()}
   def ingest_batch(buffer, events) when is_list(events) do
     # Optimized batch implementation - use try/catch for fast path
     try do
@@ -439,6 +486,7 @@ defmodule ElixirScope.Capture.Runtime.Ingestor do
 
   # Private batch write helper - optimized for the common success case
   defp fast_batch_write(_buffer, [], count), do: count
+
   defp fast_batch_write(buffer, [event | rest], count) do
     case RingBuffer.write(buffer, event) do
       :ok -> fast_batch_write(buffer, rest, count + 1)
@@ -464,18 +512,19 @@ defmodule ElixirScope.Capture.Runtime.Ingestor do
   Returns timing statistics for the ingestion operation.
   """
   @spec benchmark_ingestion(RingBuffer.t(), Events.event(), pos_integer()) :: %{
-    avg_time_ns: float(),
-    min_time_ns: non_neg_integer(),
-    max_time_ns: non_neg_integer(),
-    total_time_ns: non_neg_integer(),
-    operations: pos_integer()
-  }
+          avg_time_ns: float(),
+          min_time_ns: non_neg_integer(),
+          max_time_ns: non_neg_integer(),
+          total_time_ns: non_neg_integer(),
+          operations: pos_integer()
+        }
   def benchmark_ingestion(buffer, sample_event, iterations \\ 1000) do
-    times = for _ <- 1..iterations do
-      start_time = System.monotonic_time(:nanosecond)
-      RingBuffer.write(buffer, sample_event)
-      System.monotonic_time(:nanosecond) - start_time
-    end
+    times =
+      for _ <- 1..iterations do
+        start_time = System.monotonic_time(:nanosecond)
+        RingBuffer.write(buffer, sample_event)
+        System.monotonic_time(:nanosecond) - start_time
+      end
 
     total_time = Enum.sum(times)
 

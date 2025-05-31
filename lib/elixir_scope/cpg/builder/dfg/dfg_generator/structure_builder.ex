@@ -5,6 +5,7 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.StructureBuilder do
   """
 
   alias ElixirScope.AST.Enhanced.DFGData
+
   alias ElixirScope.AST.Enhanced.DFGGenerator.{
     VariableTracker,
     OptimizationAnalyzer
@@ -36,23 +37,28 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.StructureBuilder do
       },
 
       # Populate fields expected by tests
-      nodes: Map.values(final_state.nodes),  # List for Enum.filter compatibility
-      nodes_map: final_state.nodes,          # Map for map_size compatibility
+      # List for Enum.filter compatibility
+      nodes: Map.values(final_state.nodes),
+      # Map for map_size compatibility
+      nodes_map: final_state.nodes,
       edges: final_state.edges,
       mutations: final_state.mutations,
       phi_nodes: phi_nodes,
       complexity_score: analysis_results.complexity_score,
       variable_lifetimes: VariableTracker.calculate_variable_lifetimes(final_state.variables),
       unused_variables: final_state.unused_variables,
-      shadowed_variables: final_state.shadowing_info,  # Use collected shadowing info
+      # Use collected shadowing info
+      shadowed_variables: final_state.shadowing_info,
       captured_variables: VariableTracker.detect_captured_variables(final_state),
       optimization_hints: optimization_hints,
       fan_in: OptimizationAnalyzer.calculate_complexity_metrics(final_state).fan_in,
       fan_out: OptimizationAnalyzer.calculate_complexity_metrics(final_state).fan_out,
       depth: OptimizationAnalyzer.calculate_complexity_metrics(final_state).depth,
       width: OptimizationAnalyzer.calculate_complexity_metrics(final_state).width,
-      data_flow_complexity: OptimizationAnalyzer.calculate_complexity_metrics(final_state).data_flow_complexity,
-      variable_complexity: OptimizationAnalyzer.calculate_complexity_metrics(final_state).variable_complexity
+      data_flow_complexity:
+        OptimizationAnalyzer.calculate_complexity_metrics(final_state).data_flow_complexity,
+      variable_complexity:
+        OptimizationAnalyzer.calculate_complexity_metrics(final_state).variable_complexity
     }
   end
 
@@ -104,21 +110,23 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.StructureBuilder do
 
   defp extract_scopes(state) do
     # Extract scope information from variables
-    scopes = state.variables
-    |> Enum.map(fn {{_var_name, scope}, _var_info} -> scope end)
-    |> Enum.uniq()
+    scopes =
+      state.variables
+      |> Enum.map(fn {{_var_name, scope}, _var_info} -> scope end)
+      |> Enum.uniq()
 
     # Convert to scope map
     scopes
     |> Enum.with_index()
     |> Enum.into(%{}, fn {scope, index} ->
-      {scope_to_string(scope), %{
-        id: scope_to_string(scope),
-        type: extract_scope_type(scope),
-        parent: extract_parent_scope(scope),
-        variables: extract_scope_variables(state, scope),
-        depth: calculate_scope_depth(scope)
-      }}
+      {scope_to_string(scope),
+       %{
+         id: scope_to_string(scope),
+         type: extract_scope_type(scope),
+         parent: extract_parent_scope(scope),
+         variables: extract_scope_variables(state, scope),
+         depth: calculate_scope_depth(scope)
+       }}
     end)
   end
 
@@ -151,40 +159,46 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.StructureBuilder do
     warnings = []
 
     # Add warnings for unused variables
-    warnings = if length(state.unused_variables) > 0 do
-      unused_warning = %{
-        type: :unused_variables,
-        message: "Found #{length(state.unused_variables)} unused variables",
-        variables: state.unused_variables
-      }
-      [unused_warning | warnings]
-    else
-      warnings
-    end
+    warnings =
+      if length(state.unused_variables) > 0 do
+        unused_warning = %{
+          type: :unused_variables,
+          message: "Found #{length(state.unused_variables)} unused variables",
+          variables: state.unused_variables
+        }
+
+        [unused_warning | warnings]
+      else
+        warnings
+      end
 
     # Add warnings for shadowed variables
-    warnings = if length(state.shadowing_info) > 0 do
-      shadow_warning = %{
-        type: :variable_shadowing,
-        message: "Found #{length(state.shadowing_info)} shadowed variables",
-        count: length(state.shadowing_info)
-      }
-      [shadow_warning | warnings]
-    else
-      warnings
-    end
+    warnings =
+      if length(state.shadowing_info) > 0 do
+        shadow_warning = %{
+          type: :variable_shadowing,
+          message: "Found #{length(state.shadowing_info)} shadowed variables",
+          count: length(state.shadowing_info)
+        }
+
+        [shadow_warning | warnings]
+      else
+        warnings
+      end
 
     # Add warnings for potential mutations
-    warnings = if length(state.mutations) > 0 do
-      mutation_warning = %{
-        type: :variable_mutations,
-        message: "Found #{length(state.mutations)} variable mutations",
-        count: length(state.mutations)
-      }
-      [mutation_warning | warnings]
-    else
-      warnings
-    end
+    warnings =
+      if length(state.mutations) > 0 do
+        mutation_warning = %{
+          type: :variable_mutations,
+          message: "Found #{length(state.mutations)} variable mutations",
+          count: length(state.mutations)
+        }
+
+        [mutation_warning | warnings]
+      else
+        warnings
+      end
 
     warnings
   end
@@ -211,7 +225,9 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.StructureBuilder do
 
   defp extract_variable_name_from_node(node) do
     case node.variable do
-      %{name: name} -> name
+      %{name: name} ->
+        name
+
       nil ->
         case node.metadata do
           %{variable: var_name} -> to_string(var_name)
@@ -261,7 +277,8 @@ defmodule ElixirScope.AST.Enhanced.DFGGenerator.StructureBuilder do
   defp calculate_scope_depth(scope) do
     case scope do
       :global -> 0
-      {_type, _id} -> 1  # Simplified depth calculation
+      # Simplified depth calculation
+      {_type, _id} -> 1
       _ -> 0
     end
   end

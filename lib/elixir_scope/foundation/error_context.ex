@@ -94,11 +94,11 @@ defmodule ElixirScope.Foundation.ErrorContext do
   alias ElixirScope.Foundation.Error
 
   @type context :: %{
-    module: module(),
-    function: atom(),
-    timestamp: DateTime.t(),
-    metadata: map()
-  }
+          module: module(),
+          function: atom(),
+          timestamp: DateTime.t(),
+          metadata: map()
+        }
 
   @doc """
   Create an error context for a module/function.
@@ -117,10 +117,10 @@ defmodule ElixirScope.Foundation.ErrorContext do
   Add context to an existing error or create a new one.
   """
   @spec add_context(
-    :ok | {:ok, term()} | {:error, Error.t()} | {:error, term()},
-    context(),
-    map()
-  ) :: :ok | {:ok, term()} | {:error, Error.t()}
+          :ok | {:ok, term()} | {:error, Error.t()} | {:error, term()},
+          context(),
+          map()
+        ) :: :ok | {:ok, term()} | {:error, Error.t()}
   def add_context(result, context, additional_info \\ %{})
 
   def add_context(:ok, _context, _additional_info), do: :ok
@@ -139,7 +139,7 @@ defmodule ElixirScope.Foundation.ErrorContext do
   @doc """
   Wrap a function call with context tracking.
   """
-  @spec with_context(context(), (() -> term())) :: term()
+  @spec with_context(context(), (-> term())) :: term()
   def with_context(context, fun) when is_function(fun, 0) do
     try do
       case fun.() do
@@ -148,16 +148,17 @@ defmodule ElixirScope.Foundation.ErrorContext do
       end
     rescue
       exception ->
-        error_context = Map.merge(context, %{
-          exception: Exception.message(exception),
-          exception_type: exception.__struct__,
-          stacktrace: Exception.format_stacktrace(__STACKTRACE__)
-        })
+        error_context =
+          Map.merge(context, %{
+            exception: Exception.message(exception),
+            exception_type: exception.__struct__,
+            stacktrace: Exception.format_stacktrace(__STACKTRACE__)
+          })
+
         {:error, Error.new(:internal_error, "Exception occurred", context: error_context)}
     end
   end
 end
-
 
 # These approaches were not used.
 

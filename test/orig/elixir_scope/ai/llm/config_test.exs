@@ -1,6 +1,7 @@
 defmodule ElixirScope.AI.LLM.ConfigTest do
-  use ExUnit.Case, async: false  # Not async because we modify env vars
-  
+  # Not async because we modify env vars
+  use ExUnit.Case, async: false
+
   alias ElixirScope.AI.LLM.Config
 
   setup do
@@ -13,7 +14,7 @@ defmodule ElixirScope.AI.LLM.ConfigTest do
     original_model = System.get_env("GEMINI_MODEL")
     original_vertex_model = System.get_env("VERTEX_MODEL")
     original_timeout = System.get_env("LLM_TIMEOUT")
-    
+
     # Clear env vars for clean test state
     System.delete_env("GEMINI_API_KEY")
     System.delete_env("VERTEX_JSON_FILE")
@@ -25,7 +26,7 @@ defmodule ElixirScope.AI.LLM.ConfigTest do
     System.delete_env("VERTEX_MODEL")
     System.delete_env("VERTEX_DEFAULT_MODEL")
     System.delete_env("LLM_TIMEOUT")
-    
+
     # Clear application config
     Application.delete_env(:elixir_scope, :gemini_api_key)
     Application.delete_env(:elixir_scope, :vertex_json_file)
@@ -35,7 +36,7 @@ defmodule ElixirScope.AI.LLM.ConfigTest do
     Application.delete_env(:elixir_scope, :gemini_model)
     Application.delete_env(:elixir_scope, :vertex_model)
     Application.delete_env(:elixir_scope, :llm_timeout)
-    
+
     on_exit(fn ->
       # Restore original env vars
       if original_gemini_key, do: System.put_env("GEMINI_API_KEY", original_gemini_key)
@@ -46,7 +47,7 @@ defmodule ElixirScope.AI.LLM.ConfigTest do
       if original_model, do: System.put_env("GEMINI_MODEL", original_model)
       if original_vertex_model, do: System.put_env("VERTEX_MODEL", original_vertex_model)
       if original_timeout, do: System.put_env("LLM_TIMEOUT", original_timeout)
-      
+
       # Clear application config
       Application.delete_env(:elixir_scope, :gemini_api_key)
       Application.delete_env(:elixir_scope, :vertex_json_file)
@@ -57,7 +58,7 @@ defmodule ElixirScope.AI.LLM.ConfigTest do
       Application.delete_env(:elixir_scope, :vertex_model)
       Application.delete_env(:elixir_scope, :llm_timeout)
     end)
-    
+
     :ok
   end
 
@@ -80,9 +81,9 @@ defmodule ElixirScope.AI.LLM.ConfigTest do
     test "application config takes precedence over environment" do
       System.put_env("GEMINI_API_KEY", "env-key")
       Application.put_env(:elixir_scope, :gemini_api_key, "app-key")
-      
+
       assert Config.get_gemini_api_key() == "app-key"
-      
+
       Application.delete_env(:elixir_scope, :gemini_api_key)
     end
   end
@@ -100,14 +101,16 @@ defmodule ElixirScope.AI.LLM.ConfigTest do
 
     test "returns :vertex when credentials are available and provider is explicitly set" do
       temp_file = System.tmp_dir!() |> Path.join("vertex_creds.json")
+
       credentials = %{
         "type" => "service_account",
         "project_id" => "test-project",
         "private_key" => "test-key",
         "client_email" => "test@test-project.iam.gserviceaccount.com"
       }
+
       File.write!(temp_file, Jason.encode!(credentials))
-      
+
       try do
         System.put_env("VERTEX_JSON_FILE", temp_file)
         System.put_env("LLM_PROVIDER", "vertex")
@@ -119,14 +122,16 @@ defmodule ElixirScope.AI.LLM.ConfigTest do
 
     test "returns :vertex when both vertex and gemini are available and vertex is explicitly set" do
       temp_file = System.tmp_dir!() |> Path.join("vertex_creds.json")
+
       credentials = %{
         "type" => "service_account",
         "project_id" => "test-project",
         "private_key" => "test-key",
         "client_email" => "test@test-project.iam.gserviceaccount.com"
       }
+
       File.write!(temp_file, Jason.encode!(credentials))
-      
+
       try do
         System.put_env("VERTEX_JSON_FILE", temp_file)
         System.put_env("GEMINI_API_KEY", "test-key")
@@ -226,14 +231,16 @@ defmodule ElixirScope.AI.LLM.ConfigTest do
 
     test "returns true for :vertex when credentials are present" do
       temp_file = System.tmp_dir!() |> Path.join("vertex_creds.json")
+
       credentials = %{
         "type" => "service_account",
         "project_id" => "test-project",
         "private_key" => "test-key",
         "client_email" => "test@test-project.iam.gserviceaccount.com"
       }
+
       File.write!(temp_file, Jason.encode!(credentials))
-      
+
       try do
         System.put_env("VERTEX_JSON_FILE", temp_file)
         assert Config.valid_config?(:vertex) == true
@@ -255,9 +262,9 @@ defmodule ElixirScope.AI.LLM.ConfigTest do
     test "returns configuration map without exposing API key" do
       System.put_env("GEMINI_API_KEY", "secret-key")
       System.put_env("LLM_PROVIDER", "gemini")
-      
+
       config = Config.debug_config()
-      
+
       assert config.primary_provider == :gemini
       assert config.fallback_provider == :mock
       assert config.gemini_api_key_present == true
@@ -265,7 +272,7 @@ defmodule ElixirScope.AI.LLM.ConfigTest do
       assert config.gemini_model == "gemini-2.0-flash"
       assert config.vertex_credentials_present == false
       assert config.request_timeout == 30_000
-      
+
       # Ensure the actual API key is not exposed
       refute Map.has_key?(config, :gemini_api_key)
       refute Map.has_key?(config, :vertex_credentials)
@@ -279,25 +286,27 @@ defmodule ElixirScope.AI.LLM.ConfigTest do
 
     test "shows vertex credentials as present when configured" do
       temp_file = System.tmp_dir!() |> Path.join("vertex_creds.json")
+
       credentials = %{
         "type" => "service_account",
         "project_id" => "test-project",
         "private_key" => "test-key",
         "client_email" => "test@test-project.iam.gserviceaccount.com"
       }
+
       File.write!(temp_file, Jason.encode!(credentials))
-      
+
       try do
         System.put_env("VERTEX_JSON_FILE", temp_file)
         System.put_env("LLM_PROVIDER", "vertex")
-        
+
         config = Config.debug_config()
-        
+
         assert config.primary_provider == :vertex
         assert config.vertex_credentials_present == true
         assert String.contains?(config.vertex_base_url, "test-project")
         assert config.vertex_model == "gemini-2.0-flash"
-        
+
         # Ensure credentials are not exposed
         refute Map.has_key?(config, :vertex_credentials)
       after
@@ -341,7 +350,7 @@ defmodule ElixirScope.AI.LLM.ConfigTest do
     test "returns nil when file has invalid JSON" do
       temp_file = System.tmp_dir!() |> Path.join("invalid_vertex.json")
       File.write!(temp_file, "invalid json")
-      
+
       try do
         System.put_env("VERTEX_JSON_FILE", temp_file)
         assert Config.get_vertex_credentials() == nil
@@ -352,14 +361,16 @@ defmodule ElixirScope.AI.LLM.ConfigTest do
 
     test "returns parsed credentials when file is valid" do
       temp_file = System.tmp_dir!() |> Path.join("valid_vertex.json")
+
       credentials = %{
         "type" => "service_account",
         "project_id" => "test-project",
         "private_key" => "test-key",
         "client_email" => "test@test-project.iam.gserviceaccount.com"
       }
+
       File.write!(temp_file, Jason.encode!(credentials))
-      
+
       try do
         System.put_env("VERTEX_JSON_FILE", temp_file)
         assert Config.get_vertex_credentials() == credentials
@@ -378,14 +389,16 @@ defmodule ElixirScope.AI.LLM.ConfigTest do
 
     test "returns URL with project ID when credentials are available" do
       temp_file = System.tmp_dir!() |> Path.join("vertex_with_project.json")
+
       credentials = %{
         "type" => "service_account",
         "project_id" => "my-test-project",
         "private_key" => "test-key",
         "client_email" => "test@my-test-project.iam.gserviceaccount.com"
       }
+
       File.write!(temp_file, Jason.encode!(credentials))
-      
+
       try do
         System.put_env("VERTEX_JSON_FILE", temp_file)
         url = Config.get_vertex_base_url()
@@ -430,4 +443,4 @@ defmodule ElixirScope.AI.LLM.ConfigTest do
       assert Config.get_vertex_model() == "specific-model"
     end
   end
-end 
+end

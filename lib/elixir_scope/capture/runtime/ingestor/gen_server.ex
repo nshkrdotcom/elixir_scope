@@ -51,7 +51,8 @@ defmodule ElixirScope.Capture.Runtime.Ingestor.GenServer do
   @doc """
   Ingests a GenServer callback error event.
   """
-  @spec ingest_genserver_callback_error(RingBuffer.t(), atom(), pid(), atom(), term()) :: ingest_result()
+  @spec ingest_genserver_callback_error(RingBuffer.t(), atom(), pid(), atom(), term()) ::
+          ingest_result()
   def ingest_genserver_callback_error(buffer, callback_name, pid, kind, reason) do
     event = %Events.ErrorEvent{
       error_type: kind,

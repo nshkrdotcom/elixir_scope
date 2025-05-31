@@ -17,24 +17,43 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.PhoenixReporting do
   @doc """
   Reports Phoenix request start.
   """
-  @spec report_phoenix_request_start(correlation_id(), String.t(), String.t(), map(), tuple()) :: :ok
+  @spec report_phoenix_request_start(correlation_id(), String.t(), String.t(), map(), tuple()) ::
+          :ok
   def report_phoenix_request_start(correlation_id, method, path, params, remote_ip) do
     case Context.get_context() do
       %{enabled: true, buffer: buffer} when not is_nil(buffer) ->
-        Ingestor.ingest_phoenix_request_start(buffer, correlation_id, method, path, params, remote_ip)
-      _ -> :ok
+        Ingestor.ingest_phoenix_request_start(
+          buffer,
+          correlation_id,
+          method,
+          path,
+          params,
+          remote_ip
+        )
+
+      _ ->
+        :ok
     end
   end
 
   @doc """
   Reports Phoenix request completion.
   """
-  @spec report_phoenix_request_complete(correlation_id(), integer(), String.t(), non_neg_integer()) :: :ok
+  @spec report_phoenix_request_complete(correlation_id(), integer(), String.t(), non_neg_integer()) ::
+          :ok
   def report_phoenix_request_complete(correlation_id, status_code, content_type, duration_ms) do
     case Context.get_context() do
       %{enabled: true, buffer: buffer} when not is_nil(buffer) ->
-        Ingestor.ingest_phoenix_request_complete(buffer, correlation_id, status_code, content_type, duration_ms)
-      _ -> :ok
+        Ingestor.ingest_phoenix_request_complete(
+          buffer,
+          correlation_id,
+          status_code,
+          content_type,
+          duration_ms
+        )
+
+      _ ->
+        :ok
     end
   end
 
@@ -45,8 +64,16 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.PhoenixReporting do
   def report_phoenix_controller_entry(correlation_id, controller, action, metadata) do
     case Context.get_context() do
       %{enabled: true, buffer: buffer} when not is_nil(buffer) ->
-        Ingestor.ingest_phoenix_controller_entry(buffer, correlation_id, controller, action, metadata)
-      _ -> :ok
+        Ingestor.ingest_phoenix_controller_entry(
+          buffer,
+          correlation_id,
+          controller,
+          action,
+          metadata
+        )
+
+      _ ->
+        :ok
     end
   end
 
@@ -58,7 +85,9 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.PhoenixReporting do
     case Context.get_context() do
       %{enabled: true, buffer: buffer} when not is_nil(buffer) ->
         Ingestor.ingest_phoenix_controller_exit(buffer, correlation_id, controller, action, result)
-      _ -> :ok
+
+      _ ->
+        :ok
     end
   end
 
@@ -72,7 +101,9 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.PhoenixReporting do
     case Context.get_context() do
       %{enabled: true, buffer: buffer} when not is_nil(buffer) and should_capture ->
         Ingestor.ingest_phoenix_action_params(buffer, action_name, conn, params)
-      _ -> :ok
+
+      _ ->
+        :ok
     end
   end
 
@@ -84,7 +115,9 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.PhoenixReporting do
     case Context.get_context() do
       %{enabled: true, buffer: buffer} when not is_nil(buffer) and should_capture_state ->
         Ingestor.ingest_phoenix_action_start(buffer, action_name, conn)
-      _ -> :ok
+
+      _ ->
+        :ok
     end
   end
 
@@ -96,7 +129,9 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.PhoenixReporting do
     case Context.get_context() do
       %{enabled: true, buffer: buffer} when not is_nil(buffer) ->
         Ingestor.ingest_phoenix_action_success(buffer, action_name, conn, result)
-      _ -> :ok
+
+      _ ->
+        :ok
     end
   end
 
@@ -108,7 +143,9 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.PhoenixReporting do
     case Context.get_context() do
       %{enabled: true, buffer: buffer} when not is_nil(buffer) ->
         Ingestor.ingest_phoenix_action_error(buffer, action_name, conn, kind, reason)
-      _ -> :ok
+
+      _ ->
+        :ok
     end
   end
 
@@ -120,7 +157,9 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.PhoenixReporting do
     case Context.get_context() do
       %{enabled: true, buffer: buffer} when not is_nil(buffer) and should_capture_response ->
         Ingestor.ingest_phoenix_action_complete(buffer, action_name, conn)
-      _ -> :ok
+
+      _ ->
+        :ok
     end
   end
 
@@ -134,7 +173,9 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.PhoenixReporting do
     case Context.get_context() do
       %{enabled: true, buffer: buffer} when not is_nil(buffer) ->
         Ingestor.ingest_liveview_mount_start(buffer, correlation_id, module, params, session)
-      _ -> :ok
+
+      _ ->
+        :ok
     end
   end
 
@@ -146,7 +187,9 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.PhoenixReporting do
     case Context.get_context() do
       %{enabled: true, buffer: buffer} when not is_nil(buffer) ->
         Ingestor.ingest_liveview_mount_complete(buffer, correlation_id, module, socket_assigns)
-      _ -> :ok
+
+      _ ->
+        :ok
     end
   end
 
@@ -157,20 +200,38 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.PhoenixReporting do
   def report_liveview_handle_event_start(correlation_id, event, params, socket_assigns) do
     case Context.get_context() do
       %{enabled: true, buffer: buffer} when not is_nil(buffer) ->
-        Ingestor.ingest_liveview_handle_event_start(buffer, correlation_id, event, params, socket_assigns)
-      _ -> :ok
+        Ingestor.ingest_liveview_handle_event_start(
+          buffer,
+          correlation_id,
+          event,
+          params,
+          socket_assigns
+        )
+
+      _ ->
+        :ok
     end
   end
 
   @doc """
   Reports LiveView handle_event completion.
   """
-  @spec report_liveview_handle_event_complete(correlation_id(), String.t(), map(), map(), term()) :: :ok
+  @spec report_liveview_handle_event_complete(correlation_id(), String.t(), map(), map(), term()) ::
+          :ok
   def report_liveview_handle_event_complete(correlation_id, event, params, before_assigns, result) do
     case Context.get_context() do
       %{enabled: true, buffer: buffer} when not is_nil(buffer) ->
-        Ingestor.ingest_liveview_handle_event_complete(buffer, correlation_id, event, params, before_assigns, result)
-      _ -> :ok
+        Ingestor.ingest_liveview_handle_event_complete(
+          buffer,
+          correlation_id,
+          event,
+          params,
+          before_assigns,
+          result
+        )
+
+      _ ->
+        :ok
     end
   end
 
@@ -182,7 +243,9 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.PhoenixReporting do
     case Context.get_context() do
       %{enabled: true, buffer: buffer} when not is_nil(buffer) and should_capture ->
         Ingestor.ingest_liveview_assigns(buffer, callback_name, socket)
-      _ -> :ok
+
+      _ ->
+        :ok
     end
   end
 
@@ -194,7 +257,9 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.PhoenixReporting do
     case Context.get_context() do
       %{enabled: true, buffer: buffer} when not is_nil(buffer) and should_capture ->
         Ingestor.ingest_liveview_event(buffer, event, params, socket)
-      _ -> :ok
+
+      _ ->
+        :ok
     end
   end
 
@@ -206,7 +271,9 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.PhoenixReporting do
     case Context.get_context() do
       %{enabled: true, buffer: buffer} when not is_nil(buffer) ->
         Ingestor.ingest_liveview_callback(buffer, callback_name, socket)
-      _ -> :ok
+
+      _ ->
+        :ok
     end
   end
 
@@ -218,7 +285,9 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.PhoenixReporting do
     case Context.get_context() do
       %{enabled: true, buffer: buffer} when not is_nil(buffer) ->
         Ingestor.ingest_liveview_callback_success(buffer, callback_name, socket, result)
-      _ -> :ok
+
+      _ ->
+        :ok
     end
   end
 
@@ -230,7 +299,9 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.PhoenixReporting do
     case Context.get_context() do
       %{enabled: true, buffer: buffer} when not is_nil(buffer) ->
         Ingestor.ingest_liveview_callback_error(buffer, callback_name, socket, kind, reason)
-      _ -> :ok
+
+      _ ->
+        :ok
     end
   end
 
@@ -244,7 +315,9 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.PhoenixReporting do
     case Context.get_context() do
       %{enabled: true, buffer: buffer} when not is_nil(buffer) ->
         Ingestor.ingest_phoenix_channel_join_start(buffer, correlation_id, topic, payload, socket)
-      _ -> :ok
+
+      _ ->
+        :ok
     end
   end
 
@@ -255,8 +328,16 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.PhoenixReporting do
   def report_phoenix_channel_join_complete(correlation_id, topic, payload, result) do
     case Context.get_context() do
       %{enabled: true, buffer: buffer} when not is_nil(buffer) ->
-        Ingestor.ingest_phoenix_channel_join_complete(buffer, correlation_id, topic, payload, result)
-      _ -> :ok
+        Ingestor.ingest_phoenix_channel_join_complete(
+          buffer,
+          correlation_id,
+          topic,
+          payload,
+          result
+        )
+
+      _ ->
+        :ok
     end
   end
 
@@ -267,8 +348,16 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.PhoenixReporting do
   def report_phoenix_channel_message_start(correlation_id, event, payload, socket) do
     case Context.get_context() do
       %{enabled: true, buffer: buffer} when not is_nil(buffer) ->
-        Ingestor.ingest_phoenix_channel_message_start(buffer, correlation_id, event, payload, socket)
-      _ -> :ok
+        Ingestor.ingest_phoenix_channel_message_start(
+          buffer,
+          correlation_id,
+          event,
+          payload,
+          socket
+        )
+
+      _ ->
+        :ok
     end
   end
 
@@ -279,8 +368,16 @@ defmodule ElixirScope.Capture.Runtime.InstrumentationRuntime.PhoenixReporting do
   def report_phoenix_channel_message_complete(correlation_id, event, payload, result) do
     case Context.get_context() do
       %{enabled: true, buffer: buffer} when not is_nil(buffer) ->
-        Ingestor.ingest_phoenix_channel_message_complete(buffer, correlation_id, event, payload, result)
-      _ -> :ok
+        Ingestor.ingest_phoenix_channel_message_complete(
+          buffer,
+          correlation_id,
+          event,
+          payload,
+          result
+        )
+
+      _ ->
+        :ok
     end
   end
 end

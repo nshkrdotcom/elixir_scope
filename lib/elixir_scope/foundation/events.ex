@@ -28,16 +28,16 @@ defmodule ElixirScope.Foundation.Events do
   ]
 
   @type t :: %__MODULE__{
-    event_id: event_id(),
-    event_type: atom(),
-    timestamp: timestamp(),
-    wall_time: DateTime.t(),
-    node: node(),
-    pid: pid(),
-    correlation_id: correlation_id() | nil,
-    parent_id: event_id() | nil,
-    data: term()
-  }
+          event_id: event_id(),
+          event_type: atom(),
+          timestamp: timestamp(),
+          wall_time: DateTime.t(),
+          node: node(),
+          pid: pid(),
+          correlation_id: correlation_id() | nil,
+          parent_id: event_id() | nil,
+          data: term()
+        }
 
   ## System Management
 
@@ -54,8 +54,8 @@ defmodule ElixirScope.Foundation.Events do
 
   @spec new_event(atom(), term(), keyword()) :: t() | {:error, Error.t()}
   def new_event(event_type, data, opts \\ []) do
-    context = ErrorContext.new(__MODULE__, :new_event,
-      metadata: %{event_type: event_type, opts: opts})
+    context =
+      ErrorContext.new(__MODULE__, :new_event, metadata: %{event_type: event_type, opts: opts})
 
     ErrorContext.with_context(context, fn ->
       event = %__MODULE__{
@@ -93,7 +93,8 @@ defmodule ElixirScope.Foundation.Events do
     new_event(:function_entry, data, opts)
   end
 
-  @spec function_exit(module(), atom(), arity(), event_id(), term(), non_neg_integer(), atom()) :: t() | {:error, Error.t()}
+  @spec function_exit(module(), atom(), arity(), event_id(), term(), non_neg_integer(), atom()) ::
+          t() | {:error, Error.t()}
   def function_exit(module, function, arity, call_id, result, duration_ns, exit_reason) do
     data = %{
       call_id: call_id,
@@ -174,6 +175,7 @@ defmodule ElixirScope.Foundation.Events do
         :ok
     end
   end
+
   defp validate_event(_) do
     Error.error_result(:type_mismatch, "Expected Events struct")
   end
@@ -190,95 +192,93 @@ defmodule ElixirScope.Foundation.Events do
   end
 end
 
+# ## Event Creation
 
+# @spec new_event(atom(), term(), keyword()) :: t()
+# def new_event(event_type, data, opts \\ []) do
+#   %__MODULE__{
+#     event_id: Utils.generate_id(),
+#     event_type: event_type,
+#     timestamp: Utils.monotonic_timestamp(),
+#     wall_time: DateTime.utc_now(),
+#     node: Node.self(),
+#     pid: self(),
+#     correlation_id: Keyword.get(opts, :correlation_id),
+#     parent_id: Keyword.get(opts, :parent_id),
+#     data: data
+#   }
+# end
 
-  # ## Event Creation
+# @spec function_entry(module(), atom(), arity(), [term()], keyword()) :: t()
+# def function_entry(module, function, arity, args, opts \\ []) do
+#   data = %{
+#     call_id: Utils.generate_id(),
+#     module: module,
+#     function: function,
+#     arity: arity,
+#     args: Utils.truncate_if_large(args),
+#     caller_module: Keyword.get(opts, :caller_module),
+#     caller_function: Keyword.get(opts, :caller_function),
+#     caller_line: Keyword.get(opts, :caller_line)
+#   }
 
-  # @spec new_event(atom(), term(), keyword()) :: t()
-  # def new_event(event_type, data, opts \\ []) do
-  #   %__MODULE__{
-  #     event_id: Utils.generate_id(),
-  #     event_type: event_type,
-  #     timestamp: Utils.monotonic_timestamp(),
-  #     wall_time: DateTime.utc_now(),
-  #     node: Node.self(),
-  #     pid: self(),
-  #     correlation_id: Keyword.get(opts, :correlation_id),
-  #     parent_id: Keyword.get(opts, :parent_id),
-  #     data: data
-  #   }
-  # end
+#   new_event(:function_entry, data, opts)
+# end
 
-  # @spec function_entry(module(), atom(), arity(), [term()], keyword()) :: t()
-  # def function_entry(module, function, arity, args, opts \\ []) do
-  #   data = %{
-  #     call_id: Utils.generate_id(),
-  #     module: module,
-  #     function: function,
-  #     arity: arity,
-  #     args: Utils.truncate_if_large(args),
-  #     caller_module: Keyword.get(opts, :caller_module),
-  #     caller_function: Keyword.get(opts, :caller_function),
-  #     caller_line: Keyword.get(opts, :caller_line)
-  #   }
+# @spec function_exit(module(), atom(), arity(), event_id(), term(), non_neg_integer(), atom()) :: t()
+# def function_exit(module, function, arity, call_id, result, duration_ns, exit_reason) do
+#   data = %{
+#     call_id: call_id,
+#     module: module,
+#     function: function,
+#     arity: arity,
+#     result: Utils.truncate_if_large(result),
+#     duration_ns: duration_ns,
+#     exit_reason: exit_reason
+#   }
 
-  #   new_event(:function_entry, data, opts)
-  # end
+#   new_event(:function_exit, data)
+# end
 
-  # @spec function_exit(module(), atom(), arity(), event_id(), term(), non_neg_integer(), atom()) :: t()
-  # def function_exit(module, function, arity, call_id, result, duration_ns, exit_reason) do
-  #   data = %{
-  #     call_id: call_id,
-  #     module: module,
-  #     function: function,
-  #     arity: arity,
-  #     result: Utils.truncate_if_large(result),
-  #     duration_ns: duration_ns,
-  #     exit_reason: exit_reason
-  #   }
+# @spec state_change(pid(), atom(), term(), term(), keyword()) :: t()
+# def state_change(server_pid, callback, old_state, new_state, opts \\ []) do
+#   data = %{
+#     server_pid: server_pid,
+#     callback: callback,
+#     old_state: Utils.truncate_if_large(old_state),
+#     new_state: Utils.truncate_if_large(new_state),
+#     state_diff: compute_state_diff(old_state, new_state),
+#     trigger_message: Keyword.get(opts, :trigger_message),
+#     trigger_call_id: Keyword.get(opts, :trigger_call_id)
+#   }
 
-  #   new_event(:function_exit, data)
-  # end
+#   new_event(:state_change, data)
+# end
 
-  # @spec state_change(pid(), atom(), term(), term(), keyword()) :: t()
-  # def state_change(server_pid, callback, old_state, new_state, opts \\ []) do
-  #   data = %{
-  #     server_pid: server_pid,
-  #     callback: callback,
-  #     old_state: Utils.truncate_if_large(old_state),
-  #     new_state: Utils.truncate_if_large(new_state),
-  #     state_diff: compute_state_diff(old_state, new_state),
-  #     trigger_message: Keyword.get(opts, :trigger_message),
-  #     trigger_call_id: Keyword.get(opts, :trigger_call_id)
-  #   }
+# ## Event Processing
 
-  #   new_event(:state_change, data)
-  # end
+# @spec serialize(t()) :: binary()
+# def serialize(%__MODULE__{} = event) do
+#   :erlang.term_to_binary(event, [:compressed])
+# end
 
-  # ## Event Processing
+# @spec deserialize(binary()) :: t()
+# def deserialize(binary) when is_binary(binary) do
+#   :erlang.binary_to_term(binary)
+# end
 
-  # @spec serialize(t()) :: binary()
-  # def serialize(%__MODULE__{} = event) do
-  #   :erlang.term_to_binary(event, [:compressed])
-  # end
+# @spec serialized_size(t()) :: non_neg_integer()
+# def serialized_size(%__MODULE__{} = event) do
+#   event |> serialize() |> byte_size()
+# end
 
-  # @spec deserialize(binary()) :: t()
-  # def deserialize(binary) when is_binary(binary) do
-  #   :erlang.binary_to_term(binary)
-  # end
+## Private Functions
 
-  # @spec serialized_size(t()) :: non_neg_integer()
-  # def serialized_size(%__MODULE__{} = event) do
-  #   event |> serialize() |> byte_size()
-  # end
-
-  ## Private Functions
-
-  # defp compute_state_diff(old_state, new_state) do
-  #   if old_state == new_state do
-  #     :no_change
-  #   else
-  #     :changed
-  #   end
-  # end
+# defp compute_state_diff(old_state, new_state) do
+#   if old_state == new_state do
+#     :no_change
+#   else
+#     :changed
+#   end
+# end
 # end

@@ -13,11 +13,11 @@ defmodule ElixirScope.AST.MemoryManager.Cleaner do
   @access_tracking_table :ast_repo_access_tracking
 
   @type cleanup_stats :: %{
-    modules_cleaned: non_neg_integer(),
-    data_removed_bytes: non_neg_integer(),
-    last_cleanup_duration: non_neg_integer(),
-    total_cleanups: non_neg_integer()
-  }
+          modules_cleaned: non_neg_integer(),
+          data_removed_bytes: non_neg_integer(),
+          last_cleanup_duration: non_neg_integer(),
+          total_cleanups: non_neg_integer()
+        }
 
   @doc """
   Gets initial cleanup statistics structure.
@@ -48,10 +48,12 @@ defmodule ElixirScope.AST.MemoryManager.Cleaner do
     dry_run = Keyword.get(opts, :dry_run, false)
 
     # Validate max_age parameter
-    max_age = case max_age do
-      age when is_integer(age) and age >= 0 -> age
-      _ -> 3600  # Default to 1 hour if invalid
-    end
+    max_age =
+      case max_age do
+        age when is_integer(age) and age >= 0 -> age
+        # Default to 1 hour if invalid
+        _ -> 3600
+      end
 
     current_time = System.monotonic_time(:second)
     cutoff_time = current_time - max_age
@@ -72,11 +74,12 @@ defmodule ElixirScope.AST.MemoryManager.Cleaner do
         # Clean expired cache entries
         clean_expired_cache_entries()
 
-        {:ok, %{
-          modules_cleaned: modules_cleaned,
-          data_removed_bytes: bytes_removed,
-          dry_run: false
-        }}
+        {:ok,
+         %{
+           modules_cleaned: modules_cleaned,
+           data_removed_bytes: bytes_removed,
+           dry_run: false
+         }}
       end
     rescue
       error ->
@@ -93,26 +96,21 @@ defmodule ElixirScope.AST.MemoryManager.Cleaner do
     case result do
       %{dry_run: true, modules_to_clean: count} ->
         # Dry run - don't update actual cleanup stats, just duration
-        %{stats |
-          last_cleanup_duration: duration,
-          total_cleanups: stats.total_cleanups + 1
-        }
+        %{stats | last_cleanup_duration: duration, total_cleanups: stats.total_cleanups + 1}
 
       %{modules_cleaned: cleaned, data_removed_bytes: bytes, dry_run: false} ->
         # Actual cleanup
-        %{stats |
-          modules_cleaned: stats.modules_cleaned + cleaned,
-          data_removed_bytes: stats.data_removed_bytes + bytes,
-          last_cleanup_duration: duration,
-          total_cleanups: stats.total_cleanups + 1
+        %{
+          stats
+          | modules_cleaned: stats.modules_cleaned + cleaned,
+            data_removed_bytes: stats.data_removed_bytes + bytes,
+            last_cleanup_duration: duration,
+            total_cleanups: stats.total_cleanups + 1
         }
 
       _ ->
         # Fallback for unexpected result structure
-        %{stats |
-          last_cleanup_duration: duration,
-          total_cleanups: stats.total_cleanups + 1
-        }
+        %{stats | last_cleanup_duration: duration, total_cleanups: stats.total_cleanups + 1}
     end
   end
 
@@ -129,6 +127,7 @@ defmodule ElixirScope.AST.MemoryManager.Cleaner do
         [{^module, _last_access, access_count}] ->
           # Update existing entry
           :ets.insert(@access_tracking_table, {module, timestamp, access_count + 1})
+
         [] ->
           # New entry
           :ets.insert(@access_tracking_table, {module, timestamp, 1})
@@ -137,7 +136,8 @@ defmodule ElixirScope.AST.MemoryManager.Cleaner do
       :ok
     rescue
       _error ->
-        :ok  # Fail silently for tracking operations
+        # Fail silently for tracking operations
+        :ok
     end
   end
 
@@ -148,9 +148,11 @@ defmodule ElixirScope.AST.MemoryManager.Cleaner do
   def get_access_stats(module) when is_atom(module) do
     try do
       ensure_access_tracking_table()
+
       case :ets.lookup(@access_tracking_table, module) do
         [{^module, last_access, access_count}] ->
           {:ok, {last_access, access_count}}
+
         [] ->
           :not_found
       end
@@ -167,6 +169,7 @@ defmodule ElixirScope.AST.MemoryManager.Cleaner do
       :undefined ->
         # Table doesn't exist, create it
         :ets.new(@access_tracking_table, [:named_table, :public, :set])
+
       _ ->
         # Table exists
         :ok
@@ -193,6 +196,7 @@ defmodule ElixirScope.AST.MemoryManager.Cleaner do
       case cleanup_module_data(module) do
         {:ok, removed_bytes} ->
           {count + 1, bytes + removed_bytes}
+
         {:error, _} ->
           {count, bytes}
       end
@@ -223,17 +227,22 @@ defmodule ElixirScope.AST.MemoryManager.Cleaner do
     # Simplified size estimation
     # In practice, this would calculate actual memory usage
     # by examining ETS table entries and AST structures
-    base_size = 32 * 1024  # 32KB base
-    random_variance = :rand.uniform(64) * 1024  # 0-64KB variance
+    # 32KB base
+    base_size = 32 * 1024
+    # 0-64KB variance
+    random_variance = :rand.uniform(64) * 1024
     base_size + random_variance
   end
 
   defp clean_expired_cache_entries() do
     # Clean expired entries from cache tables
     cache_tables = [
-      {:ast_repo_query_cache, 60_000},      # 1 minute TTL
-      {:ast_repo_analysis_cache, 300_000},  # 5 minutes TTL
-      {:ast_repo_cpg_cache, 600_000}        # 10 minutes TTL
+      # 1 minute TTL
+      {:ast_repo_query_cache, 60_000},
+      # 5 minutes TTL
+      {:ast_repo_analysis_cache, 300_000},
+      # 10 minutes TTL
+      {:ast_repo_cpg_cache, 600_000}
     ]
 
     current_time = System.monotonic_time(:millisecond)
@@ -249,15 +258,21 @@ defmodule ElixirScope.AST.MemoryManager.Cleaner do
         :undefined ->
           # Table doesn't exist, skip
           :ok
+
         _ ->
           # Find and remove expired entries
-          expired_keys = :ets.foldl(fn {key, _value, timestamp, _access_count}, acc ->
-            if current_time - timestamp > ttl do
-              [key | acc]
-            else
-              acc
-            end
-          end, [], table)
+          expired_keys =
+            :ets.foldl(
+              fn {key, _value, timestamp, _access_count}, acc ->
+                if current_time - timestamp > ttl do
+                  [key | acc]
+                else
+                  acc
+                end
+              end,
+              [],
+              table
+            )
 
           Enum.each(expired_keys, fn key ->
             :ets.delete(table, key)

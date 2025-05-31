@@ -16,6 +16,7 @@ defmodule ElixirScope.AST.ModuleData.AttributeExtractor do
     case ast do
       {:defmodule, _, [_name, [do: body]]} ->
         extract_attribute_statements(body)
+
       _ ->
         []
     end

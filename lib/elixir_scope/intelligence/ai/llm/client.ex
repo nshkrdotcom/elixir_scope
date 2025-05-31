@@ -2,7 +2,7 @@
 defmodule ElixirScope.Intelligence.AI.LLM.Client do
   @moduledoc """
   Main LLM client interface for ElixirScope.
-  
+
   Provides a simple, unified API for code analysis, error explanation,
   and fix suggestions. Handles provider selection and automatic fallback
   from Vertex/Gemini to Mock provider on errors.
@@ -15,9 +15,9 @@ defmodule ElixirScope.Intelligence.AI.LLM.Client do
 
   @doc """
   Analyzes code using the configured LLM provider.
-  
+
   ## Examples
-  
+
       iex> ElixirScope.Intelligence.AI.LLM.Client.analyze_code("def hello, do: :world")
       %ElixirScope.Intelligence.AI.LLM.Response{
         text: "This is a simple function definition...",
@@ -38,9 +38,9 @@ defmodule ElixirScope.Intelligence.AI.LLM.Client do
 
   @doc """
   Explains an error using the configured LLM provider.
-  
+
   ## Examples
-  
+
       iex> ElixirScope.Intelligence.AI.LLM.Client.explain_error("undefined function foo/0")
       %ElixirScope.Intelligence.AI.LLM.Response{
         text: "This error occurs when...",
@@ -61,9 +61,9 @@ defmodule ElixirScope.Intelligence.AI.LLM.Client do
 
   @doc """
   Suggests a fix using the configured LLM provider.
-  
+
   ## Examples
-  
+
       iex> ElixirScope.Intelligence.AI.LLM.Client.suggest_fix("function is too complex")
       %ElixirScope.Intelligence.AI.LLM.Response{
         text: "To reduce complexity, consider...",
@@ -89,7 +89,7 @@ defmodule ElixirScope.Intelligence.AI.LLM.Client do
   def get_provider_status do
     primary = Config.get_primary_provider()
     fallback = Config.get_fallback_provider()
-    
+
     %{
       primary_provider: primary,
       fallback_provider: fallback,
@@ -105,16 +105,16 @@ defmodule ElixirScope.Intelligence.AI.LLM.Client do
   @spec test_connection() :: Response.t()
   def test_connection do
     test_code = "def test, do: :ok"
-    
+
     case Config.get_primary_provider() do
       :vertex ->
         Logger.info("Testing Vertex connection...")
         analyze_code(test_code, %{test: true})
-      
+
       :gemini ->
         Logger.info("Testing Gemini connection...")
         analyze_code(test_code, %{test: true})
-      
+
       :mock ->
         Logger.info("Testing Mock provider...")
         analyze_code(test_code, %{test: true})
@@ -126,24 +126,28 @@ defmodule ElixirScope.Intelligence.AI.LLM.Client do
   defp with_fallback(operation) do
     primary_provider = Config.get_primary_provider()
     fallback_provider = Config.get_fallback_provider()
-    
+
     case try_provider(operation, primary_provider) do
       %Response{success: true} = response ->
         response
-      
+
       %Response{success: false} = primary_response ->
         Logger.warning("Primary provider #{primary_provider} failed: #{primary_response.error}")
         Logger.info("Falling back to #{fallback_provider} provider")
-        
+
         case try_provider(operation, fallback_provider) do
           %Response{success: true} = fallback_response ->
             fallback_response
-          
+
           %Response{success: false} = fallback_response ->
-            Logger.error("Fallback provider #{fallback_provider} also failed: #{fallback_response.error}")
+            Logger.error(
+              "Fallback provider #{fallback_provider} also failed: #{fallback_response.error}"
+            )
+
             # Return the primary error, but note the fallback attempt
-            %{primary_response | 
-              metadata: Map.put(primary_response.metadata, :fallback_attempted, true)
+            %{
+              primary_response
+              | metadata: Map.put(primary_response.metadata, :fallback_attempted, true)
             }
         end
     end
@@ -155,6 +159,7 @@ defmodule ElixirScope.Intelligence.AI.LLM.Client do
     rescue
       error ->
         Logger.error("Provider #{provider} raised an exception: #{inspect(error)}")
+
         Response.error(
           "Provider #{provider} encountered an unexpected error: #{inspect(error)}",
           provider,
@@ -162,4 +167,4 @@ defmodule ElixirScope.Intelligence.AI.LLM.Client do
         )
     end
   end
-end 
+end

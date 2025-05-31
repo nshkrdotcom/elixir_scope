@@ -13,4 +13,4 @@ defmodule TestProject.MixProject do
   def application do
     []
   end
-end 
+end

@@ -3,7 +3,7 @@ defmodule ElixirScope.AST.Enhanced.VariableData do
   @moduledoc """
   Variable data structure for enhanced AST analysis.
   """
-  
+
   defstruct [
     :name,
     :type,
@@ -14,15 +14,15 @@ defmodule ElixirScope.AST.Enhanced.VariableData do
     :lifetime,
     :metadata
   ]
-  
+
   @type t :: %__MODULE__{
-    name: String.t(),
-    type: atom(),
-    scope: String.t(),
-    definition_line: non_neg_integer(),
-    usage_lines: list(non_neg_integer()),
-    mutations: list(map()),
-    lifetime: map(),
-    metadata: map()
-  }
-end 
+          name: String.t(),
+          type: atom(),
+          scope: String.t(),
+          definition_line: non_neg_integer(),
+          usage_lines: list(non_neg_integer()),
+          mutations: list(map()),
+          lifetime: map(),
+          metadata: map()
+        }
+end

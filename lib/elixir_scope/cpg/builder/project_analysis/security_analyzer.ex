@@ -14,14 +14,19 @@ defmodule ElixirScope.AST.Enhanced.ProjectPopulator.SecurityAnalyzer do
   Performs security analysis on a module.
   """
   def perform_module_security_analysis(_ast, functions) do
-    function_issues = functions
-    |> Map.values()
-    |> Enum.flat_map(fn func -> func.security_analysis.issues || [] end)
+    function_issues =
+      functions
+      |> Map.values()
+      |> Enum.flat_map(fn func -> func.security_analysis.issues || [] end)
 
     %{
       has_vulnerabilities: length(function_issues) > 0,
       issues: function_issues,
-      security_score: if(length(function_issues) == 0, do: 100.0, else: max(0.0, 100.0 - length(function_issues) * 10))
+      security_score:
+        if(length(function_issues) == 0,
+          do: 100.0,
+          else: max(0.0, 100.0 - length(function_issues) * 10)
+        )
     }
   end
 

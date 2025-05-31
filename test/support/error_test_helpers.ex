@@ -14,12 +14,16 @@ defmodule ElixirScope.Foundation.ErrorTestHelpers do
       case unquote(result) do
         {:error, %Error{code: code} = error} ->
           assert code == unquote(expected_code),
-            "Expected error code #{unquote(expected_code)}, got #{code}"
+                 "Expected error code #{unquote(expected_code)}, got #{code}"
+
           error
+
         {:error, other} ->
           flunk("Expected Error struct, got: #{inspect(other)}")
+
         {:ok, value} ->
           flunk("Expected error, got success: #{inspect(value)}")
+
         other ->
           flunk("Expected error tuple, got: #{inspect(other)}")
       end
@@ -32,11 +36,15 @@ defmodule ElixirScope.Foundation.ErrorTestHelpers do
   defmacro assert_ok(result) do
     quote do
       case unquote(result) do
-        {:ok, value} -> value
+        {:ok, value} ->
+          value
+
         {:error, %Error{} = error} ->
           flunk("Expected success, got error: #{Error.to_string(error)}")
+
         {:error, reason} ->
           flunk("Expected success, got error: #{inspect(reason)}")
+
         other ->
           flunk("Expected {:ok, value} tuple, got: #{inspect(other)}")
       end

@@ -2,6 +2,7 @@ defmodule ElixirScope.EventsTest do
   use ExUnit.Case, async: true
 
   alias ElixirScope.Events
+
   alias ElixirScope.Events.{
     FunctionEntry,
     FunctionExit,
@@ -34,10 +35,11 @@ defmodule ElixirScope.EventsTest do
       correlation_id = "test-correlation"
       parent_id = 12345
 
-      event = Events.new_event(:test_event, data, 
-        correlation_id: correlation_id, 
-        parent_id: parent_id
-      )
+      event =
+        Events.new_event(:test_event, data,
+          correlation_id: correlation_id,
+          parent_id: parent_id
+        )
 
       assert event.correlation_id == correlation_id
       assert event.parent_id == parent_id
@@ -46,14 +48,14 @@ defmodule ElixirScope.EventsTest do
     test "timestamps are monotonically increasing" do
       event1 = Events.new_event(:test, %{})
       event2 = Events.new_event(:test, %{})
-      
+
       assert event2.timestamp >= event1.timestamp
     end
 
     test "event IDs are unique" do
       event1 = Events.new_event(:test, %{})
       event2 = Events.new_event(:test, %{})
-      
+
       assert event1.event_id != event2.event_id
     end
   end
@@ -74,11 +76,13 @@ defmodule ElixirScope.EventsTest do
 
     test "creates function entry event with caller information" do
       args = [:arg1]
-      event = Events.function_entry(MyModule, :my_function, 1, args,
-        caller_module: CallerModule,
-        caller_function: :caller_function,
-        caller_line: 42
-      )
+
+      event =
+        Events.function_entry(MyModule, :my_function, 1, args,
+          caller_module: CallerModule,
+          caller_function: :caller_function,
+          caller_line: 42
+        )
 
       assert event.data.caller_module == CallerModule
       assert event.data.caller_function == :caller_function
@@ -88,12 +92,19 @@ defmodule ElixirScope.EventsTest do
     test "creates function exit event" do
       call_id = 12345
       result = :ok
-      duration = 1_000_000  # 1ms in nanoseconds
+      # 1ms in nanoseconds
+      duration = 1_000_000
 
-      event = Events.function_exit(
-        MyModule, :my_function, 2, call_id, 
-        result, duration, :normal
-      )
+      event =
+        Events.function_exit(
+          MyModule,
+          :my_function,
+          2,
+          call_id,
+          result,
+          duration,
+          :normal
+        )
 
       assert %Events{event_type: :function_exit} = event
       assert %FunctionExit{} = event.data
@@ -121,10 +132,14 @@ defmodule ElixirScope.EventsTest do
       spawned_pid = spawn(fn -> nil end)
       parent_pid = self()
 
-      event = Events.process_spawn(
-        spawned_pid, parent_pid, 
-        Kernel, :spawn, [:some_args]
-      )
+      event =
+        Events.process_spawn(
+          spawned_pid,
+          parent_pid,
+          Kernel,
+          :spawn,
+          [:some_args]
+        )
 
       assert %Events{event_type: :process_spawn} = event
       assert %ProcessSpawn{} = event.data
@@ -138,12 +153,16 @@ defmodule ElixirScope.EventsTest do
       spawned_pid = spawn(fn -> nil end)
       parent_pid = self()
 
-      event = Events.process_spawn(
-        spawned_pid, parent_pid,
-        Kernel, :spawn, [:some_args],
-        spawn_opts: [:link],
-        registered_name: :test_process
-      )
+      event =
+        Events.process_spawn(
+          spawned_pid,
+          parent_pid,
+          Kernel,
+          :spawn,
+          [:some_args],
+          spawn_opts: [:link],
+          registered_name: :test_process
+        )
 
       assert event.data.spawn_opts == [:link]
       assert event.data.registered_name == :test_process
@@ -151,7 +170,7 @@ defmodule ElixirScope.EventsTest do
 
     test "creates process exit event" do
       exited_pid = spawn(fn -> nil end)
-      
+
       event = %Events{
         event_type: :process_exit,
         data: %ProcessExit{
@@ -173,7 +192,14 @@ defmodule ElixirScope.EventsTest do
   describe "message events" do
     test "creates message send event" do
       sender_pid = self()
-      receiver_pid = spawn(fn -> receive do _ -> nil end end)
+
+      receiver_pid =
+        spawn(fn ->
+          receive do
+            _ -> nil
+          end
+        end)
+
       message = {:hello, "world"}
 
       event = Events.message_send(sender_pid, receiver_pid, message, :send)
@@ -189,14 +215,25 @@ defmodule ElixirScope.EventsTest do
 
     test "creates message send event with call reference" do
       sender_pid = self()
-      receiver_pid = spawn(fn -> receive do _ -> nil end end)
+
+      receiver_pid =
+        spawn(fn ->
+          receive do
+            _ -> nil
+          end
+        end)
+
       message = {:call, make_ref(), :request}
       call_ref = make_ref()
 
-      event = Events.message_send(
-        sender_pid, receiver_pid, message, :call,
-        call_ref: call_ref
-      )
+      event =
+        Events.message_send(
+          sender_pid,
+          receiver_pid,
+          message,
+          :call,
+          call_ref: call_ref
+        )
 
       assert event.data.send_type == :call
       assert event.data.call_ref == call_ref
@@ -204,7 +241,14 @@ defmodule ElixirScope.EventsTest do
 
     test "handles large messages" do
       sender_pid = self()
-      receiver_pid = spawn(fn -> receive do _ -> nil end end)
+
+      receiver_pid =
+        spawn(fn ->
+          receive do
+            _ -> nil
+          end
+        end)
+
       large_message = %{data: String.duplicate("x", 2000)}
 
       event = Events.message_send(sender_pid, receiver_pid, large_message, :send)
@@ -262,11 +306,15 @@ defmodule ElixirScope.EventsTest do
       trigger_message = {:increment}
       trigger_call_id = 12345
 
-      event = Events.state_change(
-        server_pid, :handle_call, old_state, new_state,
-        trigger_message: trigger_message,
-        trigger_call_id: trigger_call_id
-      )
+      event =
+        Events.state_change(
+          server_pid,
+          :handle_call,
+          old_state,
+          new_state,
+          trigger_message: trigger_message,
+          trigger_call_id: trigger_call_id
+        )
 
       assert event.data.trigger_message == trigger_message
       assert event.data.trigger_call_id == trigger_call_id
@@ -308,7 +356,7 @@ defmodule ElixirScope.EventsTest do
   describe "error events" do
     test "creates error event" do
       stacktrace = [{Module, :function, 2, [file: ~c"test.ex", line: 10]}]
-      
+
       data = %Events.ErrorEvent{
         error_type: :exception,
         error_class: RuntimeError,
@@ -317,7 +365,7 @@ defmodule ElixirScope.EventsTest do
         context: nil,
         recovery_action: nil
       }
-      
+
       event = Events.new_event(:error, data)
 
       assert %Events{event_type: :error} = event
@@ -330,7 +378,7 @@ defmodule ElixirScope.EventsTest do
 
     test "creates error event with context and recovery" do
       stacktrace = []
-      
+
       data = %Events.ErrorEvent{
         error_type: :crash,
         error_class: :badarg,
@@ -339,7 +387,7 @@ defmodule ElixirScope.EventsTest do
         context: {:genserver_call, :timeout},
         recovery_action: :restart
       }
-      
+
       event = Events.new_event(:error, data)
 
       assert event.data.context == {:genserver_call, :timeout}
@@ -348,9 +396,10 @@ defmodule ElixirScope.EventsTest do
 
     test "handles large stacktraces" do
       # Create a stacktrace with many entries
-      large_stacktrace = for i <- 1..50 do
-        {Module, :function, i, [file: ~c"test.ex", line: i]}
-      end
+      large_stacktrace =
+        for i <- 1..50 do
+          {Module, :function, i, [file: ~c"test.ex", line: i]}
+        end
 
       data = %Events.ErrorEvent{
         error_type: :exception,
@@ -388,8 +437,6 @@ defmodule ElixirScope.EventsTest do
     end
   end
 
-
-
   describe "variable assignment events" do
     test "creates variable assignment event structure" do
       data = %Events.VariableAssignment{
@@ -413,7 +460,7 @@ defmodule ElixirScope.EventsTest do
   describe "serialization" do
     test "serializes and deserializes events correctly" do
       original_event = Events.function_entry(MyModule, :test, 0, [])
-      
+
       serialized = Events.serialize(original_event)
       deserialized = Events.deserialize(serialized)
 
@@ -423,10 +470,12 @@ defmodule ElixirScope.EventsTest do
 
     test "serialization is efficient" do
       event = Events.function_entry(MyModule, :test, 0, [])
-      
-      duration = :timer.tc(fn ->
-        Events.serialize(event)
-      end) |> elem(0)
+
+      duration =
+        :timer.tc(fn ->
+          Events.serialize(event)
+        end)
+        |> elem(0)
 
       # Serialization should be reasonably fast (< 50000μs = 50ms)
       assert duration < 50000
@@ -434,7 +483,7 @@ defmodule ElixirScope.EventsTest do
 
     test "gets serialized size" do
       event = Events.function_entry(MyModule, :test, 0, [])
-      
+
       size = Events.serialized_size(event)
       actual_size = event |> Events.serialize() |> byte_size()
 
@@ -473,7 +522,7 @@ defmodule ElixirScope.EventsTest do
       for original <- events do
         serialized = Events.serialize(original)
         deserialized = Events.deserialize(serialized)
-        
+
         assert deserialized == original
       end
     end
@@ -482,9 +531,9 @@ defmodule ElixirScope.EventsTest do
   describe "edge cases and error handling" do
     test "handles nil values gracefully" do
       event = Events.function_entry(MyModule, :test, 0, nil)
-      
+
       assert event.data.args == nil
-      
+
       # Should still serialize/deserialize correctly
       serialized = Events.serialize(event)
       deserialized = Events.deserialize(serialized)
@@ -493,9 +542,9 @@ defmodule ElixirScope.EventsTest do
 
     test "handles empty collections" do
       event = Events.function_entry(MyModule, :test, 0, [])
-      
+
       assert event.data.args == []
-      
+
       serialized = Events.serialize(event)
       deserialized = Events.deserialize(serialized)
       assert deserialized == event
@@ -507,9 +556,9 @@ defmodule ElixirScope.EventsTest do
         {:tuple, :with, :atoms},
         [list: "with", keyword: :values]
       ]
-      
+
       event = Events.function_entry(MyModule, :test, 1, complex_args)
-      
+
       serialized = Events.serialize(event)
       deserialized = Events.deserialize(serialized)
       assert deserialized == event
@@ -523,7 +572,7 @@ defmodule ElixirScope.EventsTest do
       # Data should be preserved as-is
       assert is_list(event.data.args)
       assert length(event.data.args) == 1
-      
+
       # Event should still serialize correctly
       serialized = Events.serialize(event)
       deserialized = Events.deserialize(serialized)
@@ -533,9 +582,11 @@ defmodule ElixirScope.EventsTest do
 
   describe "performance characteristics" do
     test "event creation is fast" do
-      duration = :timer.tc(fn ->
-        Events.function_entry(MyModule, :test, 0, [])
-      end) |> elem(0)
+      duration =
+        :timer.tc(fn ->
+          Events.function_entry(MyModule, :test, 0, [])
+        end)
+        |> elem(0)
 
       # Event creation should be reasonably fast (< 50000μs = 50ms)
       assert duration < 50000
@@ -543,24 +594,28 @@ defmodule ElixirScope.EventsTest do
 
     test "handles high-frequency event creation" do
       count = 1000
-      
-      duration = :timer.tc(fn ->
-        for _i <- 1..count do
-          Events.function_entry(MyModule, :test, 0, [])
-        end
-      end) |> elem(0)
+
+      duration =
+        :timer.tc(fn ->
+          for _i <- 1..count do
+            Events.function_entry(MyModule, :test, 0, [])
+          end
+        end)
+        |> elem(0)
 
       # Should be able to create many events quickly
       avg_duration = duration / count
-      assert avg_duration < 5000  # Less than 5000μs per event on average
+      # Less than 5000μs per event on average
+      assert avg_duration < 5000
     end
 
     test "memory usage is reasonable" do
       event = Events.function_entry(MyModule, :test, 0, [])
-      
+
       # Check that events don't use excessive memory
       size = Events.serialized_size(event)
-      assert size < 1000  # Should be less than 1KB for simple events
+      # Should be less than 1KB for simple events
+      assert size < 1000
     end
   end
-end 
+end

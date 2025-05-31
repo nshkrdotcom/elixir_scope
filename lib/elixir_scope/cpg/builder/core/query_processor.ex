@@ -89,14 +89,15 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.QueryProcessor do
   end
 
   defp calculate_node_complexity(node, cpg) do
-    base_complexity = case node.ast_type do
-      :conditional -> 2.0
-      :loop -> 3.0
-      :exception -> 2.5
-      :function_call -> 1.5
-      :assignment -> 1.0
-      _ -> 0.5
-    end
+    base_complexity =
+      case node.ast_type do
+        :conditional -> 2.0
+        :loop -> 3.0
+        :exception -> 2.5
+        :function_call -> 1.5
+        :assignment -> 1.0
+        _ -> 0.5
+      end
 
     # Add complexity based on connections
     connection_complexity = count_node_connections(node.id, cpg.unified_edges) * 0.1

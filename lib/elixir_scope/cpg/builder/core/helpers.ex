@@ -13,7 +13,8 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.Helpers do
   def safe_round(value, precision) do
     cond do
       not is_number(value) -> 0.0
-      value != value -> 0.0  # NaN check
+      # NaN check
+      value != value -> 0.0
       true -> Float.round(value, precision)
     end
   end
@@ -73,12 +74,17 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.Helpers do
   """
   def extract_variables_from_expr(expr) do
     case expr do
-      {var, _, nil} when is_atom(var) -> [to_string(var)]
+      {var, _, nil} when is_atom(var) ->
+        [to_string(var)]
+
       {:=, _, [target, source]} ->
         extract_variables_from_expr(target) ++ extract_variables_from_expr(source)
+
       {_, _, args} when is_list(args) ->
         Enum.flat_map(args, &extract_variables_from_expr/1)
-      _ -> []
+
+      _ ->
+        []
     end
   end
 
@@ -89,11 +95,15 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.Helpers do
     case expr do
       {func, _, args} when is_atom(func) and is_list(args) ->
         [{func, [], args}]
+
       {:__block__, _, exprs} when is_list(exprs) ->
         Enum.flat_map(exprs, &extract_function_calls/1)
+
       {:=, _, [_target, source]} ->
         extract_function_calls(source)
-      _ -> []
+
+      _ ->
+        []
     end
   end
 
@@ -104,19 +114,27 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.Helpers do
     case expr do
       {func, _, args} when is_atom(func) and is_list(args) ->
         [func] ++ Enum.flat_map(args, &extract_all_function_calls/1)
+
       {:__block__, _, exprs} when is_list(exprs) ->
         Enum.flat_map(exprs, &extract_all_function_calls/1)
+
       {:=, _, [_target, source]} ->
         extract_all_function_calls(source)
+
       {:+, _, [left, right]} ->
         extract_all_function_calls(left) ++ extract_all_function_calls(right)
+
       {:*, _, [left, right]} ->
         extract_all_function_calls(left) ++ extract_all_function_calls(right)
+
       {:for, _, [_generator, [do: body]]} ->
         extract_all_function_calls(body)
+
       {_op, _, args} when is_list(args) ->
         Enum.flat_map(args, &extract_all_function_calls/1)
-      _ -> []
+
+      _ ->
+        []
     end
   end
 
@@ -127,13 +145,18 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.Helpers do
     case expr do
       {op, _, [left, right]} when op in [:+, :-, :*, :/, :==, :!=, :<, :>, :<=, :>=, :and, :or] ->
         1 + count_operators(left) + count_operators(right)
+
       {:=, _, [_target, source]} ->
         count_operators(source)
+
       {_func, _, args} when is_list(args) ->
         Enum.reduce(args, 0, fn arg, acc -> acc + count_operators(arg) end)
+
       list when is_list(list) ->
         Enum.reduce(list, 0, fn expr, acc -> acc + count_operators(expr) end)
-      _ -> 0
+
+      _ ->
+        0
     end
   end
 
@@ -153,12 +176,15 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.Helpers do
       %{cfg_node: %{expression: {:=, _, [target, source]}}} ->
         target_var = extract_variable_name(target)
         source_var = extract_variable_name(source)
+
         if target_var && source_var && target_var != source_var do
           {target_var, source_var}
         else
           nil
         end
-      _ -> nil
+
+      _ ->
+        nil
     end
   end
 
@@ -176,10 +202,20 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.Helpers do
         successors = get_node_successors(edges, start_node)
         limited_successors = Enum.take(successors, 2)
 
-        paths = Enum.flat_map(limited_successors, fn successor ->
-          sub_paths = find_paths_between_nodes_limited(edges, successor, end_node, new_visited, max_depth, max_paths)
-          Enum.map(sub_paths, fn path -> [start_node | path] end)
-        end)
+        paths =
+          Enum.flat_map(limited_successors, fn successor ->
+            sub_paths =
+              find_paths_between_nodes_limited(
+                edges,
+                successor,
+                end_node,
+                new_visited,
+                max_depth,
+                max_paths
+              )
+
+            Enum.map(sub_paths, fn path -> [start_node | path] end)
+          end)
 
         Enum.take(paths, max_paths)
       end
@@ -204,18 +240,32 @@ defmodule ElixirScope.AST.Enhanced.CPGBuilder.Helpers do
   defp count_nested_structures(ast, depth) do
     case ast do
       {:if, _, [_condition, [do: then_body, else: else_body]]} ->
-        1 + count_nested_structures(then_body, depth + 1) + count_nested_structures(else_body, depth + 1)
+        1 + count_nested_structures(then_body, depth + 1) +
+          count_nested_structures(else_body, depth + 1)
+
       {:case, _, [_expr, [do: clauses]]} when is_list(clauses) ->
-        1 + Enum.reduce(clauses, 0, fn clause, acc -> acc + count_nested_structures(clause, depth + 1) end)
-      {:for, _, _} -> 2
-      {:try, _, _} -> 2
+        1 +
+          Enum.reduce(clauses, 0, fn clause, acc ->
+            acc + count_nested_structures(clause, depth + 1)
+          end)
+
+      {:for, _, _} ->
+        2
+
+      {:try, _, _} ->
+        2
+
       {:__block__, _, exprs} when is_list(exprs) ->
         Enum.reduce(exprs, 0, fn expr, acc -> acc + count_nested_structures(expr, depth) end)
+
       {_, _, args} when is_list(args) ->
         Enum.reduce(args, 0, fn arg, acc -> acc + count_nested_structures(arg, depth) end)
+
       list when is_list(list) ->
         Enum.reduce(list, 0, fn item, acc -> acc + count_nested_structures(item, depth) end)
-      _ -> 0
+
+      _ ->
+        0
     end
   end
 end

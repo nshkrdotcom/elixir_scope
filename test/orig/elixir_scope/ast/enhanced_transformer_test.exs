@@ -1,68 +1,76 @@
 defmodule ElixirScope.AST.EnhancedTransformerTest do
   use ExUnit.Case
-  
+
   alias ElixirScope.AST.EnhancedTransformer
-  
+
   describe "expression-level instrumentation" do
     test "instruments individual expressions within function" do
-      input_ast = quote do
-        def complex_function(x, y) do
-          temp1 = x + y           # <- Should be instrumentable
-          temp2 = temp1 * 2       # <- Should be instrumentable  
-          result = temp2 - 1      # <- Should be instrumentable
-          result
+      input_ast =
+        quote do
+          def complex_function(x, y) do
+            # <- Should be instrumentable
+            temp1 = x + y
+            # <- Should be instrumentable  
+            temp2 = temp1 * 2
+            # <- Should be instrumentable
+            result = temp2 - 1
+            result
+          end
         end
-      end
-      
+
       plan = %{
         granularity: :expression,
         capture_locals: [:temp1, :temp2, :result]
       }
-      
+
       result = EnhancedTransformer.transform_with_enhanced_instrumentation(input_ast, plan)
-      
+
       # Verify each expression has instrumentation
       assert expression_instrumented?(result, :temp1_assignment)
       assert expression_instrumented?(result, :temp2_assignment)
       assert expression_instrumented?(result, :result_assignment)
-      
+
       # Verify variable values are captured
       assert variable_capture_present?(result, :temp1)
       assert variable_capture_present?(result, :temp2)
       assert variable_capture_present?(result, :result)
     end
-    
+
     test "injects custom debugging logic" do
-      input_ast = quote do
-        def algorithm(data) do
-          Enum.map(data, &process_item/1)
+      input_ast =
+        quote do
+          def algorithm(data) do
+            Enum.map(data, &process_item/1)
+          end
         end
-      end
-      
-      custom_logic = quote do
-        IO.puts("Processing #{length(data)} items")
-        ElixirScope.Debug.checkpoint(:algorithm_start, %{data_size: length(data)})
-      end
-      
+
+      custom_logic =
+        quote do
+          IO.puts("Processing #{length(data)} items")
+          ElixirScope.Debug.checkpoint(:algorithm_start, %{data_size: length(data)})
+        end
+
       plan = %{
         custom_injections: [
-          {1, :before, custom_logic}  # Inject at line 1, before execution
+          # Inject at line 1, before execution
+          {1, :before, custom_logic}
         ]
       }
-      
+
       result = EnhancedTransformer.transform_with_enhanced_instrumentation(input_ast, plan)
-      
+
       assert custom_logic_injected?(result, custom_logic)
     end
 
     test "injects expression tracing for specified expressions" do
-      input_ast = quote do
-        def calculate(x, y) do
-          intermediate = complex_calculation(x)
-          final = intermediate + y
-          final
+      input_ast =
+        quote do
+          def calculate(x, y) do
+            intermediate = complex_calculation(x)
+            final = intermediate + y
+            final
+          end
         end
-      end
 
       plan = %{
         trace_expressions: [:complex_calculation, :intermediate]
@@ -76,20 +84,24 @@ defmodule ElixirScope.AST.EnhancedTransformerTest do
 
       # Should wrap complex_calculation call with value capture
       assert expression_tracing_present?(result, "complex_calculation")
-      
+
       # Should NOT wrap intermediate variable (it's not a function call)
       refute expression_tracing_present?(result, "intermediate")
     end
 
     test "injects local variable capture at specific line" do
-      input_ast = quote do
-        def process_data(items) do
-          count = length(items)      # line 1
-          filtered = filter_items(items)  # line 2
-          result = transform(filtered)     # line 3
-          result
+      input_ast =
+        quote do
+          def process_data(items) do
+            # line 1
+            count = length(items)
+            # line 2
+            filtered = filter_items(items)
+            # line 3
+            result = transform(filtered)
+            result
+          end
         end
-      end
 
       plan = %{
         capture_locals: [:count, :filtered],
@@ -103,37 +115,39 @@ defmodule ElixirScope.AST.EnhancedTransformerTest do
       assert captures_variables?(result, [:count, :filtered])
     end
   end
-  
+
   describe "enhanced instrumentation" do
     test "transforms modules with enhanced capabilities" do
-      input_ast = quote do
-        defmodule TestModule do
-          def test_function do
-            :ok
+      input_ast =
+        quote do
+          defmodule TestModule do
+            def test_function do
+              :ok
+            end
           end
         end
-      end
-      
+
       plan = %{
         capture_locals: [:result],
         trace_expressions: [:test_function]
       }
-      
+
       result = EnhancedTransformer.transform_with_enhanced_instrumentation(input_ast, plan)
-      
+
       # Verify the AST is transformed (basic check)
       assert is_tuple(result)
       assert match?({:defmodule, _, _}, result)
     end
 
     test "applies granular instrumentation for compile-time focus" do
-      input_ast = quote do
-        defmodule TestModule do
-          def monitored_function(arg) do
-            arg * 2
+      input_ast =
+        quote do
+          defmodule TestModule do
+            def monitored_function(arg) do
+              arg * 2
+            end
           end
         end
-      end
 
       plan = %{
         capture_locals: [:arg]
@@ -149,20 +163,21 @@ defmodule ElixirScope.AST.EnhancedTransformerTest do
 
   describe "granular instrumentation capabilities" do
     test "transforms with all granular features" do
-      input_ast = quote do
-        def complex_algorithm(data) do
-          preprocessed = preprocess(data)
-          temp_result = calculate_intermediate(preprocessed)
-          final_result = finalize(temp_result)
-          final_result
+      input_ast =
+        quote do
+          def complex_algorithm(data) do
+            preprocessed = preprocess(data)
+            temp_result = calculate_intermediate(preprocessed)
+            final_result = finalize(temp_result)
+            final_result
+          end
         end
-      end
 
       plan = %{
         capture_locals: [:preprocessed, :temp_result],
         trace_expressions: [:preprocess, :calculate_intermediate],
         custom_injections: [
-          {2, :after, quote do: IO.puts("Checkpoint: intermediate calculated")}
+          {2, :after, quote(do: IO.puts("Checkpoint: intermediate calculated"))}
         ]
       }
 
@@ -177,11 +192,12 @@ defmodule ElixirScope.AST.EnhancedTransformerTest do
     end
 
     test "handles empty plans gracefully" do
-      input_ast = quote do
-        def simple_function(x) do
-          x + 1
+      input_ast =
+        quote do
+          def simple_function(x) do
+            x + 1
+          end
         end
-      end
 
       plan = %{}
 
@@ -206,12 +222,13 @@ defmodule ElixirScope.AST.EnhancedTransformerTest do
     end
 
     test "handles missing line metadata" do
-      input_ast = quote do
-        def no_line_info do
-          # This might not have line metadata in some cases
-          :ok
+      input_ast =
+        quote do
+          def no_line_info do
+            # This might not have line metadata in some cases
+            :ok
+          end
         end
-      end
 
       plan = %{trace_expressions: [:some_call]}
 
@@ -221,14 +238,16 @@ defmodule ElixirScope.AST.EnhancedTransformerTest do
     end
 
     test "handles functions not in instrumentation plan" do
-      input_ast = quote do
-        def not_instrumented(x) do
-          x * 2
+      input_ast =
+        quote do
+          def not_instrumented(x) do
+            x * 2
+          end
         end
-      end
 
       plan = %{
-        functions: [:other_function],  # This function not in plan
+        # This function not in plan
+        functions: [:other_function],
         capture_locals: [:x]
       }
 
@@ -244,28 +263,48 @@ defmodule ElixirScope.AST.EnhancedTransformerTest do
   defp expression_instrumented?(ast, _assignment_type) do
     # Check if the AST contains instrumentation for expression assignments
     Macro.prewalk(ast, false, fn
-      {{:., _, [{:__aliases__, _, [:ElixirScope, :Capture, :InstrumentationRuntime]}, :report_local_variable_snapshot]}, _, _}, _acc ->
+      {{:., _,
+        [
+          {:__aliases__, _, [:ElixirScope, :Capture, :InstrumentationRuntime]},
+          :report_local_variable_snapshot
+        ]}, _, _},
+      _acc ->
         {true, true}
-      node, acc -> {node, acc}
-    end) |> elem(1)
+
+      node, acc ->
+        {node, acc}
+    end)
+    |> elem(1)
   end
 
   defp variable_capture_present?(ast, variable_name) do
     # Check if variable capture instrumentation is present for the given variable
     Macro.prewalk(ast, false, fn
-      {{:., _, [{:__aliases__, _, [:ElixirScope, :Capture, :InstrumentationRuntime]}, :report_local_variable_snapshot]}, _, args}, _acc ->
+      {{:., _,
+        [
+          {:__aliases__, _, [:ElixirScope, :Capture, :InstrumentationRuntime]},
+          :report_local_variable_snapshot
+        ]}, _, args},
+      _acc ->
         # Check if the variable map contains our variable
         case args do
           [_, {:%{}, _, map_entries}, _, _] ->
-            variable_present = Enum.any?(map_entries, fn
-              {^variable_name, _} -> true
-              _ -> false
-            end)
+            variable_present =
+              Enum.any?(map_entries, fn
+                {^variable_name, _} -> true
+                _ -> false
+              end)
+
             {true, variable_present}
-          _ -> {false, false}
+
+          _ ->
+            {false, false}
         end
-      node, acc -> {node, acc}
-    end) |> elem(1)
+
+      node, acc ->
+        {node, acc}
+    end)
+    |> elem(1)
   end
 
   defp custom_logic_injected?(ast, logic) do
@@ -284,25 +323,32 @@ defmodule ElixirScope.AST.EnhancedTransformerTest do
   defp variable_capture_at_line?(ast, line_number) do
     # Check if variable capture is injected at specific line
     Macro.prewalk(ast, false, fn
-      {{:., _, [{:__aliases__, _, [:ElixirScope, :Capture, :InstrumentationRuntime]}, :report_local_variable_snapshot]}, _, args}, _acc ->
+      {{:., _,
+        [
+          {:__aliases__, _, [:ElixirScope, :Capture, :InstrumentationRuntime]},
+          :report_local_variable_snapshot
+        ]}, _, args},
+      _acc ->
         # Check if the line number matches
         case args do
           [_, _, ^line_number, _] -> {true, true}
           _ -> {false, false}
         end
-      node, acc -> {node, acc}
-    end) |> elem(1)
+
+      node, acc ->
+        {node, acc}
+    end)
+    |> elem(1)
   end
 
   defp captures_variables?(ast, variable_names) do
     # Check if all specified variables are captured
     ast_string = Macro.to_string(ast)
+
     Enum.all?(variable_names, fn var ->
       String.contains?(ast_string, "#{var}")
     end)
   end
-
-
 
   defp custom_injection_present?(ast, _line_number) do
     # Check if custom injection is present at line
@@ -314,18 +360,34 @@ defmodule ElixirScope.AST.EnhancedTransformerTest do
   defp has_variable_capture?(ast) do
     # Check if any variable capture is present
     Macro.prewalk(ast, false, fn
-      {{:., _, [{:__aliases__, _, [:ElixirScope, :Capture, :InstrumentationRuntime]}, :report_local_variable_snapshot]}, _, _}, _acc ->
+      {{:., _,
+        [
+          {:__aliases__, _, [:ElixirScope, :Capture, :InstrumentationRuntime]},
+          :report_local_variable_snapshot
+        ]}, _, _},
+      _acc ->
         {true, true}
-      node, acc -> {node, acc}
-    end) |> elem(1)
+
+      node, acc ->
+        {node, acc}
+    end)
+    |> elem(1)
   end
 
   defp has_expression_tracing?(ast) do
     # Check if any expression tracing is present
     Macro.prewalk(ast, false, fn
-      {{:., _, [{:__aliases__, _, [:ElixirScope, :Capture, :InstrumentationRuntime]}, :report_expression_value]}, _, _}, _acc ->
+      {{:., _,
+        [
+          {:__aliases__, _, [:ElixirScope, :Capture, :InstrumentationRuntime]},
+          :report_expression_value
+        ]}, _, _},
+      _acc ->
         {true, true}
-      node, acc -> {node, acc}
-    end) |> elem(1)
+
+      node, acc ->
+        {node, acc}
+    end)
+    |> elem(1)
   end
-end 
+end

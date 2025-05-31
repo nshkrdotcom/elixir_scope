@@ -6,7 +6,9 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.PathAnalyzer do
   """
 
   alias ElixirScope.AST.Enhanced.{
-    PathAnalysis, LoopAnalysis, BranchCoverage
+    PathAnalysis,
+    LoopAnalysis,
+    BranchCoverage
   }
 
   @doc """
@@ -54,7 +56,8 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.PathAnalyzer do
       end)
     end)
     |> Enum.uniq()
-    |> Enum.take(100)  # Limit to prevent explosion
+    # Limit to prevent explosion
+    |> Enum.take(100)
   end
 
   @doc """
@@ -64,7 +67,8 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.PathAnalyzer do
     # Critical paths are the longest paths or paths through complex nodes
     all_paths
     |> Enum.sort_by(&length/1, :desc)
-    |> Enum.take(3)  # Top 3 longest paths
+    # Top 3 longest paths
+    |> Enum.take(3)
   end
 
   @doc """
@@ -98,23 +102,31 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.PathAnalyzer do
   """
   def analyze_branch_coverage(nodes, _edges) do
     # Count conditional nodes and their branches
-    conditional_nodes = Map.values(nodes)
-    |> Enum.filter(fn node ->
-      node.type in [:conditional, :case, :cond_entry, :guard_check]
-    end)
+    conditional_nodes =
+      Map.values(nodes)
+      |> Enum.filter(fn node ->
+        node.type in [:conditional, :case, :cond_entry, :guard_check]
+      end)
 
-    total_branches = Enum.reduce(conditional_nodes, 0, fn node, acc ->
-      case node.type do
-        :conditional -> acc + 2  # if/else
-        :case ->
-          clause_count = Map.get(node.metadata, :clause_count, 2)
-          acc + clause_count
-        :cond_entry ->
-          clause_count = Map.get(node.metadata, :clause_count, 2)
-          acc + clause_count
-        _ -> acc + 1
-      end
-    end)
+    total_branches =
+      Enum.reduce(conditional_nodes, 0, fn node, acc ->
+        case node.type do
+          # if/else
+          :conditional ->
+            acc + 2
+
+          :case ->
+            clause_count = Map.get(node.metadata, :clause_count, 2)
+            acc + clause_count
+
+          :cond_entry ->
+            clause_count = Map.get(node.metadata, :clause_count, 2)
+            acc + clause_count
+
+          _ ->
+            acc + 1
+        end
+      end)
 
     # For now, assume all branches are covered (would need more sophisticated analysis)
     covered_branches = total_branches
@@ -123,7 +135,7 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.PathAnalyzer do
       total_branches: total_branches,
       covered_branches: covered_branches,
       uncovered_branches: [],
-      coverage_percentage: (if total_branches > 0, do: 100.0, else: 0.0),
+      coverage_percentage: if(total_branches > 0, do: 100.0, else: 0.0),
       critical_uncovered: []
     }
   end
@@ -146,8 +158,10 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.PathAnalyzer do
     if start == target do
       [[start]]
     else
-      if start in visited or length(visited) > 20 do  # Add depth limit to prevent infinite loops
-        []  # Avoid cycles and deep recursion
+      # Add depth limit to prevent infinite loops
+      if start in visited or length(visited) > 20 do
+        # Avoid cycles and deep recursion
+        []
       else
         new_visited = [start | visited]
 
@@ -202,16 +216,20 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.PathAnalyzer do
       if start == target, do: [[start]], else: []
     else
       if start in visited do
-        []  # Avoid cycles
+        # Avoid cycles
+        []
       else
         new_visited = [start | visited]
 
         # Find all edges from start (limit to 3 to prevent explosion)
-        outgoing_edges = Enum.filter(edges, fn edge -> edge.from_node_id == start end)
-        |> Enum.take(3)
+        outgoing_edges =
+          Enum.filter(edges, fn edge -> edge.from_node_id == start end)
+          |> Enum.take(3)
 
         Enum.flat_map(outgoing_edges, fn edge ->
-          sub_paths = find_paths_between_limited(edge.to_node_id, target, edges, new_visited, max_depth - 1)
+          sub_paths =
+            find_paths_between_limited(edge.to_node_id, target, edges, new_visited, max_depth - 1)
+
           Enum.map(sub_paths, fn path -> [start | path] end)
         end)
       end
@@ -237,9 +255,12 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.PathAnalyzer do
       case Map.get(nodes, node_id) do
         %{type: :conditional, metadata: %{condition: condition}} ->
           [condition]
+
         %{type: :case, expression: condition} ->
           [condition]
-        _ -> []
+
+        _ ->
+          []
       end
     end)
   end

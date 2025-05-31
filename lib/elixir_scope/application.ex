@@ -19,7 +19,7 @@ defmodule ElixirScope.Application do
 
     children = [
       # Core configuration and utilities (no dependencies)
-      {ElixirScope.Config, []},
+      {ElixirScope.Config, []}
 
       # Layer 1: Core capture pipeline will be added here
       # {ElixirScope.Capture.PipelineManager, []},

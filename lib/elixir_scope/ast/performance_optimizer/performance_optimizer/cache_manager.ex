@@ -16,7 +16,8 @@ defmodule ElixirScope.AST.PerformanceOptimizer.CacheManager do
   @module_cache_prefix "module:"
   @function_cache_prefix "function:"
   @query_cache_prefix "query:"
-  @cache_warming_interval 300_000  # 5 minutes
+  # 5 minutes
+  @cache_warming_interval 300_000
 
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
@@ -108,9 +109,11 @@ defmodule ElixirScope.AST.PerformanceOptimizer.CacheManager do
           case EnhancedRepository.get_enhanced_module(module_name) do
             {:ok, module_data} ->
               MemoryManager.cache_put(:query, cache_key, module_data)
+
             _ ->
               :ok
           end
+
         _ ->
           :ok
       end
@@ -131,8 +134,9 @@ defmodule ElixirScope.AST.PerformanceOptimizer.CacheManager do
   end
 
   defp generate_query_cache_key(query_type, params) do
-    param_hash = :crypto.hash(:md5, :erlang.term_to_binary(params))
-    |> Base.encode16(case: :lower)
+    param_hash =
+      :crypto.hash(:md5, :erlang.term_to_binary(params))
+      |> Base.encode16(case: :lower)
 
     @query_cache_prefix <> "#{query_type}:#{param_hash}"
   end

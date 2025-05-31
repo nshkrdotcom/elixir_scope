@@ -10,12 +10,14 @@ defmodule ElixirScope.AST.RuntimeCorrelator.EventCorrelator do
   require Logger
 
   alias ElixirScope.AST.EnhancedRepository
+
   alias ElixirScope.AST.Enhanced.{
     EnhancedFunctionData,
     EnhancedModuleData,
     CFGData,
     DFGData
   }
+
   alias ElixirScope.AST.RuntimeCorrelator.{Types, CacheManager, ContextBuilder}
 
   # Cache TTL (5 minutes)
@@ -24,7 +26,8 @@ defmodule ElixirScope.AST.RuntimeCorrelator.EventCorrelator do
   @doc """
   Correlates a runtime event to its corresponding AST nodes.
   """
-  @spec correlate_event_to_ast(pid() | atom(), map(), map()) :: {:ok, Types.ast_context()} | {:error, term()}
+  @spec correlate_event_to_ast(pid() | atom(), map(), map()) ::
+          {:ok, Types.ast_context()} | {:error, term()}
   def correlate_event_to_ast(repo, event, state) do
     # Validate event first
     with :ok <- validate_event(event),
@@ -38,7 +41,8 @@ defmodule ElixirScope.AST.RuntimeCorrelator.EventCorrelator do
   @doc """
   Gets comprehensive runtime context for an event.
   """
-  @spec get_runtime_context(pid() | atom(), map(), map()) :: {:ok, Types.ast_context()} | {:error, term()}
+  @spec get_runtime_context(pid() | atom(), map(), map()) ::
+          {:ok, Types.ast_context()} | {:error, term()}
   def get_runtime_context(repo, event, state) do
     with {:ok, ast_context} <- correlate_event_to_ast(repo, event, state),
          {:ok, enhanced_context} <- ContextBuilder.enhance_context(repo, ast_context, event) do
@@ -51,12 +55,12 @@ defmodule ElixirScope.AST.RuntimeCorrelator.EventCorrelator do
   @doc """
   Enhances a runtime event with AST metadata.
   """
-  @spec enhance_event_with_ast(pid() | atom(), map(), map()) :: {:ok, Types.enhanced_event()} | {:error, term()}
+  @spec enhance_event_with_ast(pid() | atom(), map(), map()) ::
+          {:ok, Types.enhanced_event()} | {:error, term()}
   def enhance_event_with_ast(repo, event, state) do
     with {:ok, ast_context} <- correlate_event_to_ast(repo, event, state),
          {:ok, structural_info} <- extract_structural_info(ast_context),
          {:ok, data_flow_info} <- extract_data_flow_info(repo, ast_context, event) do
-
       enhanced_event = %{
         original_event: event,
         ast_context: ast_context,
@@ -78,6 +82,7 @@ defmodule ElixirScope.AST.RuntimeCorrelator.EventCorrelator do
 
   defp validate_event(nil), do: {:error, :nil_event}
   defp validate_event(event) when not is_map(event), do: {:error, :invalid_event_type}
+
   defp validate_event(event) do
     module = extract_module(event)
     function = extract_function(event)
@@ -108,10 +113,10 @@ defmodule ElixirScope.AST.RuntimeCorrelator.EventCorrelator do
 
   defp correlate_event_fresh(repo, event, cache_key, _state) do
     with {:ok, module_data} <- get_module_data(repo, extract_module(event)),
-         {:ok, function_data} <- get_function_data(module_data, extract_function(event), extract_arity(event)),
+         {:ok, function_data} <-
+           get_function_data(module_data, extract_function(event), extract_arity(event)),
          {:ok, ast_node_id} <- generate_ast_node_id(event, function_data),
          {:ok, ast_context} <- build_ast_context(function_data, ast_node_id, event) do
-
       # Cache the result
       CacheManager.put_in_context_cache(cache_key, ast_context)
 
@@ -151,12 +156,14 @@ defmodule ElixirScope.AST.RuntimeCorrelator.EventCorrelator do
         line = extract_line_number(event, function_data)
 
         # Use short module name (last part after the last dot)
-        short_module_name = case to_string(module) do
-          "Elixir." <> rest ->
-            rest |> String.split(".") |> List.last()
-          module_str ->
-            module_str |> String.split(".") |> List.last()
-        end
+        short_module_name =
+          case to_string(module) do
+            "Elixir." <> rest ->
+              rest |> String.split(".") |> List.last()
+
+            module_str ->
+              module_str |> String.split(".") |> List.last()
+          end
 
         node_id = "#{short_module_name}.#{function}/#{arity}:line_#{line}"
         {:ok, node_id}
@@ -235,8 +242,10 @@ defmodule ElixirScope.AST.RuntimeCorrelator.EventCorrelator do
     cond do
       Map.has_key?(event, :caller_line) and not is_nil(Map.get(event, :caller_line)) ->
         Map.get(event, :caller_line)
+
       Map.has_key?(event, :line) and not is_nil(Map.get(event, :line)) ->
         Map.get(event, :line)
+
       true ->
         function_data.line_start
     end

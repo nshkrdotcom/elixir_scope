@@ -14,12 +14,23 @@ defmodule ElixirScope.AST.Enhanced.CFGGenerator.IntegrationTest do
       original_ast_processor = Application.get_env(:elixir_scope, :ast_processor)
 
       # Set real modules
-      Application.put_env(:elixir_scope, :state_manager,
-        ElixirScope.AST.Enhanced.CFGGenerator.StateManager)
-      Application.put_env(:elixir_scope, :ast_utilities,
-        ElixirScope.AST.Enhanced.CFGGenerator.ASTUtilities)
-      Application.put_env(:elixir_scope, :ast_processor,
-        ElixirScope.AST.Enhanced.CFGGenerator.ASTProcessor)
+      Application.put_env(
+        :elixir_scope,
+        :state_manager,
+        ElixirScope.AST.Enhanced.CFGGenerator.StateManager
+      )
+
+      Application.put_env(
+        :elixir_scope,
+        :ast_utilities,
+        ElixirScope.AST.Enhanced.CFGGenerator.ASTUtilities
+      )
+
+      Application.put_env(
+        :elixir_scope,
+        :ast_processor,
+        ElixirScope.AST.Enhanced.CFGGenerator.ASTProcessor
+      )
 
       on_exit(fn ->
         # Restore test configuration
