@@ -8,6 +8,8 @@ defmodule ElixirScope.Foundation.Config do
 
   alias ElixirScope.Foundation.{Error, ErrorContext}
 
+  @behaviour Access
+
   @type config_path :: [atom()]
   @type config_value :: term()
 
@@ -110,6 +112,39 @@ defmodule ElixirScope.Foundation.Config do
     interface: map(),
     dev: map()
   }
+
+  ## Access Behavior Implementation
+
+  @impl Access
+  def fetch(%__MODULE__{} = config, key) do
+    config
+    |> Map.from_struct()
+    |> Map.fetch(key)
+  end
+
+  @impl Access
+  def get_and_update(%__MODULE__{} = config, key, function) do
+    map_config = Map.from_struct(config)
+
+    case Map.get_and_update(map_config, key, function) do
+      {current_value, updated_map} ->
+        case struct(__MODULE__, updated_map) do
+          updated_config when is_struct(updated_config, __MODULE__) ->
+            {current_value, updated_config}
+          _ ->
+            # Fallback if struct creation fails
+            {current_value, config}
+        end
+    end
+  end
+
+  @impl Access
+  def pop(%__MODULE__{} = config, key) do
+    map_config = Map.from_struct(config)
+    {value, updated_map} = Map.pop(map_config, key)
+    updated_config = struct(__MODULE__, updated_map)
+    {value, updated_config}
+  end
 
   # Paths that can be updated at runtime
   @updatable_paths [
@@ -248,7 +283,7 @@ defmodule ElixirScope.Foundation.Config do
 
   @impl GenServer
   def handle_call({:get_config_path, path}, _from, config) do
-    value = get_config_value(config, path)
+    value = get_in(config, path)
     {:reply, value, config}
   end
 
@@ -269,7 +304,7 @@ defmodule ElixirScope.Foundation.Config do
           # new_config = put_in(config, path, value)
 
           # With this:
-          new_config = put_config_value(config, path, value)
+          new_config = put_in(config, path, value)
 
           case validate(new_config) do
             :ok ->
@@ -287,49 +322,49 @@ defmodule ElixirScope.Foundation.Config do
     end
   end
 
-  # Add this private function:
-  defp put_config_value(_config, [], value) do
-    value
-  end
+  # # Add this private function:
+  # defp put_config_value(_config, [], value) do
+  #   value
+  # end
 
-  defp put_config_value(config, [key], value) when is_struct(config) do
-    Map.put(config, key, value)
-  end
+  # defp put_config_value(config, [key], value) when is_struct(config) do
+  #   Map.put(config, key, value)
+  # end
 
-  defp put_config_value(config, [key], value) when is_map(config) do
-    Map.put(config, key, value)
-  end
+  # defp put_config_value(config, [key], value) when is_map(config) do
+  #   Map.put(config, key, value)
+  # end
 
-  defp put_config_value(config, [key | rest], value) when is_struct(config) do
-    current_value = Map.get(config, key)
-    new_value = put_config_value(current_value, rest, value)
-    Map.put(config, key, new_value)
-  end
+  # defp put_config_value(config, [key | rest], value) when is_struct(config) do
+  #   current_value = Map.get(config, key)
+  #   new_value = put_config_value(current_value, rest, value)
+  #   Map.put(config, key, new_value)
+  # end
 
-  defp put_config_value(config, [key | rest], value) when is_map(config) do
-    current_value = Map.get(config, key)
-    new_value = put_config_value(current_value, rest, value)
-    Map.put(config, key, new_value)
-  end
+  # defp put_config_value(config, [key | rest], value) when is_map(config) do
+  #   current_value = Map.get(config, key)
+  #   new_value = put_config_value(current_value, rest, value)
+  #   Map.put(config, key, new_value)
+  # end
 
 
-  # Add this private function:
-  defp get_config_value(config, []) do
-    config
-  end
+  # # # Add this private function:
+  # # defp get_config_value(config, []) do
+  # #   config
+  # # end
 
-  defp get_config_value(config, [key | rest]) when is_struct(config) do
-    # Convert struct to map for the first access
-    map_config = Map.from_struct(config)
-    get_config_value(Map.get(map_config, key), rest)
-  end
+  # defp get_config_value(config, [key | rest]) when is_struct(config) do
+  #   # Convert struct to map for the first access
+  #   map_config = Map.from_struct(config)
+  #   get_config_value(Map.get(map_config, key), rest)
+  # end
 
-  defp get_config_value(config, [key | rest]) when is_map(config) do
-    get_config_value(Map.get(config, key), rest)
-  end
+  # defp get_config_value(config, [key | rest]) when is_map(config) do
+  #   get_config_value(Map.get(config, key), rest)
+  # end
 
-  defp get_config_value(nil, _path), do: nil
-  defp get_config_value(value, []), do: value
+  # defp get_config_value(nil, _path), do: nil
+  # defp get_config_value(value, []), do: value
 
   ## Validation Functions
 
