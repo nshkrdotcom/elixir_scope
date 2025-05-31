@@ -9,8 +9,8 @@ defmodule ElixirScope.Core.EventManager do
   """
   
   alias ElixirScope.AST.RuntimeCorrelator
-  alias ElixirScope.Storage.EventStore
-  alias ElixirScope.Query.Legacy
+#   alias ElixirScope.Storage.EventStore
+#  alias ElixirScope.Query.Legacy
   alias ElixirScope.Utils
   
   @type event_query :: [

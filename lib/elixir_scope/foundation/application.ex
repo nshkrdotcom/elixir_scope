@@ -1,70 +1,67 @@
-# ORIG_FILE
-defmodule ElixirScope.Application do
+defmodule ElixirScope.Foundation.Application do
   @moduledoc """
-  ElixirScope Application Supervisor
+  Application module for ElixirScope Foundation layer.
 
-  Manages the lifecycle of all ElixirScope components in a supervised manner.
-  The supervision tree is designed to be fault-tolerant and to restart
-  components in the correct order if failures occur.
+  Manages the lifecycle of Foundation layer components and ensures
+  proper initialization order.
   """
 
   use Application
-
   require Logger
 
-  @impl true
-  def start(_type, _args) do
-    Logger.info("Starting ElixirScope application...")
+  alias ElixirScope.Foundation.{Config, Events, Telemetry, ErrorContext}
 
-    ensure_default_cfg_dependencies()
+  @impl Application
+  def start(_type, _args) do
+    Logger.info("Starting ElixirScope Foundation Application")
+
+    context = ErrorContext.new(__MODULE__, :start)
 
     children = [
-      # Core configuration and utilities (no dependencies)
-      {ElixirScope.Config, []},
+      # Configuration must start first
+      {Config, []},
 
-      # Layer 1: Core capture pipeline will be added here
-      # {ElixirScope.Capture.Runtime.PipelineManager, []},
-
-      # Layer 2: Storage and correlation will be added here
-      # {ElixirScope.Storage.QueryCoordinator, []},
-
-      # Layer 4: AI components will be added here
-      # {ElixirScope.Intelligence.AI.Orchestrator, []},
+      # Add other supervised processes here as needed
+      # Note: Events and Telemetry are currently stateless and don't need supervision
     ]
 
-    opts = [strategy: :one_for_one, name: ElixirScope.Supervisor]
+    opts = [strategy: :one_for_one, name: ElixirScope.Foundation.Supervisor]
 
-    case Supervisor.start_link(children, opts) do
-      {:ok, pid} ->
-        Logger.info("ElixirScope application started successfully")
-        {:ok, pid}
+    case ErrorContext.with_context(context, fn ->
+      Supervisor.start_link(children, opts)
+    end) do
+      {:ok, _pid} = result ->
+        # Initialize stateless components after supervision tree is up
+        case initialize_stateless_components() do
+          :ok ->
+            Logger.info("ElixirScope Foundation Application started successfully")
+            result
+          {:error, error} ->
+            Logger.error("Failed to initialize stateless components: #{inspect(error)}")
+            {:error, error}
+        end
 
-      {:error, reason} ->
-        Logger.error("Failed to start ElixirScope application: #{inspect(reason)}")
-        {:error, reason}
+      {:error, reason} = error ->
+        Logger.error("Failed to start ElixirScope Foundation Application: #{inspect(reason)}")
+        error
     end
   end
 
-  defp ensure_default_cfg_dependencies do
-    unless Application.get_env(:elixir_scope, :state_manager) do
-      Application.put_env(:elixir_scope, :state_manager,
-        ElixirScope.AST.Enhanced.CFGGenerator.StateManager)
-    end
-
-    unless Application.get_env(:elixir_scope, :ast_utilities) do
-      Application.put_env(:elixir_scope, :ast_utilities,
-        ElixirScope.AST.Enhanced.CFGGenerator.ASTUtilities)
-    end
-
-    unless Application.get_env(:elixir_scope, :ast_processor) do
-      Application.put_env(:elixir_scope, :ast_processor,
-        ElixirScope.AST.Enhanced.CFGGenerator.ASTProcessor)
-    end
-  end
-
-  @impl true
+  @impl Application
   def stop(_state) do
-    Logger.info("Stopping ElixirScope application...")
+    Logger.info("Stopping ElixirScope Foundation Application")
     :ok
+  end
+
+  @spec initialize_stateless_components() :: :ok | {:error, term()}
+  defp initialize_stateless_components do
+    context = ErrorContext.new(__MODULE__, :initialize_stateless_components)
+
+    ErrorContext.with_context(context, fn ->
+      with :ok <- Events.initialize(),
+           :ok <- Telemetry.initialize() do
+        :ok
+      end
+    end)
   end
 end

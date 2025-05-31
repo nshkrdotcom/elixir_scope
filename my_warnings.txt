@@ -1,0 +1,7 @@
+    warning: unused alias Utils
+    │
+ 31 │   alias ElixirScope.Foundation.Utils
+    │   ~
+    │
+    └─ lib/elixir_scope/foundation.ex:31:3
+
