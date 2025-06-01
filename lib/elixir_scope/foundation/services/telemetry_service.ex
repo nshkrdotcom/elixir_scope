@@ -69,6 +69,12 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
     execute(event_name, measurements, metadata)
   end
 
+  # Overloaded version for tests that pass a value
+  def emit_counter(event_name, value, metadata) when is_list(event_name) and is_number(value) do
+    measurements = %{counter: value}
+    execute(event_name, measurements, metadata)
+  end
+
   @impl Telemetry
   def emit_gauge(event_name, value, metadata) when is_list(event_name) and is_number(value) do
     measurements = %{gauge: value}
@@ -191,6 +197,12 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
   end
 
   @impl GenServer
+  def handle_call(:clear_metrics, _from, state) do
+    new_state = %{state | metrics: %{}}
+    {:reply, :ok, new_state}
+  end
+
+  @impl GenServer
   def handle_call({:attach_handlers, event_names}, _from, %{handlers: handlers} = state) do
     new_handlers =
       Enum.reduce(event_names, handlers, fn event_name, acc ->
@@ -242,8 +254,14 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
 
   defp merge_measurements(existing, new) do
     Map.merge(existing, new, fn
+      :gauge, _old_val, new_val ->
+        # For gauges, always use the latest value (no averaging)
+        new_val
+      :counter, old_val, new_val when is_number(old_val) and is_number(new_val) ->
+        # For counters, accumulate the values
+        old_val + new_val
       _key, old_val, new_val when is_number(old_val) and is_number(new_val) ->
-        # For numeric values, keep running average
+        # For other numeric values, keep running average (backwards compatibility)
         (old_val + new_val) / 2
       _key, _old_val, new_val ->
         # For non-numeric, keep the new value
