@@ -11,9 +11,12 @@ defmodule ElixirScope.Foundation.Application do
   def start(_type, _args) do
     children = [
       # Core foundation services
-      {ElixirScope.Foundation.Services.ConfigServer, name: ElixirScope.Foundation.Services.ConfigServer},
-      {ElixirScope.Foundation.Services.EventStore, name: ElixirScope.Foundation.Services.EventStore},
-      {ElixirScope.Foundation.Services.TelemetryService, name: ElixirScope.Foundation.Services.TelemetryService},
+      {ElixirScope.Foundation.Services.ConfigServer,
+       name: ElixirScope.Foundation.Services.ConfigServer},
+      {ElixirScope.Foundation.Services.EventStore,
+       name: ElixirScope.Foundation.Services.EventStore},
+      {ElixirScope.Foundation.Services.TelemetryService,
+       name: ElixirScope.Foundation.Services.TelemetryService},
 
       # Task supervisor for dynamic tasks
       {Task.Supervisor, name: ElixirScope.Foundation.TaskSupervisor}

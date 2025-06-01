@@ -136,14 +136,15 @@ defmodule ElixirScope.Foundation.Validation.EventValidator do
   end
 
   defp create_error(error_type, message, context \\ %{}) do
-    error = Error.new(
-      error_type: error_type,
-      message: message,
-      context: context,
-      category: :data,
-      subcategory: :validation,
-      severity: :medium
-    )
+    error =
+      Error.new(
+        error_type: error_type,
+        message: message,
+        context: context,
+        category: :data,
+        subcategory: :validation,
+        severity: :medium
+      )
 
     {:error, error}
   end

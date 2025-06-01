@@ -11,7 +11,8 @@ defmodule ElixirScope.Foundation.Logic.ConfigLogicTest do
       assert is_list(paths)
       assert [:ai, :planning, :sampling_rate] in paths
       assert [:dev, :debug_mode] in paths
-      refute [:ai, :provider] in paths  # Not updatable at runtime
+      # Not updatable at runtime
+      refute [:ai, :provider] in paths
     end
   end
 
@@ -46,7 +47,9 @@ defmodule ElixirScope.Foundation.Logic.ConfigLogicTest do
       config = Config.new()
 
       # Try to set invalid sampling rate
-      assert {:error, error} = ConfigLogic.update_config(config, [:ai, :planning, :sampling_rate], 2.0)
+      assert {:error, error} =
+               ConfigLogic.update_config(config, [:ai, :planning, :sampling_rate], 2.0)
+
       assert error.error_type == :range_error
     end
   end
@@ -76,6 +79,7 @@ defmodule ElixirScope.Foundation.Logic.ConfigLogicTest do
   describe "merge_env_config/2" do
     test "merges environment configuration" do
       config = Config.new()
+
       env_config = [
         ai: [provider: :openai],
         dev: [debug_mode: true]
@@ -99,7 +103,8 @@ defmodule ElixirScope.Foundation.Logic.ConfigLogicTest do
 
       assert Map.has_key?(diff, :dev)
       assert Map.has_key?(diff, :ai)
-      refute Map.has_key?(diff, :capture)  # Unchanged
+      # Unchanged
+      refute Map.has_key?(diff, :capture)
     end
 
     test "returns empty diff for identical configs" do

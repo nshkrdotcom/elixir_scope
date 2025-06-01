@@ -127,7 +127,8 @@ defmodule ElixirScope.Foundation.Events do
       iex> ElixirScope.Foundation.Events.function_entry(MyModule, :my_func, 2, [arg1, arg2])
       {:ok, %Event{event_type: :function_entry, ...}}
   """
-  @spec function_entry(module(), atom(), arity(), [term()], keyword()) :: {:ok, Event.t()} | {:error, Error.t()}
+  @spec function_entry(module(), atom(), arity(), [term()], keyword()) ::
+          {:ok, Event.t()} | {:error, Error.t()}
   def function_entry(module, function, arity, args, opts \\ []) do
     alias ElixirScope.Foundation.Logic.EventLogic
     EventLogic.create_function_entry(module, function, arity, args, opts)
@@ -141,10 +142,20 @@ defmodule ElixirScope.Foundation.Events do
       iex> ElixirScope.Foundation.Events.function_exit(MyModule, :my_func, 2, 123, :ok, 1000, :normal)
       {:ok, %Event{event_type: :function_exit, ...}}
   """
-  @spec function_exit(module(), atom(), arity(), pos_integer(), term(), non_neg_integer(), atom()) :: {:ok, Event.t()} | {:error, Error.t()}
+  @spec function_exit(module(), atom(), arity(), pos_integer(), term(), non_neg_integer(), atom()) ::
+          {:ok, Event.t()} | {:error, Error.t()}
   def function_exit(module, function, arity, call_id, result, duration_ns, exit_reason) do
     alias ElixirScope.Foundation.Logic.EventLogic
-    EventLogic.create_function_exit(module, function, arity, call_id, result, duration_ns, exit_reason)
+
+    EventLogic.create_function_exit(
+      module,
+      function,
+      arity,
+      call_id,
+      result,
+      duration_ns,
+      exit_reason
+    )
   end
 
   @doc """
@@ -155,7 +166,8 @@ defmodule ElixirScope.Foundation.Events do
       iex> ElixirScope.Foundation.Events.state_change(self(), :handle_call, old_state, new_state)
       {:ok, %Event{event_type: :state_change, ...}}
   """
-  @spec state_change(pid(), atom(), term(), term(), keyword()) :: {:ok, Event.t()} | {:error, Error.t()}
+  @spec state_change(pid(), atom(), term(), term(), keyword()) ::
+          {:ok, Event.t()} | {:error, Error.t()}
   def state_change(server_pid, callback, old_state, new_state, opts \\ []) do
     alias ElixirScope.Foundation.Logic.EventLogic
     EventLogic.create_state_change(server_pid, callback, old_state, new_state, opts)
@@ -288,6 +300,7 @@ defmodule ElixirScope.Foundation.Events do
         alias ElixirScope.Foundation.Logic.EventLogic
         chain = EventLogic.extract_correlation_chain(events, correlation_id)
         {:ok, chain}
+
       {:error, _} = error ->
         error
     end
@@ -327,8 +340,6 @@ defmodule ElixirScope.Foundation.Events do
     })
   end
 end
-
-
 
 # defmodule ElixirScope.Foundation.Events do
 #   @moduledoc """

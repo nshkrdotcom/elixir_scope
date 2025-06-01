@@ -20,16 +20,21 @@ defmodule ElixirScope do
   @doc """
   Get the current status of all ElixirScope subsystems.
   """
-  @spec status() :: {:ok, %{
-          config: map(),
-          events: map(),
-          telemetry: map()
-        }} | {:error, Error.t()}
+  @spec status() ::
+          {:ok,
+           %{
+             config: map(),
+             events: map(),
+             telemetry: map()
+           }}
+          | {:error, Error.t()}
   def status do
     case Foundation.status() do
       {:ok, foundation_status} ->
         {:ok, foundation_status}
-      {:error, _} = error -> error
+
+      {:error, _} = error ->
+        error
     end
   end
 

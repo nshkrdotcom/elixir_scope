@@ -176,12 +176,14 @@ defmodule ElixirScope.Foundation.Types.Config do
   @spec new(keyword()) :: t()
   def new(overrides) do
     config = new()
+
     Enum.reduce(overrides, config, fn {key, value}, acc ->
       case Map.get(acc, key) do
         existing_value when is_map(existing_value) and is_map(value) ->
           # Deep merge maps
           merged_value = deep_merge(existing_value, value)
           Map.put(acc, key, merged_value)
+
         _ ->
           # Replace non-map values
           Map.put(acc, key, value)

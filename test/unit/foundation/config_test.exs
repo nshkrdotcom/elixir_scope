@@ -145,24 +145,29 @@ defmodule ElixirScope.Foundation.ConfigTest do
 
     # Stop the ConfigServer more gracefully using GenServer.stop
     config_pid = GenServer.whereis(ConfigServer)
+
     if config_pid do
       try do
         GenServer.stop(config_pid, :normal, 100)
       catch
         :exit, _ -> :ok
       end
+
       # Wait for it to be gone
       :timer.sleep(100)
     end
 
     # Now test should fail
     result = ConfigAPI.get()
+
     case result do
       {:error, %Error{error_type: :service_unavailable}} ->
         assert true
+
       {:ok, _config} ->
         # Service might have restarted too quickly, that's also valid
         assert true
+
       other ->
         flunk("Unexpected result: #{inspect(other)}")
     end
@@ -173,7 +178,8 @@ defmodule ElixirScope.Foundation.ConfigTest do
     case fallback_result do
       {:ok, :mock} -> assert true
       :mock -> assert true
-      {:error, _} -> assert true  # Also acceptable if no cache exists
+      # Also acceptable if no cache exists
+      {:error, _} -> assert true
       other -> flunk("Unexpected fallback result: #{inspect(other)}")
     end
 

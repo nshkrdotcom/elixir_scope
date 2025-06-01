@@ -21,7 +21,7 @@ defmodule ElixirScope.Foundation.Contracts.Telemetry do
   @doc """
   Measure execution time and emit results.
   """
-  @callback measure(event_name(), metadata(), (() -> result)) :: result when result: var
+  @callback measure(event_name(), metadata(), (-> result)) :: result when result: var
 
   @doc """
   Emit a counter metric.

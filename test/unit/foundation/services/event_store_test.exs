@@ -25,7 +25,8 @@ defmodule ElixirScope.Foundation.Services.EventStoreTest do
     end
 
     test "rejects invalid event" do
-      invalid_event = Event.new()  # Missing required fields
+      # Missing required fields
+      invalid_event = Event.new()
 
       assert {:error, error} = EventStore.store(invalid_event)
       assert error.error_type == :validation_failed
@@ -46,7 +47,8 @@ defmodule ElixirScope.Foundation.Services.EventStoreTest do
     test "rejects batch with invalid event" do
       events = [
         create_test_event(1, :test1, %{data: 1}),
-        Event.new(),  # Invalid event
+        # Invalid event
+        Event.new(),
         create_test_event(3, :test3, %{data: 3})
       ]
 
@@ -195,7 +197,7 @@ defmodule ElixirScope.Foundation.Services.EventStoreTest do
 
   # Helper function to create test events
   defp create_test_event(event_id, event_type, data, opts \\ []) do
-    Event.new([
+    Event.new(
       event_id: event_id,
       event_type: event_type,
       timestamp: Keyword.get(opts, :timestamp, System.monotonic_time()),
@@ -204,6 +206,6 @@ defmodule ElixirScope.Foundation.Services.EventStoreTest do
       pid: self(),
       correlation_id: Keyword.get(opts, :correlation_id),
       data: data
-    ])
+    )
   end
 end

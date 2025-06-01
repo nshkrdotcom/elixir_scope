@@ -18,17 +18,18 @@ defmodule ElixirScope.Foundation.Logic.EventLogic do
   """
   @spec create_event(atom(), term(), event_opts()) :: {:ok, Event.t()} | {:error, Error.t()}
   def create_event(event_type, data, opts \\ []) do
-    event = Event.new(
-      event_id: Keyword.get(opts, :event_id, Utils.generate_id()),
-      event_type: event_type,
-      timestamp: Keyword.get(opts, :timestamp, Utils.monotonic_timestamp()),
-      wall_time: Keyword.get(opts, :wall_time, DateTime.utc_now()),
-      node: Keyword.get(opts, :node, Node.self()),
-      pid: Keyword.get(opts, :pid, self()),
-      correlation_id: Keyword.get(opts, :correlation_id),
-      parent_id: Keyword.get(opts, :parent_id),
-      data: data
-    )
+    event =
+      Event.new(
+        event_id: Keyword.get(opts, :event_id, Utils.generate_id()),
+        event_type: event_type,
+        timestamp: Keyword.get(opts, :timestamp, Utils.monotonic_timestamp()),
+        wall_time: Keyword.get(opts, :wall_time, DateTime.utc_now()),
+        node: Keyword.get(opts, :node, Node.self()),
+        pid: Keyword.get(opts, :pid, self()),
+        correlation_id: Keyword.get(opts, :correlation_id),
+        parent_id: Keyword.get(opts, :parent_id),
+        data: data
+      )
 
     case EventValidator.validate(event) do
       :ok -> {:ok, event}
@@ -109,11 +110,12 @@ defmodule ElixirScope.Foundation.Logic.EventLogic do
     compression = Keyword.get(opts, :compression, true)
 
     try do
-      binary = if compression do
-        :erlang.term_to_binary(event, [:compressed])
-      else
-        :erlang.term_to_binary(event)
-      end
+      binary =
+        if compression do
+          :erlang.term_to_binary(event, [:compressed])
+        else
+          :erlang.term_to_binary(event)
+        end
 
       {:ok, binary}
     rescue
@@ -163,7 +165,8 @@ defmodule ElixirScope.Foundation.Logic.EventLogic do
   Extract correlation chain from a list of events.
   """
   @spec extract_correlation_chain([Event.t()], String.t()) :: [Event.t()]
-  def extract_correlation_chain(events, correlation_id) when is_list(events) and is_binary(correlation_id) do
+  def extract_correlation_chain(events, correlation_id)
+      when is_list(events) and is_binary(correlation_id) do
     events
     |> Enum.filter(fn event -> event.correlation_id == correlation_id end)
     |> Enum.sort_by(& &1.timestamp)
@@ -212,14 +215,15 @@ defmodule ElixirScope.Foundation.Logic.EventLogic do
   end
 
   defp create_error(error_type, message, context) do
-    error = Error.new(
-      error_type: error_type,
-      message: message,
-      context: context,
-      category: :data,
-      subcategory: :runtime,
-      severity: :medium
-    )
+    error =
+      Error.new(
+        error_type: error_type,
+        message: message,
+        context: context,
+        category: :data,
+        subcategory: :runtime,
+        severity: :medium
+      )
 
     {:error, error}
   end

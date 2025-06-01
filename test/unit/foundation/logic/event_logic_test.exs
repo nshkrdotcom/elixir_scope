@@ -60,9 +60,16 @@ defmodule ElixirScope.Foundation.Logic.EventLogicTest do
       result = {:ok, "success"}
       duration = 1000
 
-      assert {:ok, event} = EventLogic.create_function_exit(
-        MyModule, :my_func, 3, call_id, result, duration, :normal
-      )
+      assert {:ok, event} =
+               EventLogic.create_function_exit(
+                 MyModule,
+                 :my_func,
+                 3,
+                 call_id,
+                 result,
+                 duration,
+                 :normal
+               )
 
       assert event.event_type == :function_exit
       assert event.data.call_id == call_id
@@ -92,15 +99,16 @@ defmodule ElixirScope.Foundation.Logic.EventLogicTest do
 
   describe "deserialize_event/1" do
     test "deserializes valid event binary" do
-      original_event = Event.new(
-        event_id: 123,
-        event_type: :test,
-        timestamp: System.monotonic_time(),
-        wall_time: DateTime.utc_now(),
-        node: Node.self(),
-        pid: self(),
-        data: %{key: "value"}
-      )
+      original_event =
+        Event.new(
+          event_id: 123,
+          event_type: :test,
+          timestamp: System.monotonic_time(),
+          wall_time: DateTime.utc_now(),
+          node: Node.self(),
+          pid: self(),
+          data: %{key: "value"}
+        )
 
       {:ok, binary} = EventLogic.serialize_event(original_event)
 

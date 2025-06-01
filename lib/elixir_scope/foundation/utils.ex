@@ -24,10 +24,10 @@ defmodule ElixirScope.Foundation.Utils do
     # This approach guarantees uniqueness even under extreme concurrency
     unique_int = System.unique_integer([:positive])
     ref_hash = make_ref() |> :erlang.ref_to_list() |> :erlang.phash2()
-    
+
     # Combine both for maximum uniqueness guarantee
     # Use bit shifting to avoid collisions between components
-    (unique_int * 1_000_000) + abs(ref_hash) + 1
+    unique_int * 1_000_000 + abs(ref_hash) + 1
   end
 
   @doc """
@@ -59,13 +59,15 @@ defmodule ElixirScope.Foundation.Utils do
   def generate_correlation_id do
     # Generate UUID v4 format (36 characters)
     <<u0::32, u1::16, u2::16, u3::16, u4::48>> = :crypto.strong_rand_bytes(16)
-    
+
     # Set version (4) and variant bits
     u2_v4 = (u2 &&& 0x0FFF) ||| 0x4000
     u3_var = (u3 &&& 0x3FFF) ||| 0x8000
-    
-    :io_lib.format("~8.16.0b-~4.16.0b-~4.16.0b-~4.16.0b-~12.16.0b",
-                   [u0, u1, u2_v4, u3_var, u4])
+
+    :io_lib.format(
+      "~8.16.0b-~4.16.0b-~4.16.0b-~4.16.0b-~12.16.0b",
+      [u0, u1, u2_v4, u3_var, u4]
+    )
     |> IO.iodata_to_binary()
   end
 
@@ -194,12 +196,14 @@ defmodule ElixirScope.Foundation.Utils do
   @spec get_nested(map(), [atom()], term()) :: term()
   def get_nested(map, path, default \\ nil)
   def get_nested(map, [], _default), do: map
+
   def get_nested(map, [key | rest], default) when is_map(map) do
     case Map.get(map, key) do
       nil -> default
       value -> get_nested(value, rest, default)
     end
   end
+
   def get_nested(_not_map, _path, default), do: default
 
   @doc """
@@ -213,9 +217,11 @@ defmodule ElixirScope.Foundation.Utils do
   """
   @spec put_nested(map(), [atom()], term()) :: map()
   def put_nested(_map, [], value), do: value
+
   def put_nested(map, [key], value) when is_map(map) do
     Map.put(map, key, value)
   end
+
   def put_nested(map, [key | rest], value) when is_map(map) do
     nested_map = Map.get(map, key, %{})
     Map.put(map, key, put_nested(nested_map, rest, value))
@@ -255,7 +261,9 @@ defmodule ElixirScope.Foundation.Utils do
         rescue
           ArgumentError -> {key, atomize_keys(value)}
         end
-      {key, value} -> {key, atomize_keys(value)}
+
+      {key, value} ->
+        {key, atomize_keys(value)}
     end)
   end
 
@@ -299,7 +307,7 @@ defmodule ElixirScope.Foundation.Utils do
       iex> result = ElixirScope.Foundation.Utils.retry(fn -> {:error, :failed} end, max_attempts: 2)
       {:error, :max_attempts_exceeded}
   """
-  @spec retry((() -> any()), Keyword.t()) :: {:error, :max_attempts_exceeded} | {:ok, any()}
+  @spec retry((-> any()), Keyword.t()) :: {:error, :max_attempts_exceeded} | {:ok, any()}
   def retry(fun, opts \\ []) when is_function(fun, 0) do
     max_attempts = Keyword.get(opts, :max_attempts, 3)
     base_delay = Keyword.get(opts, :base_delay, 100)
@@ -361,15 +369,15 @@ defmodule ElixirScope.Foundation.Utils do
       nanoseconds >= 1_000_000_000 ->
         seconds = nanoseconds / 1_000_000_000
         "#{:erlang.float_to_binary(seconds, decimals: 1)}s"
-      
+
       nanoseconds >= 1_000_000 ->
         milliseconds = nanoseconds / 1_000_000
         "#{:erlang.float_to_binary(milliseconds, decimals: 1)}ms"
-      
+
       nanoseconds >= 1_000 ->
         microseconds = nanoseconds / 1_000
         "#{:erlang.float_to_binary(microseconds, decimals: 1)}μs"
-      
+
       true ->
         "#{nanoseconds}ns"
     end
@@ -400,7 +408,7 @@ defmodule ElixirScope.Foundation.Utils do
       iex> duration > 10_000  # At least 10ms in microseconds
       true
   """
-  @spec measure((() -> result)) :: {result, non_neg_integer()} when result: any()
+  @spec measure((-> result)) :: {result, non_neg_integer()} when result: any()
   def measure(func) when is_function(func, 0) do
     start = System.monotonic_time(:microsecond)
     result = func.()
@@ -419,7 +427,8 @@ defmodule ElixirScope.Foundation.Utils do
       iex> is_integer(before) and is_integer(after) and is_integer(diff)
       true
   """
-  @spec measure_memory((() -> result)) :: {result, {non_neg_integer(), non_neg_integer(), integer()}} when result: any()
+  @spec measure_memory((-> result)) :: {result, {non_neg_integer(), non_neg_integer(), integer()}}
+        when result: any()
   def measure_memory(func) when is_function(func, 0) do
     :erlang.garbage_collect()
     before_memory = :erlang.memory(:total)
@@ -447,9 +456,9 @@ defmodule ElixirScope.Foundation.Utils do
   def format_bytes(bytes) when is_integer(bytes) and bytes >= 0 do
     cond do
       bytes < 1024 -> "#{bytes} B"
-      bytes < 1024*1024 -> "#{Float.round(bytes/1024, 1)} KB"
-      bytes < 1024*1024*1024 -> "#{Float.round(bytes/(1024*1024), 1)} MB"
-      true -> "#{Float.round(bytes/(1024*1024*1024), 1)} GB"
+      bytes < 1024 * 1024 -> "#{Float.round(bytes / 1024, 1)} KB"
+      bytes < 1024 * 1024 * 1024 -> "#{Float.round(bytes / (1024 * 1024), 1)} MB"
+      true -> "#{Float.round(bytes / (1024 * 1024 * 1024), 1)} GB"
     end
   end
 
@@ -473,6 +482,7 @@ defmodule ElixirScope.Foundation.Utils do
         }
   def process_stats do
     info = Process.info(self())
+
     %{
       memory: Keyword.get(info, :memory, 0),
       message_queue_len: Keyword.get(info, :message_queue_len, 0),
@@ -495,7 +505,18 @@ defmodule ElixirScope.Foundation.Utils do
   """
   @spec system_stats() :: %{
           atom_count: any(),
-          memory: [{:atom | :atom_used | :binary | :code | :ets | :processes | :processes_used | :system | :total, non_neg_integer()}, ...],
+          memory: [
+            {:atom
+             | :atom_used
+             | :binary
+             | :code
+             | :ets
+             | :processes
+             | :processes_used
+             | :system
+             | :total, non_neg_integer()},
+            ...
+          ],
           process_count: non_neg_integer(),
           scheduler_count: pos_integer(),
           scheduler_online: pos_integer()
@@ -556,19 +577,25 @@ defmodule ElixirScope.Foundation.Utils do
 
   defp do_retry(fun, attempt, max_attempts, base_delay, max_delay) do
     case fun.() do
-      {:ok, result} -> {:ok, result}
-      :ok -> {:ok, :ok}
+      {:ok, result} ->
+        {:ok, result}
+
+      :ok ->
+        {:ok, :ok}
+
       {:error, _} when attempt < max_attempts ->
         delay = min(base_delay * :math.pow(2, attempt - 1), max_delay) |> round()
         Process.sleep(delay)
         do_retry(fun, attempt + 1, max_attempts, base_delay, max_delay)
-      {:error, _reason} -> {:error, :max_attempts_exceeded}
-      result -> {:ok, result}
+
+      {:error, _reason} ->
+        {:error, :max_attempts_exceeded}
+
+      result ->
+        {:ok, result}
     end
   end
 end
-
-
 
 # defmodule ElixirScope.Foundation.Utils do
 #   @moduledoc """

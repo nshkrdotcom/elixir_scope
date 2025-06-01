@@ -82,17 +82,22 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
   @spec initialize(keyword()) :: :ok | {:error, Error.t()}
   def initialize(opts) do
     case start_link(opts) do
-      {:ok, _pid} -> :ok
-      {:error, {:already_started, _pid}} -> :ok
-      {:error, reason} -> 
-        {:error, Error.new(
-          error_type: :service_initialization_failed,
-          message: "Failed to initialize configuration service",
-          context: %{reason: reason},
-          category: :config,
-          subcategory: :startup,
-          severity: :high
-        )}
+      {:ok, _pid} ->
+        :ok
+
+      {:error, {:already_started, _pid}} ->
+        :ok
+
+      {:error, reason} ->
+        {:error,
+         Error.new(
+           error_type: :service_initialization_failed,
+           message: "Failed to initialize configuration service",
+           context: %{reason: reason},
+           category: :config,
+           subcategory: :startup,
+           severity: :high
+         )}
     end
   end
 
@@ -168,10 +173,11 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
         new_state = %{
           state
           | config: new_config,
-            metrics: Map.merge(state.metrics, %{
-              updates_count: state.metrics.updates_count + 1,
-              last_update: System.monotonic_time(:millisecond)
-            })
+            metrics:
+              Map.merge(state.metrics, %{
+                updates_count: state.metrics.updates_count + 1,
+                last_update: System.monotonic_time(:millisecond)
+              })
         }
 
         # Notify subscribers
@@ -203,16 +209,18 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
       :ok ->
         new_state = %{state | config: new_config}
         notify_subscribers(state.subscribers, {:config_reset, new_config})
-        
+
         # Emit event to EventStore for audit and correlation
         emit_config_event(:config_reset, %{
           timestamp: System.monotonic_time(:millisecond),
           reset_from_updates_count: state.metrics.updates_count
         })
-        
+
         # Emit telemetry for config resets
-        emit_config_telemetry(:config_reset, %{reset_from_updates_count: state.metrics.updates_count})
-        
+        emit_config_telemetry(:config_reset, %{
+          reset_from_updates_count: state.metrics.updates_count
+        })
+
         {:reply, :ok, new_state}
 
       {:error, _} = error ->
@@ -247,6 +255,7 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
   @impl GenServer
   def handle_call(:get_status, _from, %{metrics: metrics} = state) do
     current_time = System.monotonic_time(:millisecond)
+
     status = %{
       status: :running,
       uptime_ms: current_time - metrics.start_time,
@@ -254,6 +263,7 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
       last_update: metrics.last_update,
       subscribers_count: length(state.subscribers)
     }
+
     {:reply, {:ok, status}, state}
   end
 
@@ -286,10 +296,13 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
         case ElixirScope.Foundation.Events.new_event(event_type, data) do
           {:ok, event} ->
             case EventStore.store(event) do
-              {:ok, _id} -> :ok
+              {:ok, _id} ->
+                :ok
+
               {:error, error} ->
                 Logger.warning("Failed to emit config event: #{inspect(error)}")
             end
+
           {:error, error} ->
             Logger.warning("Failed to create config event: #{inspect(error)}")
         end
@@ -307,6 +320,7 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
         case operation_type do
           :config_updated ->
             TelemetryService.emit_counter([:foundation, :config_updates], metadata)
+
           :config_reset ->
             TelemetryService.emit_counter([:foundation, :config_resets], metadata)
         end
@@ -318,13 +332,14 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
   end
 
   defp create_service_error(message) do
-    error = Error.new(
-      error_type: :service_unavailable,
-      message: message,
-      category: :system,
-      subcategory: :initialization,
-      severity: :high
-    )
+    error =
+      Error.new(
+        error_type: :service_unavailable,
+        message: message,
+        category: :system,
+        subcategory: :initialization,
+        severity: :high
+      )
 
     {:error, error}
   end

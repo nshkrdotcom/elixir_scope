@@ -6,15 +6,16 @@ defmodule ElixirScope.Foundation.Validation.EventValidatorTest do
 
   describe "validate/1" do
     test "validates correct event" do
-      event = Event.new(
-        event_id: 123,
-        event_type: :test,
-        timestamp: System.monotonic_time(),
-        wall_time: DateTime.utc_now(),
-        node: Node.self(),
-        pid: self(),
-        data: %{key: "value"}
-      )
+      event =
+        Event.new(
+          event_id: 123,
+          event_type: :test,
+          timestamp: System.monotonic_time(),
+          wall_time: DateTime.utc_now(),
+          node: Node.self(),
+          pid: self(),
+          data: %{key: "value"}
+        )
 
       assert :ok = EventValidator.validate(event)
     end
@@ -28,14 +29,15 @@ defmodule ElixirScope.Foundation.Validation.EventValidatorTest do
     end
 
     test "rejects event with invalid field types" do
-      event = Event.new(
-        event_id: "not_an_integer",
-        event_type: :test,
-        timestamp: System.monotonic_time(),
-        wall_time: DateTime.utc_now(),
-        node: Node.self(),
-        pid: self()
-      )
+      event =
+        Event.new(
+          event_id: "not_an_integer",
+          event_type: :test,
+          timestamp: System.monotonic_time(),
+          wall_time: DateTime.utc_now(),
+          node: Node.self(),
+          pid: self()
+        )
 
       assert {:error, error} = EventValidator.validate(event)
       assert error.error_type == :type_mismatch
@@ -43,15 +45,17 @@ defmodule ElixirScope.Foundation.Validation.EventValidatorTest do
 
     test "rejects event with too large data" do
       large_data = String.duplicate("x", 2_000_000)
-      event = Event.new(
-        event_id: 123,
-        event_type: :test,
-        timestamp: System.monotonic_time(),
-        wall_time: DateTime.utc_now(),
-        node: Node.self(),
-        pid: self(),
-        data: large_data
-      )
+
+      event =
+        Event.new(
+          event_id: 123,
+          event_type: :test,
+          timestamp: System.monotonic_time(),
+          wall_time: DateTime.utc_now(),
+          node: Node.self(),
+          pid: self(),
+          data: large_data
+        )
 
       assert {:error, error} = EventValidator.validate(event)
       assert error.error_type == :data_too_large

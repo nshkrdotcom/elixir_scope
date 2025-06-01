@@ -39,7 +39,7 @@ defmodule ElixirScope.Foundation.Services.EventStore do
   @impl EventStoreContract
   def store(%Event{} = event) do
     result = GenServer.call(__MODULE__, {:store_event, event})
-    
+
     # Report telemetry on successful store
     case result do
       {:ok, event_id} ->
@@ -47,12 +47,14 @@ defmodule ElixirScope.Foundation.Services.EventStore do
           event_type: event.event_type,
           has_correlation: !is_nil(event.correlation_id)
         })
+
         {:ok, event_id}
-      
+
       {:error, _} = error ->
         emit_telemetry_counter([:foundation, :event_store, :store_errors], %{
           event_type: event.event_type
         })
+
         error
     end
   end
@@ -62,29 +64,33 @@ defmodule ElixirScope.Foundation.Services.EventStore do
     start_time = System.monotonic_time()
     result = GenServer.call(__MODULE__, {:store_batch, events})
     end_time = System.monotonic_time()
-    
+
     duration = end_time - start_time
-    
+
     case result do
       {:ok, event_ids} ->
         emit_telemetry_gauge([:foundation, :event_store, :batch_duration], duration, %{
           batch_size: length(events),
           result: :success
         })
+
         emit_telemetry_counter([:foundation, :event_store, :batch_operations], %{
           batch_size: length(events),
           result: :success
         })
+
         {:ok, event_ids}
-      
+
       {:error, _} = error ->
         emit_telemetry_gauge([:foundation, :event_store, :batch_duration], duration, %{
           batch_size: length(events),
           result: :error
         })
+
         emit_telemetry_counter([:foundation, :event_store, :batch_errors], %{
           batch_size: length(events)
         })
+
         error
     end
   end
@@ -94,23 +100,25 @@ defmodule ElixirScope.Foundation.Services.EventStore do
     start_time = System.monotonic_time()
     result = GenServer.call(__MODULE__, {:get_event, event_id})
     end_time = System.monotonic_time()
-    
+
     duration = end_time - start_time
-    
+
     case result do
       {:ok, _event} ->
         emit_telemetry_gauge([:foundation, :event_store, :get_duration], duration, %{
           result: :found
         })
+
         emit_telemetry_counter([:foundation, :event_store, :gets], %{result: :found})
-        
+
       {:error, _} ->
         emit_telemetry_gauge([:foundation, :event_store, :get_duration], duration, %{
           result: :not_found
         })
+
         emit_telemetry_counter([:foundation, :event_store, :gets], %{result: :not_found})
     end
-    
+
     result
   end
 
@@ -119,30 +127,32 @@ defmodule ElixirScope.Foundation.Services.EventStore do
     start_time = System.monotonic_time()
     result = GenServer.call(__MODULE__, {:query_events, query_map})
     end_time = System.monotonic_time()
-    
+
     duration = end_time - start_time
-    
+
     case result do
       {:ok, events} ->
         emit_telemetry_gauge([:foundation, :event_store, :query_duration], duration, %{
           result_count: length(events),
           query_type: extract_query_type(query_map)
         })
+
         emit_telemetry_counter([:foundation, :event_store, :queries], %{
           result_count: length(events),
           query_type: extract_query_type(query_map)
         })
-        
+
       {:error, _} ->
         emit_telemetry_gauge([:foundation, :event_store, :query_duration], duration, %{
           result: :error,
           query_type: extract_query_type(query_map)
         })
+
         emit_telemetry_counter([:foundation, :event_store, :query_errors], %{
           query_type: extract_query_type(query_map)
         })
     end
-    
+
     result
   end
 
@@ -151,25 +161,27 @@ defmodule ElixirScope.Foundation.Services.EventStore do
     start_time = System.monotonic_time()
     result = GenServer.call(__MODULE__, {:get_by_correlation, correlation_id})
     end_time = System.monotonic_time()
-    
+
     duration = end_time - start_time
-    
+
     case result do
       {:ok, events} ->
         emit_telemetry_gauge([:foundation, :event_store, :correlation_query_duration], duration, %{
           result_count: length(events)
         })
+
         emit_telemetry_counter([:foundation, :event_store, :correlation_queries], %{
           result_count: length(events)
         })
-        
+
       {:error, _} ->
         emit_telemetry_gauge([:foundation, :event_store, :correlation_query_duration], duration, %{
           result: :error
         })
+
         emit_telemetry_counter([:foundation, :event_store, :correlation_query_errors], %{})
     end
-    
+
     result
   end
 
@@ -178,43 +190,55 @@ defmodule ElixirScope.Foundation.Services.EventStore do
     start_time = System.monotonic_time()
     result = GenServer.call(__MODULE__, {:prune_before, timestamp})
     end_time = System.monotonic_time()
-    
+
     duration = end_time - start_time
-    
+
     case result do
       {:ok, pruned_count} ->
         emit_telemetry_gauge([:foundation, :event_store, :prune_duration], duration, %{
           pruned_count: pruned_count
         })
+
         emit_telemetry_counter([:foundation, :event_store, :events_pruned], %{
           pruned_count: pruned_count
         })
-        
+
       {:error, _} ->
         emit_telemetry_gauge([:foundation, :event_store, :prune_duration], duration, %{
           result: :error
         })
+
         emit_telemetry_counter([:foundation, :event_store, :prune_errors], %{})
     end
-    
+
     result
   end
 
   @impl EventStoreContract
   def stats do
     result = GenServer.call(__MODULE__, :get_stats)
-    
+
     # Report current stats as telemetry
     case result do
       {:ok, stats} ->
-        emit_telemetry_gauge([:foundation, :event_store, :current_event_count], stats.current_event_count, %{})
-        emit_telemetry_gauge([:foundation, :event_store, :memory_usage], stats.memory_usage_estimate, %{})
+        emit_telemetry_gauge(
+          [:foundation, :event_store, :current_event_count],
+          stats.current_event_count,
+          %{}
+        )
+
+        emit_telemetry_gauge(
+          [:foundation, :event_store, :memory_usage],
+          stats.memory_usage_estimate,
+          %{}
+        )
+
         emit_telemetry_gauge([:foundation, :event_store, :uptime], stats.uptime_ms, %{})
-        
+
       {:error, _} ->
         emit_telemetry_counter([:foundation, :event_store, :stats_errors], %{})
     end
-    
+
     result
   end
 
@@ -241,17 +265,22 @@ defmodule ElixirScope.Foundation.Services.EventStore do
   @spec do_initialize(keyword()) :: :ok | {:error, Error.t()}
   def do_initialize(opts) do
     case start_link(opts) do
-      {:ok, _pid} -> :ok
-      {:error, {:already_started, _pid}} -> :ok
-      {:error, reason} -> 
-        {:error, Error.new(
-          error_type: :service_initialization_failed,
-          message: "Failed to initialize event store service",
-          context: %{reason: reason},
-          category: :events,
-          subcategory: :startup,
-          severity: :high
-        )}
+      {:ok, _pid} ->
+        :ok
+
+      {:error, {:already_started, _pid}} ->
+        :ok
+
+      {:error, reason} ->
+        {:error,
+         Error.new(
+           error_type: :service_initialization_failed,
+           message: "Failed to initialize event store service",
+           context: %{reason: reason},
+           category: :events,
+           subcategory: :startup,
+           severity: :high
+         )}
     end
   end
 
@@ -350,7 +379,11 @@ defmodule ElixirScope.Foundation.Services.EventStore do
   end
 
   @impl GenServer
-  def handle_call({:get_by_correlation, correlation_id}, _from, %{correlation_index: index, events: events} = state) do
+  def handle_call(
+        {:get_by_correlation, correlation_id},
+        _from,
+        %{correlation_index: index, events: events} = state
+      ) do
     case Map.get(index, correlation_id) do
       nil ->
         {:reply, {:ok, []}, state}
@@ -381,6 +414,7 @@ defmodule ElixirScope.Foundation.Services.EventStore do
   @impl GenServer
   def handle_call(:get_status, _from, %{metrics: metrics} = state) do
     current_time = System.monotonic_time(:millisecond)
+
     status = %{
       status: :running,
       uptime_ms: current_time - metrics.start_time,
@@ -389,6 +423,7 @@ defmodule ElixirScope.Foundation.Services.EventStore do
       current_event_count: map_size(state.events),
       last_prune: metrics.last_prune
     }
+
     {:reply, {:ok, status}, state}
   end
 
@@ -451,7 +486,9 @@ defmodule ElixirScope.Foundation.Services.EventStore do
     oldest_event_ids = state.event_sequence |> Enum.reverse() |> Enum.take(prune_count)
 
     new_events = Map.drop(state.events, oldest_event_ids)
-    new_sequence = state.event_sequence |> Enum.reverse() |> Enum.drop(prune_count) |> Enum.reverse()
+
+    new_sequence =
+      state.event_sequence |> Enum.reverse() |> Enum.drop(prune_count) |> Enum.reverse()
 
     # Update correlation index
     new_correlation_index = remove_from_correlation_index(state.correlation_index, oldest_event_ids)
@@ -519,16 +556,32 @@ defmodule ElixirScope.Foundation.Services.EventStore do
   defp apply_query_filters(events, query) do
     Enum.filter(events, fn event ->
       Enum.all?(query, fn
-        {:event_type, type} -> event.event_type == type
-        {:node, node} -> event.node == node
-        {:pid, pid} -> event.pid == pid
-        {:correlation_id, corr_id} -> event.correlation_id == corr_id
+        {:event_type, type} ->
+          event.event_type == type
+
+        {:node, node} ->
+          event.node == node
+
+        {:pid, pid} ->
+          event.pid == pid
+
+        {:correlation_id, corr_id} ->
+          event.correlation_id == corr_id
+
         {:time_range, {start_time, end_time}} ->
           event.timestamp >= start_time and event.timestamp <= end_time
-        {:limit, _} -> true
-        {:offset, _} -> true
-        {:order_by, _} -> true
-        _ -> true
+
+        {:limit, _} ->
+          true
+
+        {:offset, _} ->
+          true
+
+        {:order_by, _} ->
+          true
+
+        _ ->
+          true
       end)
     end)
   end
@@ -580,6 +633,7 @@ defmodule ElixirScope.Foundation.Services.EventStore do
     # Rough estimate based on average event size
     if map_size(events) > 0 do
       sample_events = events |> Map.values() |> Enum.take(10)
+
       avg_size =
         sample_events
         |> Enum.map(&:erlang.external_size/1)
@@ -630,39 +684,42 @@ defmodule ElixirScope.Foundation.Services.EventStore do
   end
 
   defp create_service_error(message) do
-    error = Error.new(
-      error_type: :service_unavailable,
-      message: message,
-      category: :system,
-      subcategory: :initialization,
-      severity: :high
-    )
+    error =
+      Error.new(
+        error_type: :service_unavailable,
+        message: message,
+        category: :system,
+        subcategory: :initialization,
+        severity: :high
+      )
 
     {:error, error}
   end
 
   defp create_not_found_error(message, context) do
-    error = Error.new(
-      error_type: :not_found,
-      message: message,
-      context: context,
-      category: :data,
-      subcategory: :access,
-      severity: :low
-    )
+    error =
+      Error.new(
+        error_type: :not_found,
+        message: message,
+        context: context,
+        category: :data,
+        subcategory: :access,
+        severity: :low
+      )
 
     {:error, error}
   end
 
   defp create_query_error(message, context) do
-    error = Error.new(
-      error_type: :query_failed,
-      message: message,
-      context: context,
-      category: :data,
-      subcategory: :runtime,
-      severity: :medium
-    )
+    error =
+      Error.new(
+        error_type: :query_failed,
+        message: message,
+        context: context,
+        category: :data,
+        subcategory: :runtime,
+        severity: :medium
+      )
 
     {:error, error}
   end

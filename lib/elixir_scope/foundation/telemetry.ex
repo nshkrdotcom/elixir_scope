@@ -67,7 +67,7 @@ defmodule ElixirScope.Foundation.Telemetry do
       ...> )
       :operation_result
   """
-  @spec measure(event_name(), metadata(), (() -> result)) :: result when result: var
+  @spec measure(event_name(), metadata(), (-> result)) :: result when result: var
   defdelegate measure(event_name, metadata, fun), to: TelemetryService
 
   @doc """
@@ -164,7 +164,7 @@ defmodule ElixirScope.Foundation.Telemetry do
       ...> )
       :function_result
   """
-  @spec time_function(module(), atom(), (() -> result)) :: result when result: var
+  @spec time_function(module(), atom(), (-> result)) :: result when result: var
   def time_function(module, function, fun) when is_atom(module) and is_atom(function) do
     event_name = [:elixir_scope, :function, :execution]
     metadata = %{module: module, function: function}

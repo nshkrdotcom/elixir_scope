@@ -38,7 +38,8 @@ defmodule ElixirScope.Foundation.TestHelpers do
   @doc """
   Creates a test event with known data.
   """
-  @spec create_test_event(keyword()) :: {:ok, ElixirScope.Foundation.Types.Event.t()} | {:error, Error.t()}
+  @spec create_test_event(keyword()) ::
+          {:ok, ElixirScope.Foundation.Types.Event.t()} | {:error, Error.t()}
   def create_test_event(overrides \\ []) do
     base_data = %{
       test_field: "test_value",
@@ -105,10 +106,13 @@ defmodule ElixirScope.Foundation.TestHelpers do
       ElixirScope.Foundation.Services.EventStore,
       ElixirScope.Foundation.Services.TelemetryService
     ]
-    
-    wait_for(fn ->
-      Enum.all?(services, fn service -> GenServer.whereis(service) != nil end)
-    end, timeout_ms)
+
+    wait_for(
+      fn ->
+        Enum.all?(services, fn service -> GenServer.whereis(service) != nil end)
+      end,
+      timeout_ms
+    )
   end
 
   @doc """
@@ -118,12 +122,14 @@ defmodule ElixirScope.Foundation.TestHelpers do
   def wait_for_service_restart(service_module, timeout_ms \\ 5000) do
     # First ensure it's stopped
     case GenServer.whereis(service_module) do
-      nil -> :ok
-      pid -> 
+      nil ->
+        :ok
+
+      pid ->
         GenServer.stop(pid, :normal, 1000)
         wait_for(fn -> GenServer.whereis(service_module) == nil end, 1000)
     end
-    
+
     # Then wait for it to restart
     wait_for_service_availability(service_module, timeout_ms)
   end
@@ -170,7 +176,8 @@ defmodule ElixirScope.Foundation.TestHelpers do
 
   ## Private Functions
 
-  @spec deep_merge_config(ElixirScope.Foundation.Types.Config.t(), map()) :: ElixirScope.Foundation.Types.Config.t()
+  @spec deep_merge_config(ElixirScope.Foundation.Types.Config.t(), map()) ::
+          ElixirScope.Foundation.Types.Config.t()
   defp deep_merge_config(original, overrides) when is_map(original) and is_map(overrides) do
     Map.merge(original, overrides, fn _key, orig_val, override_val ->
       if is_map(orig_val) and is_map(override_val) do

@@ -19,7 +19,7 @@ defmodule ElixirScope.Foundation.Types.EventTest do
       fields = [
         event_id: 123,
         event_type: :test,
-        timestamp: 456789,
+        timestamp: 456_789,
         data: %{key: "value"}
       ]
 
@@ -27,7 +27,7 @@ defmodule ElixirScope.Foundation.Types.EventTest do
 
       assert event.event_id == 123
       assert event.event_type == :test
-      assert event.timestamp == 456789
+      assert event.timestamp == 456_789
       assert event.data == %{key: "value"}
     end
   end

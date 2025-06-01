@@ -54,11 +54,12 @@ defmodule ElixirScope.Foundation do
     with {:ok, config_status} <- Config.status(),
          {:ok, events_status} <- Events.status(),
          {:ok, telemetry_status} <- Telemetry.status() do
-      {:ok, %{
-        config: config_status,
-        events: events_status,
-        telemetry: telemetry_status
-      }}
+      {:ok,
+       %{
+         config: config_status,
+         events: events_status,
+         telemetry: telemetry_status
+       }}
     else
       {:error, _} = error -> error
     end
@@ -106,8 +107,10 @@ defmodule ElixirScope.Foundation do
     # Stop services in reverse order
     # Let the supervision tree handle the actual shutdown
     case Process.whereis(ElixirScope.Foundation.Supervisor) do
-      nil -> :ok
-      pid -> 
+      nil ->
+        :ok
+
+      pid ->
         Supervisor.stop(pid, :normal)
         :ok
     end
@@ -140,6 +143,7 @@ defmodule ElixirScope.Foundation do
           elixir_version: System.version(),
           otp_release: System.otp_release()
         }
+
         {:ok, health_info}
 
       {:error, _} = error ->
@@ -150,7 +154,7 @@ defmodule ElixirScope.Foundation do
   ## Private Functions
 
   defp determine_overall_health(service_status) do
-    all_running = 
+    all_running =
       service_status
       |> Map.values()
       |> Enum.all?(fn status -> Map.get(status, :status) == :running end)

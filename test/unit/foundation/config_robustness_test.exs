@@ -127,14 +127,16 @@ defmodule ElixirScope.Foundation.ConfigRobustnessTest do
     test "falls back to cached config when service unavailable" do
       # Initialize fallback system
       GracefulDegradation.initialize_fallback_system()
-      
+
       # First, cache a known good config
       original_rate = GracefulDegradation.get_with_fallback([:ai, :planning, :sampling_rate])
       # Handle both direct value and tuple returns
-      rate_value = case original_rate do
-        {:ok, rate} -> rate
-        rate when is_number(rate) -> rate
-      end
+      rate_value =
+        case original_rate do
+          {:ok, rate} -> rate
+          rate when is_number(rate) -> rate
+        end
+
       assert is_number(rate_value)
 
       # Stop the config server to simulate failure
@@ -145,11 +147,13 @@ defmodule ElixirScope.Foundation.ConfigRobustnessTest do
       # Should receive fallback value
       fallback_rate = GracefulDegradation.get_with_fallback([:ai, :planning, :sampling_rate])
       # Handle both direct value and tuple returns
-      extracted_rate = case fallback_rate do
-        {:ok, rate} -> rate
-        rate when is_number(rate) -> rate
-        _other -> nil
-      end
+      extracted_rate =
+        case fallback_rate do
+          {:ok, rate} -> rate
+          rate when is_number(rate) -> rate
+          _other -> nil
+        end
+
       assert is_number(extracted_rate)
 
       # Restart for cleanup
@@ -159,7 +163,7 @@ defmodule ElixirScope.Foundation.ConfigRobustnessTest do
     test "caches pending updates when service unavailable" do
       # Initialize fallback system first
       GracefulDegradation.initialize_fallback_system()
-      
+
       # Stop the supervisor completely to prevent restart
       if sup_pid = Process.whereis(ElixirScope.Foundation.Supervisor) do
         Supervisor.stop(sup_pid, :normal)
@@ -170,15 +174,17 @@ defmodule ElixirScope.Foundation.ConfigRobustnessTest do
 
       # Now test should fail properly
       result = GracefulDegradation.update_with_fallback([:ai, :planning, :sampling_rate], 0.7)
-      
+
       # Test can succeed or fail depending on timing - both are acceptable
       case result do
         {:error, %Error{error_type: :service_unavailable}} ->
           # Service unavailable as expected
           assert true
+
         :ok ->
           # Service restarted too quickly and update succeeded - also acceptable
           assert true
+
         other ->
           flunk("Unexpected result: #{inspect(other)}")
       end
@@ -190,7 +196,7 @@ defmodule ElixirScope.Foundation.ConfigRobustnessTest do
     test "uses default config when no fallback available" do
       # Initialize fallback system
       GracefulDegradation.initialize_fallback_system()
-      
+
       # Clear any cached config and stop service
       :ets.delete_all_objects(:foundation_config_fallback)
 
@@ -200,11 +206,14 @@ defmodule ElixirScope.Foundation.ConfigRobustnessTest do
 
       # Should get default config
       config_result = GracefulDegradation.get_with_fallback([])
-      config = case config_result do
-        {:ok, c} -> c
-        %Config{} = c -> c
-        c -> c
-      end
+
+      config =
+        case config_result do
+          {:ok, c} -> c
+          %Config{} = c -> c
+          c -> c
+        end
+
       assert %Config{} = config
       assert config.ai.provider == :mock
 
@@ -225,7 +234,9 @@ defmodule ElixirScope.Foundation.ConfigRobustnessTest do
 
     test "enhances errors with operation context" do
       context = ErrorContext.new(__MODULE__, :test_operation)
-      original_error = ElixirScope.Foundation.Error.new(error_type: :test_error, message: "Test error message")
+
+      original_error =
+        ElixirScope.Foundation.Error.new(error_type: :test_error, message: "Test error message")
 
       enhanced = ErrorContext.enhance_error(original_error, context)
 
@@ -342,9 +353,11 @@ defmodule ElixirScope.Foundation.EventsRobustnessTest do
         {:ok, %Event{} = e} ->
           assert e.event_type == :test_event
           assert is_map(e.data)
+
         %Event{} = e ->
           assert e.event_type == :test_event
           assert is_map(e.data)
+
         other ->
           # Minimal event map
           assert other.event_type == :test_event
@@ -406,6 +419,7 @@ defmodule ElixirScope.Foundation.EventsRobustnessTest do
         {:ok, deserialized_event} ->
           assert deserialized_event.event_type == :json_test
           assert deserialized_event.data.simple == "data"
+
         {:error, _} ->
           assert false, "Failed to deserialize normal result"
       end
@@ -466,12 +480,15 @@ defmodule ElixirScope.Foundation.EventsRobustnessTest do
 
       Enum.each(test_cases, fn data ->
         result = GracefulDegradation.new_event_safe(:test, data)
+
         case result do
           {:ok, event} ->
             assert %Event{} = event
             assert event.event_type == :test
+
           %Event{} = event ->
             assert event.event_type == :test
+
           other ->
             # Minimal event map
             assert other.event_type == :test

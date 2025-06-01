@@ -154,6 +154,7 @@ defmodule ElixirScope.Foundation.Logic.ConfigLogic do
 
   defp deep_merge(left, right) when is_map(left) and is_list(right) do
     right_map = Enum.into(right, %{})
+
     Map.merge(left, right_map, fn _key, left_val, right_val ->
       deep_merge(left_val, right_val)
     end)
@@ -176,10 +177,13 @@ defmodule ElixirScope.Foundation.Logic.ConfigLogic do
       current_path = path ++ [key]
 
       cond do
-        old_val == new_val -> acc
+        old_val == new_val ->
+          acc
+
         is_map(old_val) and is_map(new_val) ->
           nested_diff = create_diff(old_val, new_val, current_path)
           if map_size(nested_diff) > 0, do: Map.put(acc, key, nested_diff), else: acc
+
         true ->
           Map.put(acc, key, %{old: old_val, new: new_val, path: current_path})
       end
@@ -195,14 +199,15 @@ defmodule ElixirScope.Foundation.Logic.ConfigLogic do
   end
 
   defp create_error(error_type, message, context) do
-    error = Error.new(
-      error_type: error_type,
-      message: message,
-      context: context,
-      category: :config,
-      subcategory: :runtime,
-      severity: :medium
-    )
+    error =
+      Error.new(
+        error_type: error_type,
+        message: message,
+        context: context,
+        category: :config,
+        subcategory: :runtime,
+        severity: :medium
+      )
 
     {:error, error}
   end

@@ -145,7 +145,7 @@ defmodule ElixirScope.Foundation.Config.GracefulDegradation do
         cold: %{enable: false}
       },
       interface: %{query_timeout: 1000, max_results: 100, enable_streaming: false},
-      dev: %{debug_mode: false, verbose_logging: false, performance_monitoring: false},
+      dev: %{debug_mode: false, verbose_logging: false, performance_monitoring: false}
     }
   end
 end
@@ -184,11 +184,12 @@ defmodule ElixirScope.Foundation.Events.GracefulDegradation do
     IO.puts("📥 Input event: #{inspect(event_or_tuple, limit: :infinity)}")
 
     # Handle both Event structs and {:ok, Event} tuples
-    event = case event_or_tuple do
-      {:ok, %ElixirScope.Foundation.Types.Event{} = e} -> e
-      %ElixirScope.Foundation.Types.Event{} = e -> e
-      other -> other
-    end
+    event =
+      case event_or_tuple do
+        {:ok, %ElixirScope.Foundation.Types.Event{} = e} -> e
+        %ElixirScope.Foundation.Types.Event{} = e -> e
+        other -> other
+      end
 
     result =
       case Events.serialize(event) do
@@ -334,6 +335,7 @@ defmodule ElixirScope.Foundation.Events.GracefulDegradation do
   defp reconstruct_event_from_map(map) do
     # Attempt to reconstruct event from map
     alias ElixirScope.Foundation.Types.Event
+
     %Event{
       event_id: Map.get(map, "event_id", Utils.generate_id()),
       event_type: String.to_atom(Map.get(map, "event_type", "unknown")),
@@ -349,6 +351,7 @@ defmodule ElixirScope.Foundation.Events.GracefulDegradation do
 
   defp create_error_event(binary) do
     alias ElixirScope.Foundation.Types.Event
+
     %Event{
       event_id: Utils.generate_id(),
       event_type: :deserialization_error,

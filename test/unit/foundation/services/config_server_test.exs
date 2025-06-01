@@ -7,11 +7,12 @@ defmodule ElixirScope.Foundation.Services.ConfigServerTest do
   setup do
     # Start ConfigServer for testing, handle already started case
     result = ConfigServer.start_link()
-    
-    pid = case result do
-      {:ok, pid} -> pid
-      {:error, {:already_started, pid}} -> pid
-    end
+
+    pid =
+      case result do
+        {:ok, pid} -> pid
+        {:error, {:already_started, pid}} -> pid
+      end
 
     on_exit(fn ->
       if Process.alive?(pid) do
@@ -89,20 +90,23 @@ defmodule ElixirScope.Foundation.Services.ConfigServerTest do
       # Start a process that subscribes and then dies
       test_pid = self()
 
-      subscriber_pid = spawn(fn ->
-        :ok = ConfigServer.subscribe()
-        send(test_pid, :subscribed)
-        receive do
-          :die -> exit(:normal)
-        end
-      end)
+      subscriber_pid =
+        spawn(fn ->
+          :ok = ConfigServer.subscribe()
+          send(test_pid, :subscribed)
+
+          receive do
+            :die -> exit(:normal)
+          end
+        end)
 
       # Wait for subscription
       assert_receive :subscribed, 1000
 
       # Kill the subscriber
       send(subscriber_pid, :die)
-      Process.sleep(10)  # Give time for cleanup
+      # Give time for cleanup
+      Process.sleep(10)
 
       # Update configuration - should not crash the server
       assert :ok = ConfigServer.update([:dev, :debug_mode], true)
@@ -119,24 +123,26 @@ defmodule ElixirScope.Foundation.Services.ConfigServerTest do
     test "returns error when server not started" do
       # Stop the entire supervisor tree to prevent immediate restart
       supervisor_pid = Process.whereis(ElixirScope.Foundation.Supervisor)
+
       if supervisor_pid do
         Supervisor.stop(supervisor_pid, :normal)
         # Wait for shutdown to complete
         :timer.sleep(200)
       end
-      
+
       # Now ConfigServer should be unavailable
       case ConfigServer.available?() do
         true ->
           # Service may have restarted through another supervision tree
           # This is acceptable behavior in a supervised system
           assert true
+
         false ->
           # Service is down as expected, test the error case
           assert {:error, error} = ConfigServer.get()
           assert error.error_type == :service_unavailable
       end
-      
+
       # Restart for cleanup
       ElixirScope.Foundation.TestHelpers.ensure_config_available()
     end

@@ -20,14 +20,22 @@ defmodule ElixirScope.Foundation.Validation.ConfigValidatorTest do
     end
 
     test "rejects negative ring buffer size" do
-      config = Config.new(capture: %{ring_buffer: %{size: -1, max_events: 1000, overflow_strategy: :drop_oldest}})
+      config =
+        Config.new(
+          capture: %{ring_buffer: %{size: -1, max_events: 1000, overflow_strategy: :drop_oldest}}
+        )
 
       assert {:error, error} = ConfigValidator.validate(config)
       assert error.error_type == :validation_failed
     end
 
     test "rejects invalid sampling rate" do
-      config = Config.new(ai: %{planning: %{sampling_rate: 1.5, performance_target: 0.01, default_strategy: :balanced}})
+      config =
+        Config.new(
+          ai: %{
+            planning: %{sampling_rate: 1.5, performance_target: 0.01, default_strategy: :balanced}
+          }
+        )
 
       assert {:error, error} = ConfigValidator.validate(config)
       assert error.error_type == :range_error

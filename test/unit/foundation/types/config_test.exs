@@ -39,15 +39,17 @@ defmodule ElixirScope.Foundation.Types.ConfigTest do
       updated = put_in(config, [:dev, :debug_mode], true)
 
       assert updated.dev.debug_mode == true
-      assert config.dev.debug_mode == false  # Original unchanged
+      # Original unchanged
+      assert config.dev.debug_mode == false
     end
 
     test "supports get_and_update operation" do
       config = Config.new()
 
-      {old_value, new_config} = get_and_update_in(config, [:dev, :debug_mode], fn
-        current -> {current, not current}
-      end)
+      {old_value, new_config} =
+        get_and_update_in(config, [:dev, :debug_mode], fn
+          current -> {current, not current}
+        end)
 
       assert old_value == false
       assert new_config.dev.debug_mode == true

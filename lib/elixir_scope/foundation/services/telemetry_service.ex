@@ -23,8 +23,10 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
   @default_config %{
     enable_vm_metrics: true,
     enable_process_metrics: true,
-    metric_retention_ms: 300_000,  # 5 minutes
-    cleanup_interval: 60_000       # 1 minute
+    # 5 minutes
+    metric_retention_ms: 300_000,
+    # 1 minute
+    cleanup_interval: 60_000
   }
 
   ## Public API (Telemetry Behaviour Implementation)
@@ -32,7 +34,8 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
   @impl Telemetry
   def execute(event_name, measurements, metadata) when is_list(event_name) do
     case GenServer.whereis(__MODULE__) do
-      nil -> :ok  # Fail silently for telemetry
+      # Fail silently for telemetry
+      nil -> :ok
       _pid -> GenServer.cast(__MODULE__, {:execute_event, event_name, measurements, metadata})
     end
   end
@@ -100,7 +103,8 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
   @impl Telemetry
   def detach_handlers(event_names) when is_list(event_names) do
     case GenServer.whereis(__MODULE__) do
-      nil -> :ok  # Fail silently
+      # Fail silently
+      nil -> :ok
       _pid -> GenServer.cast(__MODULE__, {:detach_handlers, event_names})
     end
   end
@@ -189,7 +193,7 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
   def handle_call(:get_metrics, _from, %{metrics: metrics} = state) do
     # Transform flat event names into nested structure for API compatibility
     nested_metrics = transform_to_nested_structure(metrics)
-    
+
     # Add current timestamp to metrics
     timestamped_metrics = Map.put(nested_metrics, :retrieved_at, System.monotonic_time())
 
@@ -204,6 +208,7 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
       handlers_count: map_size(state.handlers),
       config: state.config
     }
+
     {:reply, {:ok, status}, state}
   end
 
@@ -268,12 +273,15 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
       :gauge, _old_val, new_val ->
         # For gauges, always use the latest value (no averaging)
         new_val
+
       :counter, old_val, new_val when is_number(old_val) and is_number(new_val) ->
         # For counters, accumulate the values
         old_val + new_val
+
       _key, old_val, new_val when is_number(old_val) and is_number(new_val) ->
         # For other numeric values, keep running average (backwards compatibility)
         (old_val + new_val) / 2
+
       _key, _old_val, new_val ->
         # For non-numeric, keep the new value
         new_val
@@ -282,7 +290,9 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
 
   defp execute_handlers(event_name, measurements, metadata, handlers) do
     case Map.get(handlers, event_name) do
-      nil -> :ok
+      nil ->
+        :ok
+
       handler_fn when is_function(handler_fn) ->
         try do
           handler_fn.(event_name, measurements, metadata)
@@ -296,7 +306,9 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
   defp create_default_handler(event_name) do
     fn ^event_name, measurements, metadata ->
       Logger.debug("Telemetry event: #{inspect(event_name)}",
-        measurements: measurements, metadata: metadata)
+        measurements: measurements,
+        metadata: metadata
+      )
     end
   end
 
@@ -331,13 +343,14 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
   end
 
   defp create_service_error(message) do
-    error = Error.new(
-      error_type: :service_unavailable,
-      message: message,
-      category: :system,
-      subcategory: :initialization,
-      severity: :medium
-    )
+    error =
+      Error.new(
+        error_type: :service_unavailable,
+        message: message,
+        category: :system,
+        subcategory: :initialization,
+        severity: :medium
+      )
 
     {:error, error}
   end
@@ -347,17 +360,22 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
   @spec initialize(keyword()) :: :ok | {:error, Error.t()}
   def initialize(opts) do
     case start_link(opts) do
-      {:ok, _pid} -> :ok
-      {:error, {:already_started, _pid}} -> :ok
-      {:error, reason} -> 
-        {:error, Error.new(
-          error_type: :service_initialization_failed,
-          message: "Failed to initialize telemetry service",
-          context: %{reason: reason},
-          category: :system,
-          subcategory: :startup,
-          severity: :high
-        )}
+      {:ok, _pid} ->
+        :ok
+
+      {:error, {:already_started, _pid}} ->
+        :ok
+
+      {:error, reason} ->
+        {:error,
+         Error.new(
+           error_type: :service_initialization_failed,
+           message: "Failed to initialize telemetry service",
+           context: %{reason: reason},
+           category: :system,
+           subcategory: :startup,
+           severity: :high
+         )}
     end
   end
 
@@ -370,39 +388,39 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
           foundation_map = Map.get(acc, :foundation, %{})
           updated_foundation = Map.put(foundation_map, :events_stored, metric_data.count || 0)
           Map.put(acc, :foundation, updated_foundation)
-        
+
         [:foundation, :config_updates] ->
           # Transform config_updates metric
           foundation_map = Map.get(acc, :foundation, %{})
           updated_foundation = Map.put(foundation_map, :config_updates, metric_data.count || 0)
           Map.put(acc, :foundation, updated_foundation)
-        
+
         [:foundation, :config_resets] ->
           # Transform config_resets metric
           foundation_map = Map.get(acc, :foundation, %{})
           updated_foundation = Map.put(foundation_map, :config_resets, metric_data.count || 0)
           Map.put(acc, :foundation, updated_foundation)
-        
+
         [:foundation, :config_operations] ->
           # Transform general config operations metric
           foundation_map = Map.get(acc, :foundation, %{})
           updated_foundation = Map.put(foundation_map, :config_operations, metric_data.count || 0)
           Map.put(acc, :foundation, updated_foundation)
-        
+
         [:foundation | rest] ->
           # Handle other foundation metrics
           nested_path = [:foundation] ++ rest
           put_nested_value(acc, nested_path, metric_data)
-        
+
         [first | rest] when rest != [] ->
           # Handle other nested metrics
           nested_path = [first] ++ rest
           put_nested_value(acc, nested_path, metric_data)
-        
+
         [single] ->
           # Single-level metrics
           Map.put(acc, single, metric_data)
-        
+
         _ ->
           acc
       end

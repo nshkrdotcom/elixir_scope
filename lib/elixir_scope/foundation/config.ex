@@ -203,20 +203,18 @@ defmodule ElixirScope.Foundation.Config do
     if path in updatable_paths() do
       update(path, value)
     else
-      {:error, Error.new(
-        error_type: :config_update_forbidden,
-        message: "Configuration path cannot be updated at runtime",
-        context: %{path: path, allowed_paths: updatable_paths()},
-        category: :config,
-        subcategory: :validation,
-        severity: :medium
-      )}
+      {:error,
+       Error.new(
+         error_type: :config_update_forbidden,
+         message: "Configuration path cannot be updated at runtime",
+         context: %{path: path, allowed_paths: updatable_paths()},
+         category: :config,
+         subcategory: :validation,
+         severity: :medium
+       )}
     end
   end
 end
-
-
-
 
 # defmodule ElixirScope.Foundation.Config do
 #   @moduledoc """
@@ -488,7 +486,6 @@ end
 #   end
 # end
 
-
 #   @impl GenServer
 #   def handle_call(:get_config, _from, config) do
 #     {:reply, config, config}
@@ -517,7 +514,6 @@ end
 #     value = get_in(config, path)
 #     {:reply, value, config}
 #   end
-
 
 # @impl GenServer
 # def handle_call({:update_config, path, value}, _from, config) do
