@@ -299,7 +299,7 @@ defmodule ElixirScope.Foundation.Utils do
       iex> result = ElixirScope.Foundation.Utils.retry(fn -> {:error, :failed} end, max_attempts: 2)
       {:error, :max_attempts_exceeded}
   """
-  @spec retry((() -> term()), keyword()) :: {:ok, term()} | {:error, term()}
+  @spec retry((() -> any()), Keyword.t()) :: {:error, :max_attempts_exceeded} | {:ok, any()}
   def retry(fun, opts \\ []) when is_function(fun, 0) do
     max_attempts = Keyword.get(opts, :max_attempts, 3)
     base_delay = Keyword.get(opts, :base_delay, 100)
@@ -464,7 +464,13 @@ defmodule ElixirScope.Foundation.Utils do
       iex> Map.has_key?(stats, :message_queue_len)
       true
   """
-  @spec process_stats() :: map()
+  @spec process_stats() :: %{
+          garbage_collection: any(),
+          memory: any(),
+          message_queue_len: any(),
+          reductions: any(),
+          status: any()
+        }
   def process_stats do
     info = Process.info(self())
     %{
@@ -487,7 +493,13 @@ defmodule ElixirScope.Foundation.Utils do
       iex> Map.has_key?(stats, :memory)
       true
   """
-  @spec system_stats() :: map()
+  @spec system_stats() :: %{
+          atom_count: any(),
+          memory: [{:atom | :atom_used | :binary | :code | :ets | :processes | :processes_used | :system | :total, non_neg_integer()}, ...],
+          process_count: non_neg_integer(),
+          scheduler_count: pos_integer(),
+          scheduler_online: pos_integer()
+        }
   def system_stats do
     %{
       process_count: :erlang.system_info(:process_count),

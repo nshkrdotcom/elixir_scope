@@ -36,7 +36,17 @@ defmodule ElixirScope.Foundation.Types.Event do
   @doc """
   Create a new empty event structure.
   """
-  @spec new() :: t()
+  @spec new() :: %__MODULE__{
+          event_id: nil,
+          event_type: nil,
+          timestamp: nil,
+          wall_time: nil,
+          node: nil,
+          pid: nil,
+          correlation_id: nil,
+          parent_id: nil,
+          data: nil
+        }
   def new, do: %__MODULE__{}
 
   @doc """

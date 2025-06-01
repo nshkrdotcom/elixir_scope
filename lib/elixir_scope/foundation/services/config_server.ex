@@ -143,7 +143,7 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
         {:ok, state}
 
       {:error, error} ->
-        Logger.error("Failed to initialize configuration: #{ElixirScope.Foundation.Error.to_string(error)}")
+        Logger.error("Failed to initialize configuration: #{inspect(error)}")
         {:stop, {:config_validation_failed, error}}
     end
   end
@@ -288,10 +288,10 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
             case EventStore.store(event) do
               {:ok, _id} -> :ok
               {:error, error} ->
-                Logger.warning("Failed to emit config event: #{ElixirScope.Foundation.Error.to_string(error)}")
+                Logger.warning("Failed to emit config event: #{inspect(error)}")
             end
           {:error, error} ->
-            Logger.warning("Failed to create config event: #{ElixirScope.Foundation.Error.to_string(error)}")
+            Logger.warning("Failed to create config event: #{inspect(error)}")
         end
       rescue
         error ->
@@ -309,8 +309,6 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
             TelemetryService.emit_counter([:foundation, :config_updates], metadata)
           :config_reset ->
             TelemetryService.emit_counter([:foundation, :config_resets], metadata)
-          _ ->
-            TelemetryService.emit_counter([:foundation, :config_operations], Map.put(metadata, :operation, operation_type))
         end
       rescue
         error ->

@@ -6,7 +6,7 @@ defmodule ElixirScope.Foundation.Config.GracefulDegradation do
   to maintain service availability during Config GenServer restarts.
   """
 
-  alias ElixirScope.Foundation.{Utils, Config, Error}
+  alias ElixirScope.Foundation.{Utils, Config}
   require Logger
 
   @fallback_table :foundation_config_fallback
@@ -32,7 +32,7 @@ defmodule ElixirScope.Foundation.Config.GracefulDegradation do
   """
   def get_with_fallback(path) do
     case Config.get(path) do
-      {:error, %Error{error_type: :service_unavailable}} ->
+      {:error, %ElixirScope.Foundation.Types.Error{error_type: :service_unavailable}} ->
         get_fallback_config(path)
 
       value ->
@@ -52,7 +52,7 @@ defmodule ElixirScope.Foundation.Config.GracefulDegradation do
         clear_cached_value(path)
         :ok
 
-      {:error, %Error{error_type: :service_unavailable}} = error ->
+      {:error, %ElixirScope.Foundation.Types.Error{error_type: :service_unavailable}} = error ->
         Logger.error("Config update failed: #{inspect(error)}")
         # Cache the pending update for retry when service returns
         cache_pending_update(path, value)
@@ -175,7 +175,7 @@ defmodule ElixirScope.Foundation.Events.GracefulDegradation do
     end
   end
 
-  @spec serialize_safe(ElixirScope.Foundation.Events.t()) :: binary()
+  @spec serialize_safe(ElixirScope.Foundation.Types.Event.t()) :: binary()
   @doc """
   Serialize event with JSON fallback for failed serialization.
   """

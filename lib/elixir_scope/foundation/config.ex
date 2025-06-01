@@ -118,7 +118,7 @@ defmodule ElixirScope.Foundation.Config do
         ...
       ]
   """
-  @spec updatable_paths() :: [config_path()]
+  @spec updatable_paths() :: [[atom(), ...], ...]
   defdelegate updatable_paths(), to: ConfigServer
 
   @doc """

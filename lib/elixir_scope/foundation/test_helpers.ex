@@ -38,7 +38,7 @@ defmodule ElixirScope.Foundation.TestHelpers do
   @doc """
   Creates a test event with known data.
   """
-  @spec create_test_event(keyword()) :: Events.t() | {:error, Error.t()}
+  @spec create_test_event(keyword()) :: {:ok, ElixirScope.Foundation.Types.Event.t()} | {:error, Error.t()}
   def create_test_event(overrides \\ []) do
     base_data = %{
       test_field: "test_value",
@@ -58,18 +58,23 @@ defmodule ElixirScope.Foundation.TestHelpers do
   """
   @spec with_test_config(map(), (-> any())) :: any()
   def with_test_config(config_overrides, test_fun) do
-    original_config = Config.get()
+    case Config.get() do
+      {:ok, original_config} ->
+        # Apply overrides
+        _test_config = deep_merge_config(original_config, config_overrides)
 
-    # Apply overrides
-    _test_config = deep_merge_config(original_config, config_overrides)
+        try do
+          # This would require additional Config API in a real implementation
+          test_fun.()
+        after
+          # Restore original config paths that were changed
+          # This is simplified - real implementation would track and restore changes
+          :ok
+        end
 
-    try do
-      # This would require additional Config API in a real implementation
-      test_fun.()
-    after
-      # Restore original config paths that were changed
-      # This is simplified - real implementation would track and restore changes
-      :ok
+      {:error, _error} ->
+        # If config service is not available, just run the test function
+        test_fun.()
     end
   end
 
@@ -165,7 +170,7 @@ defmodule ElixirScope.Foundation.TestHelpers do
 
   ## Private Functions
 
-  @spec deep_merge_config(Config.t(), map()) :: Config.t()
+  @spec deep_merge_config(ElixirScope.Foundation.Types.Config.t(), map()) :: ElixirScope.Foundation.Types.Config.t()
   defp deep_merge_config(original, overrides) when is_map(original) and is_map(overrides) do
     Map.merge(original, overrides, fn _key, orig_val, override_val ->
       if is_map(orig_val) and is_map(override_val) do

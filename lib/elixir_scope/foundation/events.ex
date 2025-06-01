@@ -13,7 +13,7 @@ defmodule ElixirScope.Foundation.Events do
 
   @type event_id :: Event.event_id()
   @type correlation_id :: Event.correlation_id()
-  @type event_query :: keyword()
+  @type event_query :: map()
 
   @doc """
   Initialize the event store service.
@@ -213,6 +213,10 @@ defmodule ElixirScope.Foundation.Events do
       {:ok, [%Event{}, ...]}
   """
   @spec query(event_query()) :: {:ok, [Event.t()]} | {:error, Error.t()}
+  def query(query_opts) when is_map(query_opts) do
+    EventStore.query(query_opts)
+  end
+
   def query(query_opts) when is_list(query_opts) do
     query_map = Map.new(query_opts)
     EventStore.query(query_map)
@@ -301,10 +305,10 @@ defmodule ElixirScope.Foundation.Events do
   """
   @spec get_time_range(integer(), integer()) :: {:ok, [Event.t()]} | {:error, Error.t()}
   def get_time_range(start_time, end_time) do
-    query([
+    query(%{
       time_range: {start_time, end_time},
       order_by: :timestamp
-    ])
+    })
   end
 
   @doc """
@@ -317,10 +321,10 @@ defmodule ElixirScope.Foundation.Events do
   """
   @spec get_recent(non_neg_integer()) :: {:ok, [Event.t()]} | {:error, Error.t()}
   def get_recent(limit \\ 100) do
-    query([
+    query(%{
       order_by: :timestamp,
       limit: limit
-    ])
+    })
   end
 end
 

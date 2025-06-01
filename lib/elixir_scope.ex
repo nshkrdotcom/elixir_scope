@@ -20,28 +20,29 @@ defmodule ElixirScope do
   @doc """
   Get the current status of all ElixirScope subsystems.
   """
-  @spec status() :: %{
-          config: :ok | {:error, Error.t()},
-          events: :ok | {:error, Error.t()},
-          telemetry: :ok | {:error, Error.t()},
-          uptime_ms: non_neg_integer()
-        }
+  @spec status() :: {:ok, %{
+          config: map(),
+          events: map(),
+          telemetry: map()
+        }} | {:error, Error.t()}
   def status do
-    Foundation.status()
+    case Foundation.status() do
+      {:ok, foundation_status} ->
+        {:ok, foundation_status}
+      {:error, _} = error -> error
+    end
   end
 
   @doc """
   Start ElixirScope (alias for initialize/1).
   """
-  @spec start_link(keyword()) :: {:ok, pid()} | {:error, Error.t()}
+  @spec start_link(keyword()) :: {:ok, pid()}
   def start_link(opts \\ []) do
     context = ErrorContext.new(__MODULE__, :start_link, metadata: %{opts: opts})
 
     ErrorContext.with_context(context, fn ->
-      case initialize(opts) do
-        :ok -> {:ok, self()}
-        {:error, _} = error -> error
-      end
+      :ok = initialize(opts)
+      {:ok, self()}
     end)
   end
 end

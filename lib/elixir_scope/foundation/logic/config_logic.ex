@@ -28,7 +28,7 @@ defmodule ElixirScope.Foundation.Logic.ConfigLogic do
   @doc """
   Get the list of paths that can be updated at runtime.
   """
-  @spec updatable_paths() :: [config_path()]
+  @spec updatable_paths() :: [[atom(), ...], ...]
   def updatable_paths, do: @updatable_paths
 
   @doc """

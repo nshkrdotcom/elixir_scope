@@ -124,7 +124,50 @@ defmodule ElixirScope.Foundation.Types.Config do
   @doc """
   Create a new configuration with default values.
   """
-  @spec new() :: t()
+  @spec new() :: %__MODULE__{
+          ai: %{
+            analysis: %{cache_ttl: 3600, max_file_size: 1_000_000, timeout: 30000},
+            api_key: nil,
+            model: <<_::40>>,
+            planning: %{
+              default_strategy: :balanced,
+              performance_target: float(),
+              sampling_rate: float()
+            },
+            provider: :mock
+          },
+          capture: %{
+            processing: %{batch_size: 100, flush_interval: 50, max_queue_size: 1000},
+            ring_buffer: %{
+              max_events: 1000,
+              num_buffers: :schedulers,
+              overflow_strategy: :drop_oldest,
+              size: 1024
+            },
+            vm_tracing: %{
+              enable_exit_trace: true,
+              enable_message_trace: false,
+              enable_spawn_trace: true,
+              trace_children: true
+            }
+          },
+          dev: %{
+            debug_mode: false,
+            performance_monitoring: true,
+            verbose_logging: false
+          },
+          interface: %{enable_streaming: true, max_results: 1000, query_timeout: 10000},
+          storage: %{
+            cold: %{enable: false},
+            hot: %{max_age_seconds: 3600, max_events: 100_000, prune_interval: 60000},
+            warm: %{
+              compression: :zstd,
+              enable: false,
+              max_size_mb: 100,
+              path: <<_::152>>
+            }
+          }
+        }
   def new, do: %__MODULE__{}
 
   @doc """
