@@ -2,7 +2,8 @@ defmodule ElixirScope.Test.Integration.EndToEndWorkflowsTest do
   use ExUnit.Case, async: false
   
   @moduletag :integration
-  @tag :integration @tag :slow
+  @tag :integration 
+  @tag :slow
   
   alias ElixirScope.Integration.EndToEndWorkflows
   alias ElixirScope.Test.Support.Helpers

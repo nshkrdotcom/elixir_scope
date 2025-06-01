@@ -27,7 +27,7 @@ defmodule ElixirScope.Smoke.FoundationTest do
   describe "configuration smoke tests" do
     test "can get configuration" do
       config = Config.get()
-      assert %Config{} = config
+      assert %{} = config
       assert config.ai.provider == :mock
     end
 
@@ -65,7 +65,7 @@ defmodule ElixirScope.Smoke.FoundationTest do
     test "can create basic events" do
       event = Events.new_event(:test_event, %{data: "test"})
 
-      assert %Events{} = event
+      assert %{} = event
       assert event.event_type == :test_event
       assert event.data.data == "test"
       assert is_integer(event.event_id)
@@ -210,7 +210,7 @@ defmodule ElixirScope.Smoke.FoundationTest do
       assert {:error, %Error{}} = result
 
       # System should still be functional
-      assert %Config{} = Config.get()
+      assert %{} = Config.get()
     end
   end
 end

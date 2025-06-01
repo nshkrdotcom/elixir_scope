@@ -2,7 +2,8 @@ defmodule ElixirScope.Test.Scenarios.HotspotIdentificationTest do
   use ExUnit.Case, async: false
   
   @moduletag :scenario
-  @tag :scenario @tag :performance
+  @tag :scenario 
+  @tag :performance
   
   alias ElixirScope.Scenarios.HotspotIdentification
   alias ElixirScope.Test.Support.Helpers

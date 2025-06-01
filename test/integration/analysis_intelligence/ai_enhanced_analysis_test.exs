@@ -2,7 +2,8 @@ defmodule ElixirScope.Test.Integration.AnalysisIntelligenceTest do
   use ExUnit.Case, async: false
   
   @moduletag :integration
-  @tag :integration @tag :ai
+  @tag :integration 
+  @tag :ai
   
   alias ElixirScope.Integration.AnalysisIntelligence
   alias ElixirScope.Test.Support.Helpers

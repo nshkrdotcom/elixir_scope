@@ -2,7 +2,8 @@ defmodule ElixirScope.Test.Scenarios.TeamCollaborationTest do
   use ExUnit.Case, async: false
   
   @moduletag :scenario
-  @tag :scenario @tag :collaboration
+  @tag :scenario 
+  @tag :collaboration
   
   alias ElixirScope.Scenarios.TeamCollaboration
   alias ElixirScope.Test.Support.Helpers

@@ -2,7 +2,8 @@ defmodule ElixirScope.Test.Performance.StressTest do
   use ExUnit.Case, async: true
   
   @moduletag :performance
-  @tag :stress @tag :slow
+  @tag :stress 
+  @tag :slow
   
   alias ElixirScope.Performance.Stress
   alias ElixirScope.Test.Support.Helpers

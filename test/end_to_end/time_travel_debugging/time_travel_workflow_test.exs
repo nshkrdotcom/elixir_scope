@@ -2,7 +2,9 @@ defmodule ElixirScope.Test.EndToEnd.TimeTravelDebuggingTest do
   use ExUnit.Case, async: false
   
   @moduletag :end_to_end
-  @tag :end_to_end @tag :time_travel @tag :debug
+  @tag :end_to_end 
+  @tag :time_travel 
+  @tag :debug
   
   alias ElixirScope.EndToEnd.TimeTravelDebugging
   alias ElixirScope.Test.Support.Helpers

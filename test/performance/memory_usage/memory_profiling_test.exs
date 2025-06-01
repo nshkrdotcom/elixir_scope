@@ -2,7 +2,8 @@ defmodule ElixirScope.Test.Performance.MemoryUsageTest do
   use ExUnit.Case, async: true
   
   @moduletag :performance
-  @tag :memory @tag :slow
+  @tag :memory
+  @tag :slow
   
   alias ElixirScope.Performance.MemoryUsage
   alias ElixirScope.Test.Support.Helpers

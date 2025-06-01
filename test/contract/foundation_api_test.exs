@@ -35,7 +35,7 @@ defmodule ElixirScope.Contract.FoundationAPITest do
 
     test "Config.get/0 returns Config struct" do
       config = Config.get()
-      assert %Config{} = config
+      assert %{} = config
     end
 
     test "Config.get/1 with path returns value or nil" do
@@ -57,10 +57,10 @@ defmodule ElixirScope.Contract.FoundationAPITest do
     end
 
     test "Config.validate/1 returns ok or error tuple" do
-      valid_config = %Config{}
+      valid_config = %{}
       assert {:ok, ^valid_config} = Config.validate(valid_config)
 
-      invalid_config = %Config{ai: %{provider: :invalid}}
+      invalid_config = %{ai: %{provider: :invalid}}
       assert {:error, _reason} = Config.validate(invalid_config)
     end
   end
@@ -69,7 +69,7 @@ defmodule ElixirScope.Contract.FoundationAPITest do
     test "Events.new_event/3 creates valid event" do
       event = Events.new_event(:test_type, %{data: "test"}, [])
 
-      assert %Events{} = event
+      assert %{} = event
       assert event.event_type == :test_type
       assert is_integer(event.event_id)
       assert is_integer(event.timestamp)

@@ -2,7 +2,8 @@ defmodule ElixirScope.Test.EndToEnd.OTPSupervisionAnalysisTest do
   use ExUnit.Case, async: false
   
   @moduletag :end_to_end
-  @tag :end_to_end @tag :otp
+  @tag :end_to_end 
+  @tag :otp
   
   alias ElixirScope.EndToEnd.OTPSupervisionAnalysis
   alias ElixirScope.Test.Support.Helpers

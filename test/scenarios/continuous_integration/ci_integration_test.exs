@@ -2,7 +2,8 @@ defmodule ElixirScope.Test.Scenarios.ContinuousIntegrationTest do
   use ExUnit.Case, async: false
   
   @moduletag :scenario
-  @tag :scenario @tag :ci
+  @tag :scenario 
+  @tag :ci
   
   alias ElixirScope.Scenarios.ContinuousIntegration
   alias ElixirScope.Test.Support.Helpers

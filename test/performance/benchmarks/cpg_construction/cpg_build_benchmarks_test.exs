@@ -2,7 +2,8 @@ defmodule ElixirScope.Test.Performance.CPGConstructionBenchmarkTest do
   use ExUnit.Case, async: true
   
   @moduletag :performance
-  @tag :benchmark @tag :slow
+  @tag :benchmark 
+  @tag :slow
   
   alias ElixirScope.Performance.CPGConstructionBenchmark
   alias ElixirScope.Test.Support.Helpers
