@@ -2,7 +2,8 @@ defmodule ElixirScope.Test.EndToEnd.GenServerDebuggingTest do
   use ExUnit.Case, async: false
   
   @moduletag :end_to_end
-  @tag :end_to_end @tag :genserver
+  @tag :end_to_end 
+  @tag :genserver
   
   alias ElixirScope.EndToEnd.GenServerDebugging
   alias ElixirScope.Test.Support.Helpers

@@ -2,7 +2,9 @@ defmodule ElixirScope.Test.EndToEnd.PhoenixProjectAnalysisTest do
   use ExUnit.Case, async: false
   
   @moduletag :end_to_end
-  @tag :end_to_end @tag :phoenix @tag :slow
+  @tag :end_to_end 
+  @tag :phoenix 
+  @tag :slow
   
   alias ElixirScope.EndToEnd.PhoenixProjectAnalysis
   alias ElixirScope.Test.Support.Helpers

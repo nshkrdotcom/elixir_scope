@@ -13,6 +13,7 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
   alias ElixirScope.Foundation.Logic.ConfigLogic
   alias ElixirScope.Foundation.Validation.ConfigValidator
   alias ElixirScope.Foundation.Contracts.Configurable
+  alias ElixirScope.Foundation.Services.{EventStore, TelemetryService}
 
   @behaviour Configurable
 
@@ -176,6 +177,17 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
         # Notify subscribers
         notify_subscribers(state.subscribers, {:config_updated, path, value})
 
+        # Emit event to EventStore for audit and correlation
+        emit_config_event(:config_updated, %{
+          path: path,
+          new_value: value,
+          previous_value: ConfigLogic.get_config_value(config, path),
+          timestamp: System.monotonic_time(:millisecond)
+        })
+
+        # Emit telemetry for config updates
+        emit_config_telemetry(:config_updated, %{path: path})
+
         {:reply, :ok, new_state}
 
       {:error, _} = error ->
@@ -191,6 +203,16 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
       :ok ->
         new_state = %{state | config: new_config}
         notify_subscribers(state.subscribers, {:config_reset, new_config})
+        
+        # Emit event to EventStore for audit and correlation
+        emit_config_event(:config_reset, %{
+          timestamp: System.monotonic_time(:millisecond),
+          reset_from_updates_count: state.metrics.updates_count
+        })
+        
+        # Emit telemetry for config resets
+        emit_config_telemetry(:config_reset, %{reset_from_updates_count: state.metrics.updates_count})
+        
         {:reply, :ok, new_state}
 
       {:error, _} = error ->
@@ -255,6 +277,46 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
     Enum.each(subscribers, fn pid ->
       send(pid, {:config_notification, message})
     end)
+  end
+
+  defp emit_config_event(event_type, data) do
+    # Only emit if EventStore is available to avoid blocking config operations
+    if EventStore.available?() do
+      try do
+        case ElixirScope.Foundation.Events.new_event(event_type, data) do
+          {:ok, event} ->
+            case EventStore.store(event) do
+              {:ok, _id} -> :ok
+              {:error, error} ->
+                Logger.warning("Failed to emit config event: #{ElixirScope.Foundation.Error.to_string(error)}")
+            end
+          {:error, error} ->
+            Logger.warning("Failed to create config event: #{ElixirScope.Foundation.Error.to_string(error)}")
+        end
+      rescue
+        error ->
+          Logger.warning("Exception while emitting config event: #{inspect(error)}")
+      end
+    end
+  end
+
+  defp emit_config_telemetry(operation_type, metadata) do
+    # Only emit if TelemetryService is available to avoid blocking config operations
+    if TelemetryService.available?() do
+      try do
+        case operation_type do
+          :config_updated ->
+            TelemetryService.emit_counter([:foundation, :config_updates], metadata)
+          :config_reset ->
+            TelemetryService.emit_counter([:foundation, :config_resets], metadata)
+          _ ->
+            TelemetryService.emit_counter([:foundation, :config_operations], Map.put(metadata, :operation, operation_type))
+        end
+      rescue
+        error ->
+          Logger.warning("Exception while emitting config telemetry: #{inspect(error)}")
+      end
+    end
   end
 
   defp create_service_error(message) do

@@ -1,0 +1,10 @@
+**`test/unit/foundation/types/error_test.exs`**
+- `Error.new/1` with unknown error_type uses default "Unknown error" definition.
+- `Error.wrap_error/4` for existing Error.t correctly deep-merges context.
+- `Error.retry_delay/2` handles attempt 0 for exponential_backoff.
+- `Error.determine_retry_strategy/2` covers all defined error_types.
+- `Error.suggest_recovery_actions/2` provides distinct actions for different error_types.
+- `Error.format_stacktrace/1` handles empty stacktrace list.
+- `Error.format_stacktrace/1` correctly formats entries not matching {M,F,A,L} tuple.
+- `Error.new/1` sets `correlation_id` from opts.
+

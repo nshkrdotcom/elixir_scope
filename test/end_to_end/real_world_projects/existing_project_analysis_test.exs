@@ -2,7 +2,9 @@ defmodule ElixirScope.Test.EndToEnd.RealWorldProjectsTest do
   use ExUnit.Case, async: false
   
   @moduletag :end_to_end
-  @tag :end_to_end @tag :real_world @tag :slow
+  @tag :end_to_end 
+  @tag :real_world 
+  @tag :slow
   
   alias ElixirScope.EndToEnd.RealWorldProjects
   alias ElixirScope.Test.Support.Helpers

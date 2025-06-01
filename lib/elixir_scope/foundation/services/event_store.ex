@@ -14,6 +14,7 @@ defmodule ElixirScope.Foundation.Services.EventStore do
   alias ElixirScope.Foundation.Types.{Event, Error}
   alias ElixirScope.Foundation.Validation.EventValidator
   alias ElixirScope.Foundation.Contracts.EventStore, as: EventStoreContract
+  alias ElixirScope.Foundation.Services.TelemetryService
 
   @type server_state :: %{
           events: %{Event.event_id() => Event.t()},
@@ -37,37 +38,184 @@ defmodule ElixirScope.Foundation.Services.EventStore do
 
   @impl EventStoreContract
   def store(%Event{} = event) do
-    GenServer.call(__MODULE__, {:store_event, event})
+    result = GenServer.call(__MODULE__, {:store_event, event})
+    
+    # Report telemetry on successful store
+    case result do
+      {:ok, event_id} ->
+        emit_telemetry_counter([:foundation, :event_store, :events_stored], %{
+          event_type: event.event_type,
+          has_correlation: !is_nil(event.correlation_id)
+        })
+        {:ok, event_id}
+      
+      {:error, _} = error ->
+        emit_telemetry_counter([:foundation, :event_store, :store_errors], %{
+          event_type: event.event_type
+        })
+        error
+    end
   end
 
   @impl EventStoreContract
   def store_batch(events) when is_list(events) do
-    GenServer.call(__MODULE__, {:store_batch, events})
+    start_time = System.monotonic_time()
+    result = GenServer.call(__MODULE__, {:store_batch, events})
+    end_time = System.monotonic_time()
+    
+    duration = end_time - start_time
+    
+    case result do
+      {:ok, event_ids} ->
+        emit_telemetry_gauge([:foundation, :event_store, :batch_duration], duration, %{
+          batch_size: length(events),
+          result: :success
+        })
+        emit_telemetry_counter([:foundation, :event_store, :batch_operations], %{
+          batch_size: length(events),
+          result: :success
+        })
+        {:ok, event_ids}
+      
+      {:error, _} = error ->
+        emit_telemetry_gauge([:foundation, :event_store, :batch_duration], duration, %{
+          batch_size: length(events),
+          result: :error
+        })
+        emit_telemetry_counter([:foundation, :event_store, :batch_errors], %{
+          batch_size: length(events)
+        })
+        error
+    end
   end
 
   @impl EventStoreContract
   def get(event_id) do
-    GenServer.call(__MODULE__, {:get_event, event_id})
+    start_time = System.monotonic_time()
+    result = GenServer.call(__MODULE__, {:get_event, event_id})
+    end_time = System.monotonic_time()
+    
+    duration = end_time - start_time
+    
+    case result do
+      {:ok, _event} ->
+        emit_telemetry_gauge([:foundation, :event_store, :get_duration], duration, %{
+          result: :found
+        })
+        emit_telemetry_counter([:foundation, :event_store, :gets], %{result: :found})
+        
+      {:error, _} ->
+        emit_telemetry_gauge([:foundation, :event_store, :get_duration], duration, %{
+          result: :not_found
+        })
+        emit_telemetry_counter([:foundation, :event_store, :gets], %{result: :not_found})
+    end
+    
+    result
   end
 
   @impl EventStoreContract
   def query(query_map) when is_map(query_map) do
-    GenServer.call(__MODULE__, {:query_events, query_map})
+    start_time = System.monotonic_time()
+    result = GenServer.call(__MODULE__, {:query_events, query_map})
+    end_time = System.monotonic_time()
+    
+    duration = end_time - start_time
+    
+    case result do
+      {:ok, events} ->
+        emit_telemetry_gauge([:foundation, :event_store, :query_duration], duration, %{
+          result_count: length(events),
+          query_type: extract_query_type(query_map)
+        })
+        emit_telemetry_counter([:foundation, :event_store, :queries], %{
+          result_count: length(events),
+          query_type: extract_query_type(query_map)
+        })
+        
+      {:error, _} ->
+        emit_telemetry_gauge([:foundation, :event_store, :query_duration], duration, %{
+          result: :error,
+          query_type: extract_query_type(query_map)
+        })
+        emit_telemetry_counter([:foundation, :event_store, :query_errors], %{
+          query_type: extract_query_type(query_map)
+        })
+    end
+    
+    result
   end
 
   @impl EventStoreContract
   def get_by_correlation(correlation_id) do
-    GenServer.call(__MODULE__, {:get_by_correlation, correlation_id})
+    start_time = System.monotonic_time()
+    result = GenServer.call(__MODULE__, {:get_by_correlation, correlation_id})
+    end_time = System.monotonic_time()
+    
+    duration = end_time - start_time
+    
+    case result do
+      {:ok, events} ->
+        emit_telemetry_gauge([:foundation, :event_store, :correlation_query_duration], duration, %{
+          result_count: length(events)
+        })
+        emit_telemetry_counter([:foundation, :event_store, :correlation_queries], %{
+          result_count: length(events)
+        })
+        
+      {:error, _} ->
+        emit_telemetry_gauge([:foundation, :event_store, :correlation_query_duration], duration, %{
+          result: :error
+        })
+        emit_telemetry_counter([:foundation, :event_store, :correlation_query_errors], %{})
+    end
+    
+    result
   end
 
   @impl EventStoreContract
   def prune_before(timestamp) do
-    GenServer.call(__MODULE__, {:prune_before, timestamp})
+    start_time = System.monotonic_time()
+    result = GenServer.call(__MODULE__, {:prune_before, timestamp})
+    end_time = System.monotonic_time()
+    
+    duration = end_time - start_time
+    
+    case result do
+      {:ok, pruned_count} ->
+        emit_telemetry_gauge([:foundation, :event_store, :prune_duration], duration, %{
+          pruned_count: pruned_count
+        })
+        emit_telemetry_counter([:foundation, :event_store, :events_pruned], %{
+          pruned_count: pruned_count
+        })
+        
+      {:error, _} ->
+        emit_telemetry_gauge([:foundation, :event_store, :prune_duration], duration, %{
+          result: :error
+        })
+        emit_telemetry_counter([:foundation, :event_store, :prune_errors], %{})
+    end
+    
+    result
   end
 
   @impl EventStoreContract
   def stats do
-    GenServer.call(__MODULE__, :get_stats)
+    result = GenServer.call(__MODULE__, :get_stats)
+    
+    # Report current stats as telemetry
+    case result do
+      {:ok, stats} ->
+        emit_telemetry_gauge([:foundation, :event_store, :current_event_count], stats.current_event_count, %{})
+        emit_telemetry_gauge([:foundation, :event_store, :memory_usage], stats.memory_usage_estimate, %{})
+        emit_telemetry_gauge([:foundation, :event_store, :uptime], stats.uptime_ms, %{})
+        
+      {:error, _} ->
+        emit_telemetry_counter([:foundation, :event_store, :stats_errors], %{})
+    end
+    
+    result
   end
 
   @impl EventStoreContract
@@ -140,6 +288,12 @@ defmodule ElixirScope.Foundation.Services.EventStore do
     if config.prune_interval > 0 do
       schedule_pruning(config.prune_interval)
     end
+
+    # Report initialization telemetry
+    emit_telemetry_counter([:foundation, :event_store, :initializations], %{
+      max_events: config.max_events,
+      enable_correlation_index: config.enable_correlation_index
+    })
 
     Logger.info("Event store initialized successfully")
     {:ok, state}
@@ -440,6 +594,39 @@ defmodule ElixirScope.Foundation.Services.EventStore do
 
   defp schedule_pruning(interval) do
     Process.send_after(self(), :prune_old_events, interval)
+  end
+
+  defp emit_telemetry_counter(event_name, metadata) do
+    if TelemetryService.available?() do
+      try do
+        TelemetryService.emit_counter(event_name, metadata)
+      rescue
+        error ->
+          Logger.debug("Failed to emit telemetry counter: #{inspect(error)}")
+      end
+    end
+  end
+
+  defp emit_telemetry_gauge(event_name, value, metadata) do
+    if TelemetryService.available?() do
+      try do
+        TelemetryService.emit_gauge(event_name, value, metadata)
+      rescue
+        error ->
+          Logger.debug("Failed to emit telemetry gauge: #{inspect(error)}")
+      end
+    end
+  end
+
+  defp extract_query_type(query_map) do
+    cond do
+      Map.has_key?(query_map, :event_type) -> :by_event_type
+      Map.has_key?(query_map, :time_range) -> :by_time_range
+      Map.has_key?(query_map, :correlation_id) -> :by_correlation
+      Map.has_key?(query_map, :node) -> :by_node
+      Map.has_key?(query_map, :pid) -> :by_pid
+      true -> :generic
+    end
   end
 
   defp create_service_error(message) do

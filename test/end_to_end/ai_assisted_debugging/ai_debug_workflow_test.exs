@@ -2,7 +2,9 @@ defmodule ElixirScope.Test.EndToEnd.AIAssistedDebuggingTest do
   use ExUnit.Case, async: false
   
   @moduletag :end_to_end
-  @tag :end_to_end @tag :ai @tag :debug
+  @tag :end_to_end 
+  @tag :ai 
+  @tag :debug
   
   alias ElixirScope.EndToEnd.AIAssistedDebugging
   alias ElixirScope.Test.Support.Helpers

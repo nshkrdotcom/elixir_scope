@@ -2,7 +2,8 @@ defmodule ElixirScope.Test.Contract.LLMProviderContractsTest do
   use ExUnit.Case, async: true
   
   @moduletag :contract
-  @tag :contract @tag :ai
+  @tag :contract 
+  @tag :ai
   
   alias ElixirScope.Contract.LLMProviderContracts
   alias ElixirScope.Test.Support.Helpers

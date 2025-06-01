@@ -170,12 +170,11 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
 
   @impl GenServer
   def handle_call(:get_metrics, _from, %{metrics: metrics} = state) do
+    # Transform flat event names into nested structure for API compatibility
+    nested_metrics = transform_to_nested_structure(metrics)
+    
     # Add current timestamp to metrics
-    timestamped_metrics =
-      metrics
-      |> Map.new(fn {event_name, metric_data} ->
-        {event_name, Map.put(metric_data, :retrieved_at, System.monotonic_time())}
-      end)
+    timestamped_metrics = Map.put(nested_metrics, :retrieved_at, System.monotonic_time())
 
     {:reply, {:ok, timestamped_metrics}, state}
   end
@@ -331,5 +330,63 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
           severity: :high
         )}
     end
+  end
+
+  defp transform_to_nested_structure(metrics) do
+    Enum.reduce(metrics, %{}, fn {event_name, metric_data}, acc ->
+      case event_name do
+        [:foundation, :event_store, :events_stored] ->
+          # Transform to the expected nested structure for events_stored
+          # Safely build the nested path
+          foundation_map = Map.get(acc, :foundation, %{})
+          updated_foundation = Map.put(foundation_map, :events_stored, metric_data.count || 0)
+          Map.put(acc, :foundation, updated_foundation)
+        
+        [:foundation, :config_updates] ->
+          # Transform config_updates metric
+          foundation_map = Map.get(acc, :foundation, %{})
+          updated_foundation = Map.put(foundation_map, :config_updates, metric_data.count || 0)
+          Map.put(acc, :foundation, updated_foundation)
+        
+        [:foundation, :config_resets] ->
+          # Transform config_resets metric
+          foundation_map = Map.get(acc, :foundation, %{})
+          updated_foundation = Map.put(foundation_map, :config_resets, metric_data.count || 0)
+          Map.put(acc, :foundation, updated_foundation)
+        
+        [:foundation, :config_operations] ->
+          # Transform general config operations metric
+          foundation_map = Map.get(acc, :foundation, %{})
+          updated_foundation = Map.put(foundation_map, :config_operations, metric_data.count || 0)
+          Map.put(acc, :foundation, updated_foundation)
+        
+        [:foundation | rest] ->
+          # Handle other foundation metrics
+          nested_path = [:foundation] ++ rest
+          put_nested_value(acc, nested_path, metric_data)
+        
+        [first | rest] when rest != [] ->
+          # Handle other nested metrics
+          nested_path = [first] ++ rest
+          put_nested_value(acc, nested_path, metric_data)
+        
+        [single] ->
+          # Single-level metrics
+          Map.put(acc, single, metric_data)
+        
+        _ ->
+          acc
+      end
+    end)
+  end
+
+  defp put_nested_value(map, [key], value) do
+    Map.put(map, key, value)
+  end
+
+  defp put_nested_value(map, [key | rest], value) do
+    Map.update(map, key, put_nested_value(%{}, rest, value), fn existing ->
+      put_nested_value(existing, rest, value)
+    end)
   end
 end

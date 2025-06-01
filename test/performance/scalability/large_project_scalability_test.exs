@@ -2,7 +2,8 @@ defmodule ElixirScope.Test.Performance.ScalabilityTest do
   use ExUnit.Case, async: true
   
   @moduletag :performance
-  @tag :scalability @tag :slow
+  @tag :scalability 
+  @tag :slow
   
   alias ElixirScope.Performance.Scalability
   alias ElixirScope.Test.Support.Helpers

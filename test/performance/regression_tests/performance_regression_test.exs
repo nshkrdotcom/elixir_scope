@@ -2,7 +2,8 @@ defmodule ElixirScope.Test.Performance.RegressionTest do
   use ExUnit.Case, async: true
   
   @moduletag :performance
-  @tag :regression @tag :slow
+  @tag :regression 
+  @tag :slow
   
   alias ElixirScope.Performance.Regression
   alias ElixirScope.Test.Support.Helpers

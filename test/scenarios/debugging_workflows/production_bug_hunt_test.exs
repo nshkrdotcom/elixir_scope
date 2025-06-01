@@ -2,7 +2,9 @@ defmodule ElixirScope.Test.Scenarios.ProductionBugHuntTest do
   use ExUnit.Case, async: false
   
   @moduletag :scenario
-  @tag :scenario @tag :debug @tag :slow
+  @tag :scenario 
+  @tag :debug 
+  @tag :slow
   
   alias ElixirScope.Scenarios.ProductionBugHunt
   alias ElixirScope.Test.Support.Helpers
