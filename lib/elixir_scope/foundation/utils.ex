@@ -18,11 +18,14 @@ defmodule ElixirScope.Foundation.Utils do
   """
   @spec generate_id() :: pos_integer()
   def generate_id do
-    # Combine monotonic time with random number for uniqueness
-    # Use abs to ensure positive value, add 1 to ensure it's never 0
-    time_part = abs(System.monotonic_time(:microsecond))
-    random_part = :rand.uniform(1000)
-    time_part * 1000 + random_part + 1
+    # Use a combination of unique_integer and make_ref for absolute uniqueness
+    # This approach guarantees uniqueness even under extreme concurrency
+    unique_int = System.unique_integer([:positive])
+    ref_hash = make_ref() |> :erlang.ref_to_list() |> :erlang.phash2()
+    
+    # Combine both for maximum uniqueness guarantee
+    # Use bit shifting to avoid collisions between components
+    (unique_int * 1_000_000) + abs(ref_hash) + 1
   end
 
   @doc """

@@ -133,6 +133,17 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
     GenServer.stop(__MODULE__)
   end
 
+  @doc """
+  Reset all metrics (for testing purposes).
+  """
+  @spec reset_metrics() :: :ok | {:error, Error.t()}
+  def reset_metrics do
+    case GenServer.whereis(__MODULE__) do
+      nil -> create_service_error("Telemetry service not started")
+      _pid -> GenServer.call(__MODULE__, :clear_metrics)
+    end
+  end
+
   ## GenServer Callbacks
 
   @impl GenServer

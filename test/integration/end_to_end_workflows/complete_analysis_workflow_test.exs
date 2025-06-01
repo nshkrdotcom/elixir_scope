@@ -2,12 +2,6 @@ defmodule ElixirScope.Test.Integration.EndToEndWorkflowsTest do
   use ExUnit.Case, async: false
   
   @moduletag :integration
-  @tag :integration 
-  @tag :slow
-  
-  alias ElixirScope.Integration.EndToEndWorkflows
-  alias ElixirScope.Test.Support.Helpers
-  alias ElixirScope.Test.Fixtures
   
   setup do
     # Setup test data
@@ -15,6 +9,9 @@ defmodule ElixirScope.Test.Integration.EndToEndWorkflowsTest do
   end
   
   describe "Integration.EndToEndWorkflows" do
+    @describetag :integration
+    @describetag :slow
+    
     test "placeholder test for Integration.EndToEndWorkflows" do
       # TODO: Implement integration test
       assert true

@@ -83,6 +83,47 @@ defmodule ElixirScope.Foundation.TestHelpers do
   end
 
   @doc """
+  Waits for a specific service to be available.
+  """
+  @spec wait_for_service_availability(module(), non_neg_integer()) :: :ok | :timeout
+  def wait_for_service_availability(service_module, timeout_ms \\ 5000) do
+    wait_for(fn -> GenServer.whereis(service_module) != nil end, timeout_ms)
+  end
+
+  @doc """
+  Waits for all foundation services to be available.
+  """
+  @spec wait_for_all_services_available(non_neg_integer()) :: :ok | :timeout
+  def wait_for_all_services_available(timeout_ms \\ 5000) do
+    services = [
+      ElixirScope.Foundation.Services.ConfigServer,
+      ElixirScope.Foundation.Services.EventStore,
+      ElixirScope.Foundation.Services.TelemetryService
+    ]
+    
+    wait_for(fn ->
+      Enum.all?(services, fn service -> GenServer.whereis(service) != nil end)
+    end, timeout_ms)
+  end
+
+  @doc """
+  Waits for a service to restart after being stopped.
+  """
+  @spec wait_for_service_restart(module(), non_neg_integer()) :: :ok | :timeout
+  def wait_for_service_restart(service_module, timeout_ms \\ 5000) do
+    # First ensure it's stopped
+    case GenServer.whereis(service_module) do
+      nil -> :ok
+      pid -> 
+        GenServer.stop(pid, :normal, 1000)
+        wait_for(fn -> GenServer.whereis(service_module) == nil end, 1000)
+    end
+    
+    # Then wait for it to restart
+    wait_for_service_availability(service_module, timeout_ms)
+  end
+
+  @doc """
   Test error context creation and handling.
   """
   @spec test_error_context(module(), atom(), map()) :: ErrorContext.context()

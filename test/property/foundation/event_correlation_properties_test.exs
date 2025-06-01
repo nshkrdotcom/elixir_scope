@@ -11,11 +11,14 @@ defmodule ElixirScope.Foundation.Property.EventCorrelationPropertiesTest do
     :ok = TestHelpers.ensure_config_available()
     :ok = EventStore.initialize()
     
-    # Clear existing events
-    current_time = System.monotonic_time()
-    {:ok, _} = EventStore.prune_before(current_time)
+    # Create a truly unique test session ID to isolate our events
+    test_session_id = "test-#{System.unique_integer([:positive])}-#{:rand.uniform(1_000_000)}"
     
-    :ok
+    # Clear ALL existing events to start completely fresh
+    current_time = System.monotonic_time()
+    {:ok, _} = EventStore.prune_before(current_time + 1_000_000)  # Clear everything
+    
+    {:ok, test_session_id: test_session_id}
   end
   
   # Generators for test data
@@ -77,8 +80,12 @@ defmodule ElixirScope.Foundation.Property.EventCorrelationPropertiesTest do
   defp correlation_id_generator do
     one_of([
       constant(nil),
-      string(:alphanumeric, min_length: 8, max_length: 32),
-      bind(uuid_generator(), fn uuid -> constant(uuid) end)
+      bind(string(:alphanumeric, min_length: 8, max_length: 16), fn base ->
+        constant("session-#{System.unique_integer([:positive])}-#{base}")
+      end),
+      bind(uuid_generator(), fn uuid -> 
+        constant("session-#{System.unique_integer([:positive])}-#{uuid}")
+      end)
     ])
   end
   
@@ -152,8 +159,8 @@ defmodule ElixirScope.Foundation.Property.EventCorrelationPropertiesTest do
           # Should either succeed with an ID or fail gracefully
           case result do
             {:ok, event_id} ->
-              assert is_binary(event_id)
-              assert String.length(event_id) > 0
+              assert is_integer(event_id)
+              assert event_id > 0
               
             {:error, reason} ->
               assert is_atom(reason) or is_binary(reason) or is_tuple(reason)
@@ -183,9 +190,10 @@ defmodule ElixirScope.Foundation.Property.EventCorrelationPropertiesTest do
           # All returned events should be valid
           Enum.each(events, fn event ->
             assert %Event{} = event
-            assert is_binary(event.event_id)
+            assert is_integer(event.event_id)
             assert is_atom(event.event_type)
-            assert is_map(event.data)
+            # Event data can be any term, not just maps
+            assert event.data != nil
             assert is_integer(event.timestamp)
           end)
           
@@ -207,32 +215,29 @@ defmodule ElixirScope.Foundation.Property.EventCorrelationPropertiesTest do
                 max_length: 10
               ) do
       # Create and store events with the same correlation ID
-      stored_events = 
+      stored_event_ids = 
         Enum.map(event_sequence, fn {event_type, event_data} ->
           # Add small delay to ensure different timestamps
           Process.sleep(1)
           
           {:ok, event} = Events.new_event(event_type, event_data, correlation_id: correlation_id)
-          {:ok, _event_id} = EventStore.store(event)
-          event
+          {:ok, event_id} = EventStore.store(event)
+          event_id
         end)
       
       # Retrieve by correlation
       {:ok, retrieved_events} = EventStore.get_by_correlation(correlation_id)
       
       # Should return all events
-      assert length(retrieved_events) >= length(stored_events)
+      assert length(retrieved_events) >= length(stored_event_ids)
       
-      # Filter to only our events (there might be others from previous tests)
+      # Filter to only our events using event IDs for exact matching
       our_events = 
         Enum.filter(retrieved_events, fn retrieved ->
-          Enum.any?(stored_events, fn stored -> 
-            stored.event_type == retrieved.event_type and 
-            stored.data == retrieved.data
-          end)
+          retrieved.event_id in stored_event_ids
         end)
       
-      assert length(our_events) == length(stored_events)
+      assert length(our_events) == length(stored_event_ids)
       
       # Events should be in chronological order
       timestamps = Enum.map(our_events, & &1.timestamp)
@@ -248,35 +253,45 @@ defmodule ElixirScope.Foundation.Property.EventCorrelationPropertiesTest do
   property "Event parent-child relationships form valid tree structures" do
     check all correlation_id <- filter(correlation_id_generator(), &(&1 != nil)),
               sequence_length <- integer(3..8) do
+      # Create a unique session ID for this specific test run
+      session_id = System.unique_integer([:positive])
+      
       # Create event chain with parent-child relationships
-      _events_with_ids = 
+      chain_event_ids = 
         Enum.reduce(1..sequence_length, [], fn index, acc ->
           parent_id = case acc do
             [] -> nil
-            [{prev_id, _} | _] -> prev_id
+            [prev_id | _] -> prev_id
           end
+          
+          unique_data = %{
+            sequence: index,
+            session_id: session_id,
+            test_type: :chain_event
+          }
           
           {:ok, event} = Events.new_event(
             :chain_event,
-            %{sequence: index},
+            unique_data,
             correlation_id: correlation_id,
             parent_id: parent_id
           )
           
           {:ok, event_id} = EventStore.store(event)
-          [{event_id, event} | acc]
+          [event_id | acc]
         end)
         |> Enum.reverse()
       
       # Retrieve all events by correlation
       {:ok, retrieved_events} = EventStore.get_by_correlation(correlation_id)
       
-      # Filter to our chain events
+      # Filter to ONLY our chain events using session_id for precise matching
       chain_events = 
         Enum.filter(retrieved_events, fn event ->
           event.event_type == :chain_event and 
           is_map(event.data) and 
-          Map.has_key?(event.data, :sequence)
+          Map.get(event.data, :session_id) == session_id and
+          event.event_id in chain_event_ids
         end)
         |> Enum.sort_by(fn event -> event.data.sequence end)
       
@@ -363,7 +378,8 @@ defmodule ElixirScope.Foundation.Property.EventCorrelationPropertiesTest do
                 {:ok, event} ->
                   case EventStore.store(event) do
                     {:ok, event_id} ->
-                      [%{event | event_id: event_id} | acc]
+                      stored_event = %{event | event_id: event_id}
+                      [stored_event | acc]
                     {:error, _} ->
                       acc
                   end
@@ -372,25 +388,47 @@ defmodule ElixirScope.Foundation.Property.EventCorrelationPropertiesTest do
               end
               
             {:prune, {_start_time, end_time}} ->
-              # Remove events before end_time
-              Enum.filter(acc, fn event ->
-                event.timestamp >= end_time
-              end)
+              # Remove events with timestamps before end_time
+              # Only prune if the time range makes sense
+              if end_time > 0 do
+                :ok = EventStore.prune_before(end_time)
+                # Filter out events that would have been pruned
+                Enum.filter(acc, fn event ->
+                  event.timestamp >= end_time
+                end)
+              else
+                acc
+              end
           end
         end)
       
-      # Verify the store is consistent with our expectations
+      # Verify the store contains at least our expected events
       {:ok, all_events} = EventStore.query(%{})
       
-      # We should have at least the events we expect
-      # (There might be more from other tests or operations)
+      # We should have at least the events we expect to still exist
       expected_event_ids = Enum.map(final_expected_events, & &1.event_id)
       actual_event_ids = Enum.map(all_events, & &1.event_id)
       
-      Enum.each(expected_event_ids, fn expected_id ->
-        assert expected_id in actual_event_ids,
-          "Expected event #{expected_id} to be in store"
-      end)
+      # Each expected event should exist in the store
+      missing_events = 
+        Enum.filter(expected_event_ids, fn expected_id ->
+          expected_id not in actual_event_ids
+        end)
+      
+      # Only fail if there are missing events that should exist
+      if length(missing_events) > 0 and length(final_expected_events) > 0 do
+        # Double-check by trying to retrieve the missing events individually
+        actually_missing = 
+          Enum.filter(missing_events, fn event_id ->
+            case EventStore.get(event_id) do
+              {:ok, _} -> false  # Event exists
+              {:error, _} -> true  # Event actually missing
+            end
+          end)
+        
+        assert length(actually_missing) == 0,
+          "Expected events #{inspect(actually_missing)} to be in store but they were missing"
+      end
       
       # EventStore should remain functional
       assert EventStore.available?()
@@ -400,31 +438,38 @@ defmodule ElixirScope.Foundation.Property.EventCorrelationPropertiesTest do
   property "Event timestamps are monotonic within correlation groups" do
     check all correlation_id <- filter(correlation_id_generator(), &(&1 != nil)),
               event_count <- integer(3..10) do
+      # Create a unique session ID for this specific test run
+      session_id = System.unique_integer([:positive])
+      
       # Create events sequentially to ensure different timestamps
-      _created_events = 
+      created_event_ids = 
         for i <- 1..event_count do
           # Small delay to ensure timestamp progression
           Process.sleep(1)
           
-          {:ok, event} = Events.new_event(
-            :monotonic_test,
-            %{sequence: i},
-            correlation_id: correlation_id
-          )
+          # Use unique data that includes the session ID
+          unique_data = %{
+            sequence: i,
+            session_id: session_id,
+            test_type: :monotonic_test,
+            timestamp: System.monotonic_time()
+          }
           
-          {:ok, _event_id} = EventStore.store(event)
-          event
+          {:ok, event} = Events.new_event(:monotonic_test, unique_data, correlation_id: correlation_id)
+          {:ok, event_id} = EventStore.store(event)
+          event_id
         end
       
       # Retrieve events by correlation
       {:ok, retrieved_events} = EventStore.get_by_correlation(correlation_id)
       
-      # Filter to our test events and sort by sequence to verify order
+      # Filter to ONLY our test events using session_id for precise matching
       our_events = 
         Enum.filter(retrieved_events, fn event ->
           event.event_type == :monotonic_test and
           is_map(event.data) and
-          Map.has_key?(event.data, :sequence)
+          Map.get(event.data, :session_id) == session_id and
+          event.event_id in created_event_ids
         end)
         |> Enum.sort_by(fn event -> event.data.sequence end)
       
@@ -461,6 +506,9 @@ defmodule ElixirScope.Foundation.Property.EventCorrelationPropertiesTest do
   property "EventStore concurrent operations maintain referential integrity" do
     check all correlation_id <- filter(correlation_id_generator(), &(&1 != nil)),
               operation_count <- integer(5..15) do
+      # Create a unique session ID for this specific test run
+      session_id = System.unique_integer([:positive])
+      
       # Create concurrent operations
       tasks = 
         for i <- 1..operation_count do
@@ -470,11 +518,14 @@ defmodule ElixirScope.Foundation.Property.EventCorrelationPropertiesTest do
             
             case operation do
               :store ->
-                {:ok, event} = Events.new_event(
-                  :concurrent_test,
-                  %{task_id: i, timestamp: System.monotonic_time()},
-                  correlation_id: correlation_id
-                )
+                unique_data = %{
+                  task_id: i,
+                  session_id: session_id,
+                  timestamp: System.monotonic_time(),
+                  test_type: :concurrent_test
+                }
+                
+                {:ok, event} = Events.new_event(:concurrent_test, unique_data, correlation_id: correlation_id)
                 EventStore.store(event)
                 
               :retrieve ->
@@ -502,23 +553,28 @@ defmodule ElixirScope.Foundation.Property.EventCorrelationPropertiesTest do
       # Final verification: retrieve all events and verify integrity
       {:ok, final_events} = EventStore.get_by_correlation(correlation_id)
       
+      # Filter to ONLY our test events using session_id for precise matching
       concurrent_events = 
         Enum.filter(final_events, fn event ->
-          event.event_type == :concurrent_test
+          event.event_type == :concurrent_test and
+          is_map(event.data) and
+          Map.get(event.data, :session_id) == session_id
         end)
       
-      # Should have some events from successful stores
+      # Count successful stores from results (only those that returned event IDs)
       successful_stores = 
         Enum.count(results, fn 
-          {:ok, event_id} when is_binary(event_id) -> true
+          {:ok, event_id} when is_integer(event_id) -> true
           _ -> false
         end)
       
       assert length(concurrent_events) == successful_stores
       
       # All events should be valid and have unique IDs
-      event_ids = Enum.map(concurrent_events, & &1.event_id)
-      assert length(event_ids) == length(Enum.uniq(event_ids))
+      if length(concurrent_events) > 0 do
+        event_ids = Enum.map(concurrent_events, & &1.event_id)
+        assert length(event_ids) == length(Enum.uniq(event_ids))
+      end
     end
   end
   

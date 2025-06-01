@@ -3,7 +3,6 @@ defmodule ElixirScope.Foundation.Property.PerformanceDebugTest do
   use ExUnitProperties
   
   alias ElixirScope.Foundation.Services.TelemetryService
-  alias ElixirScope.Foundation.Telemetry
   
   # Comprehensive timing utilities
   defp timestamp_ms do
@@ -13,7 +12,9 @@ defmodule ElixirScope.Foundation.Property.PerformanceDebugTest do
   defp timestamp_log(message, start_time \\ nil) do
     now = timestamp_ms()
     duration_info = if start_time, do: " (+#{now - start_time}ms)", else: ""
-    IO.puts("[#{DateTime.utc_now() |> DateTime.to_string()}#{duration_info}] #{message}")
+    if System.get_env("VERBOSE_TEST_LOGS") == "true" do
+      IO.puts("[#{DateTime.utc_now() |> DateTime.to_string()}#{duration_info}] #{message}")
+    end
     now
   end
   

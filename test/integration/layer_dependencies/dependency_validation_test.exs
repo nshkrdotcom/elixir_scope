@@ -2,11 +2,6 @@ defmodule ElixirScope.Test.Integration.LayerDependenciesTest do
   use ExUnit.Case, async: false
 
   @moduletag :integration
-  @tag :integration
-
-  alias ElixirScope.Integration.LayerDependencies
-  alias ElixirScope.Test.Support.Helpers
-  alias ElixirScope.Test.Fixtures
 
   setup do
     # Setup test data
@@ -14,6 +9,8 @@ defmodule ElixirScope.Test.Integration.LayerDependenciesTest do
   end
 
   describe "Integration.LayerDependencies" do
+    @describetag :integration
+    
     test "placeholder test for Integration.LayerDependencies" do
       # TODO: Implement integration test
       assert true

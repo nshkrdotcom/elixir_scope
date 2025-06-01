@@ -21,32 +21,27 @@ defmodule ElixirScope.Foundation.Property.ShrinkingBottleneckTest do
   end
 
   # Test 1: Trigger actual shrinking with simple failure
+  @tag :intentional_failure
   property "SHRINKING TEST: Simple failure to measure framework overhead" do
-    start_time = timestamp_log("=== STARTING SIMPLE SHRINKING TEST ===")
+    timestamp_log("=== STARTING SIMPLE SHRINKING TEST ===")
     
     check all value <- StreamData.integer(1..100),
-              max_runs: 5 do  # Reduced to limit shrinking time
+              max_runs: 10 do
       
-      run_start = timestamp_ms()
+      test_start = timestamp_ms()
       timestamp_log("Testing value: #{value} (expecting failure on values > 50)")
-      
-      # Do minimal work
-      TelemetryService.emit_counter([:shrinking_test, :simple], %{value: value})
       
       # Intentional failure to trigger shrinking
       if value > 50 do
         timestamp_log("INTENTIONAL FAILURE: value #{value} > 50 - this will trigger shrinking")
-        run_end = timestamp_ms()
-        timestamp_log("Run duration before failure: #{run_end - run_start}ms")
+        timestamp_log("Run duration before failure: #{timestamp_ms() - test_start}ms")
         assert false, "Intentional failure to measure shrinking overhead (value=#{value})"
       end
       
-      run_end = timestamp_ms()
-      timestamp_log("Success run duration: #{run_end - run_start}ms")
+      test_end = timestamp_ms()
+      test_duration = test_end - test_start
+      timestamp_log("Success run duration: #{test_duration}ms")
     end
-    
-    end_time = timestamp_ms()
-    timestamp_log("=== SIMPLE SHRINKING TEST COMPLETE: #{end_time - start_time}ms ===")
   end
 
   # Test 2: Trigger shrinking with complex generators (like original tests)
@@ -108,42 +103,43 @@ defmodule ElixirScope.Foundation.Property.ShrinkingBottleneckTest do
   end
 
   # Test 3: Measure the overhead of service restarts during failures
+  @tag :intentional_failure
   property "SHRINKING TEST: Service restart overhead during failures" do
-    start_time = timestamp_log("=== STARTING SERVICE RESTART OVERHEAD TEST ===")
+    timestamp_log("=== STARTING SERVICE RESTART OVERHEAD TEST ===")
     
     check all restart_trigger <- StreamData.boolean(),
-              max_runs: 3 do
+              max_runs: 5 do
       
-      run_start = timestamp_ms()
+      test_start = timestamp_ms()
       
       if restart_trigger do
         timestamp_log("TRIGGERING SERVICE RESTART SCENARIO")
         
-        # Simulate what happens during test failures - service restart
+        # Stop and restart service to simulate test isolation overhead
+        restart_start = timestamp_ms()
         if Process.whereis(TelemetryService) do
-          restart_start = timestamp_ms()
           GenServer.stop(TelemetryService, :normal, 1000)
-          Process.sleep(50)  # Cleanup time
-          {:ok, _} = TelemetryService.start_link([])
-          restart_end = timestamp_ms()
-          timestamp_log("Service restart took: #{restart_end - restart_start}ms")
         end
         
-        # Intentional failure after restart
+        case TelemetryService.start_link([]) do
+          {:ok, _} -> :ok
+          {:error, {:already_started, _}} -> :ok
+        end
+        restart_end = timestamp_ms()
+        
+        timestamp_log("Service restart took: #{restart_end - restart_start}ms")
+        
+        # Intentional failure to trigger shrinking in the expensive case
         timestamp_log("INTENTIONAL FAILURE: after service restart")
-        run_end = timestamp_ms()
-        timestamp_log("Run duration with restart: #{run_end - run_start}ms")
+        test_end = timestamp_ms()
+        timestamp_log("Run duration with restart: #{test_end - test_start}ms")
         assert false, "Intentional failure after service restart"
       end
       
-      # Success case
-      TelemetryService.emit_counter([:restart_test], %{})
-      run_end = timestamp_ms()
-      timestamp_log("Success run duration: #{run_end - run_start}ms")
+      # Success case - minimal work
+      test_end = timestamp_ms()
+      timestamp_log("Success run duration: #{test_end - test_start}ms")
     end
-    
-    end_time = timestamp_ms()
-    timestamp_log("=== SERVICE RESTART OVERHEAD TEST COMPLETE: #{end_time - start_time}ms ===")
   end
 
   # Test 4: Test with exact same structure as original failing test

@@ -2,11 +2,6 @@ defmodule ElixirScope.Test.Integration.ASTCPGTest do
   use ExUnit.Case, async: false
 
   @moduletag :integration
-  @tag :integration
-
-  alias ElixirScope.Integration.ASTCPG
-  alias ElixirScope.Test.Support.Helpers
-  alias ElixirScope.Test.Fixtures
 
   setup do
     # Setup test data
@@ -14,6 +9,8 @@ defmodule ElixirScope.Test.Integration.ASTCPGTest do
   end
 
   describe "Integration.ASTCPG" do
+    @describetag :integration
+    
     test "placeholder test for Integration.ASTCPG" do
       # TODO: Implement integration test
       assert true

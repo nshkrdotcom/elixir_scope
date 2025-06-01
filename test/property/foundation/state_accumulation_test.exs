@@ -7,14 +7,18 @@ defmodule ElixirScope.Foundation.Property.StateAccumulationTest do
   
   defp timestamp_ms, do: System.monotonic_time(:millisecond)
   
-  defp timestamp_log(message) do
-    IO.puts("[#{DateTime.utc_now() |> DateTime.to_string()}] #{message}")
+  # Conditional logging - only log if verbose mode or significant issues
+  defp timestamp_log(message, force) do
+    verbose = System.get_env("VERBOSE_TEST_LOGS") == "true"
+    if verbose or force do
+      IO.puts("[#{DateTime.utc_now() |> DateTime.to_string()}] #{message}")
+    end
     timestamp_ms()
   end
 
   # Test 1: Simulate the state accumulation that causes slowdowns
   test "STATE ACCUMULATION: Reproduce 32-second delay through metric buildup" do
-    start_time = timestamp_log("=== TESTING STATE ACCUMULATION SLOWDOWN ===")
+    start_time = timestamp_log("=== TESTING STATE ACCUMULATION SLOWDOWN ===", true)
     
     # Ensure service is running
     unless Process.whereis(TelemetryService) do
@@ -26,7 +30,9 @@ defmodule ElixirScope.Foundation.Property.StateAccumulationTest do
     
     for iteration_count <- iterations do
       iter_start = timestamp_ms()
-      timestamp_log("=== ITERATION #{iteration_count}: Adding #{iteration_count} metrics ===")
+      # Only log every few iterations or when count is high
+      should_log = iteration_count >= 500 or rem(iteration_count, 50) == 0
+      timestamp_log("=== ITERATION #{iteration_count}: Adding #{iteration_count} metrics ===", should_log)
       
       # Add lots of metrics (simulating multiple test runs)
       operation_start = timestamp_ms()
@@ -62,43 +68,45 @@ defmodule ElixirScope.Foundation.Property.StateAccumulationTest do
       iter_end = timestamp_ms()
       total_iter_duration = iter_end - iter_start
       
-      timestamp_log("ITERATION #{iteration_count} RESULTS:")
-      timestamp_log("  - Operations (#{iteration_count} ops): #{operation_duration}ms")
-      timestamp_log("  - Get metrics: #{metrics_duration}ms")
-      timestamp_log("  - Verification: #{verify_duration}ms") 
-      timestamp_log("  - Total metrics in system: #{total_metrics}")
-      timestamp_log("  - Total iteration time: #{total_iter_duration}ms")
+      # Only log details if slow or forced
+      if should_log or total_iter_duration > 2000 do
+        timestamp_log("ITERATION #{iteration_count} RESULTS:", true)
+        timestamp_log("  - Operations (#{iteration_count} ops): #{operation_duration}ms", true)
+        timestamp_log("  - Get metrics: #{metrics_duration}ms", true)
+        timestamp_log("  - Verification: #{verify_duration}ms", true) 
+        timestamp_log("  - Total metrics in system: #{total_metrics}", true)
+        timestamp_log("  - Total iteration time: #{total_iter_duration}ms", true)
+      end
       
       # Check if we've hit the slowdown threshold
       if total_iter_duration > 5000 do
-        timestamp_log("*** FOUND THE BOTTLENECK: #{iteration_count} operations took #{total_iter_duration}ms ***")
-        timestamp_log("*** This explains the 32-second delay! ***")
+        timestamp_log("*** FOUND THE BOTTLENECK: #{iteration_count} operations took #{total_iter_duration}ms ***", true)
+        timestamp_log("*** This explains the 32-second delay! ***", true)
       end
       
       if metrics_duration > 1000 do
-        timestamp_log("*** GET_METRICS IS SLOW: #{metrics_duration}ms with #{total_metrics} metrics ***")
+        timestamp_log("*** GET_METRICS IS SLOW: #{metrics_duration}ms with #{total_metrics} metrics ***", true)
       end
       
       if verify_duration > 1000 do
-        timestamp_log("*** VERIFICATION IS SLOW: #{verify_duration}ms with #{total_metrics} metrics ***")
+        timestamp_log("*** VERIFICATION IS SLOW: #{verify_duration}ms with #{total_metrics} metrics ***", true)
       end
     end
     
     end_time = timestamp_ms()
     total_duration = end_time - start_time
-    timestamp_log("=== STATE ACCUMULATION TEST COMPLETE: #{total_duration}ms ===")
+    timestamp_log("=== STATE ACCUMULATION TEST COMPLETE: #{total_duration}ms ===", true)
     
     if total_duration > 30000 do
-      timestamp_log("*** REPRODUCED THE 32-SECOND DELAY! ***")
+      timestamp_log("*** REPRODUCED THE 32-SECOND DELAY! ***", true)
     end
   end
 
   # Test 2: Test with proper state reset vs without reset
   test "STATE RESET: Compare performance with and without proper cleanup" do
-    start_time = timestamp_log("=== TESTING STATE RESET IMPACT ===")
+    start_time = timestamp_log("=== TESTING STATE RESET IMPACT ===", true)
     
     # Test WITHOUT proper reset (accumulating state)
-    timestamp_log("--- Testing WITHOUT state reset ---")
     no_reset_start = timestamp_ms()
     
     for run <- 1..5 do
@@ -114,29 +122,41 @@ defmodule ElixirScope.Foundation.Property.StateAccumulationTest do
       get_end = timestamp_ms()
       get_duration = get_end - get_start
       
-      total_metrics = count_all_metrics(metrics)
-      timestamp_log("Run #{run} (no reset): get_metrics=#{get_duration}ms, total_metrics=#{total_metrics}")
+      _total_metrics = count_all_metrics(metrics)
+      # Only log if very slow
+      if get_duration > 100 do
+        timestamp_log("Run #{run} (no reset): SLOW get_metrics=#{get_duration}ms", true)
+      end
     end
     
     no_reset_end = timestamp_ms()
     no_reset_duration = no_reset_end - no_reset_start
     
     # Test WITH proper reset (clean state)
-    timestamp_log("--- Testing WITH state reset ---")
     
-    # Restart service to clear state
+    # Restart service to clear state - handle already started case
     if Process.whereis(TelemetryService) do
       GenServer.stop(TelemetryService, :normal, 1000)
       Process.sleep(100)
     end
-    {:ok, _} = TelemetryService.start_link([])
+    
+    case TelemetryService.start_link([]) do
+      {:ok, _} -> :ok
+      {:error, {:already_started, _}} -> :ok
+    end
     
     reset_start = timestamp_ms()
     
     for run <- 1..5 do
-      # Restart service each run (like proper test isolation)
-      GenServer.stop(TelemetryService, :normal, 1000)
-      {:ok, _} = TelemetryService.start_link([])
+      # Restart service each run (like proper test isolation) - handle already started
+      if Process.whereis(TelemetryService) do
+        GenServer.stop(TelemetryService, :normal, 1000)
+      end
+      
+      case TelemetryService.start_link([]) do
+        {:ok, _} -> :ok
+        {:error, {:already_started, _}} -> :ok
+      end
       
       # Add same metrics but with clean state
       for i <- 1..100 do
@@ -146,28 +166,30 @@ defmodule ElixirScope.Foundation.Property.StateAccumulationTest do
       
       # Measure get_metrics performance
       get_start = timestamp_ms()
-      {:ok, metrics} = Telemetry.get_metrics()
+      {:ok, _metrics} = Telemetry.get_metrics()
       get_end = timestamp_ms()
       get_duration = get_end - get_start
       
-      total_metrics = count_all_metrics(metrics)
-      timestamp_log("Run #{run} (with reset): get_metrics=#{get_duration}ms, total_metrics=#{total_metrics}")
+      # Only log if very slow
+      if get_duration > 100 do
+        timestamp_log("Run #{run} (with reset): SLOW get_metrics=#{get_duration}ms", true)
+      end
     end
     
     reset_end = timestamp_ms()
     reset_duration = reset_end - reset_start
     
-    timestamp_log("=== STATE RESET COMPARISON ===")
-    timestamp_log("Without reset: #{no_reset_duration}ms")
-    timestamp_log("With reset: #{reset_duration}ms")
-    timestamp_log("Difference: #{no_reset_duration - reset_duration}ms")
-    
+    # Only report if there's a significant difference
     if no_reset_duration > reset_duration * 2 do
-      timestamp_log("*** STATE ACCUMULATION CONFIRMED AS BOTTLENECK ***")
+      timestamp_log("*** STATE ACCUMULATION CONFIRMED: #{no_reset_duration}ms vs #{reset_duration}ms ***", true)
     end
     
     end_time = timestamp_ms()
-    timestamp_log("=== STATE RESET TEST COMPLETE: #{end_time - start_time}ms ===")
+    total_test_duration = end_time - start_time
+    # Only log if test was slow
+    if total_test_duration > 1000 do
+      timestamp_log("=== STATE RESET TEST COMPLETE: #{total_test_duration}ms ===", true)
+    end
   end
 
   # Helper to count all metrics recursively

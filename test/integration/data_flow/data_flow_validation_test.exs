@@ -2,11 +2,6 @@ defmodule ElixirScope.Test.Integration.DataFlowTest do
   use ExUnit.Case, async: false
 
   @moduletag :integration
-  @tag :integration
-
-  alias ElixirScope.Integration.DataFlow
-  alias ElixirScope.Test.Support.Helpers
-  alias ElixirScope.Test.Fixtures
 
   setup do
     # Setup test data
@@ -14,6 +9,8 @@ defmodule ElixirScope.Test.Integration.DataFlowTest do
   end
 
   describe "Integration.DataFlow" do
+    @describetag :integration
+    
     test "placeholder test for Integration.DataFlow" do
       # TODO: Implement integration test
       assert true

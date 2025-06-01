@@ -2,11 +2,6 @@ defmodule ElixirScope.Test.Integration.QueryCrossLayerTest do
   use ExUnit.Case, async: false
 
   @moduletag :integration
-  @tag :integration
-
-  alias ElixirScope.Integration.QueryCrossLayer
-  alias ElixirScope.Test.Support.Helpers
-  alias ElixirScope.Test.Fixtures
 
   setup do
     # Setup test data
@@ -14,6 +9,8 @@ defmodule ElixirScope.Test.Integration.QueryCrossLayerTest do
   end
 
   describe "Integration.QueryCrossLayer" do
+    @describetag :integration
+    
     test "placeholder test for Integration.QueryCrossLayer" do
       # TODO: Implement integration test
       assert true

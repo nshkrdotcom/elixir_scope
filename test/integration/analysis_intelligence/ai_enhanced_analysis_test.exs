@@ -2,12 +2,6 @@ defmodule ElixirScope.Test.Integration.AnalysisIntelligenceTest do
   use ExUnit.Case, async: false
   
   @moduletag :integration
-  @tag :integration 
-  @tag :ai
-  
-  alias ElixirScope.Integration.AnalysisIntelligence
-  alias ElixirScope.Test.Support.Helpers
-  alias ElixirScope.Test.Fixtures
   
   setup do
     # Setup test data
@@ -15,6 +9,9 @@ defmodule ElixirScope.Test.Integration.AnalysisIntelligenceTest do
   end
   
   describe "Integration.AnalysisIntelligence" do
+    @describetag :integration
+    @describetag :ai
+    
     test "placeholder test for Integration.AnalysisIntelligence" do
       # TODO: Implement integration test
       assert true

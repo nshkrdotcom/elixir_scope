@@ -9,12 +9,17 @@ defmodule ElixirScope.Foundation.Property.DataFormatBottleneckTest do
   defp timestamp_ms, do: System.monotonic_time(:millisecond)
   
   defp timestamp_log(message) do
-    IO.puts("[#{DateTime.utc_now() |> DateTime.to_string()}] #{message}")
+    if System.get_env("VERBOSE_TEST_LOGS") == "true" do
+      IO.puts("[#{DateTime.utc_now() |> DateTime.to_string()}] #{message}")
+    end
     timestamp_ms()
   end
 
   setup do
-    timestamp_log("=== SETUP START ===")
+    # Only log setup if verbose mode
+    if System.get_env("VERBOSE_TEST_LOGS") == "true" do
+      timestamp_log("=== SETUP START ===")
+    end
     
     # Reset state more aggressively like original tests
     try do
@@ -26,10 +31,16 @@ defmodule ElixirScope.Foundation.Property.DataFormatBottleneckTest do
       _ -> :ok
     end
     
-    {:ok, _} = TelemetryService.start_link([])
+    # Handle already started case
+    case TelemetryService.start_link([]) do
+      {:ok, _} -> :ok
+      {:error, {:already_started, _}} -> :ok
+    end
     Process.sleep(50)
     
-    timestamp_log("=== SETUP COMPLETE ===")
+    if System.get_env("VERBOSE_TEST_LOGS") == "true" do
+      timestamp_log("=== SETUP COMPLETE ===")
+    end
     :ok
   end
 
@@ -98,7 +109,7 @@ defmodule ElixirScope.Foundation.Property.DataFormatBottleneckTest do
         if is_map(value) do
           if Map.has_key?(value, :measurements) do
             measurements = value.measurements
-            Enum.each(measurements, fn {measurement_key, measurement_value} ->
+            Enum.each(measurements, fn {_measurement_key, measurement_value} ->
               # Check if this is the problematic pattern
               if is_number(measurement_value) and measurement_value != measurement_value do
                 timestamp_log("SLOW: Found NaN or complex number: #{inspect(measurement_value)}")

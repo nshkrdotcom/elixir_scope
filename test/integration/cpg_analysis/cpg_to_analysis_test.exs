@@ -2,11 +2,6 @@ defmodule ElixirScope.Test.Integration.CPGAnalysisTest do
   use ExUnit.Case, async: false
 
   @moduletag :integration
-  @tag :integration
-
-  alias ElixirScope.Integration.CPGAnalysis
-  alias ElixirScope.Test.Support.Helpers
-  alias ElixirScope.Test.Fixtures
 
   setup do
     # Setup test data
@@ -14,6 +9,8 @@ defmodule ElixirScope.Test.Integration.CPGAnalysisTest do
   end
 
   describe "Integration.CPGAnalysis" do
+    @describetag :integration
+    
     test "placeholder test for Integration.CPGAnalysis" do
       # TODO: Implement integration test
       assert true
