@@ -8,7 +8,7 @@ defmodule ElixirScope.Foundation.Integration.CrossServiceIntegrationTest do
 
   use ExUnit.Case, async: false
 
-  alias ElixirScope.Foundation.{Config, Events, Telemetry}
+  alias ElixirScope.Foundation.{Config, Events, Telemetry} #, ErrorContext, GracefulDegradation}
   alias ElixirScope.Foundation.Services.{ConfigServer, EventStore, TelemetryService}
   alias ElixirScope.Foundation.TestHelpers
 
@@ -428,4 +428,179 @@ defmodule ElixirScope.Foundation.Integration.CrossServiceIntegrationTest do
       assert timestamps == Enum.sort(timestamps)
     end
   end
+
+  # describe "cross-service error handling and context" do
+  #   test "ErrorContext correctly captures and enhances an error originating in ConfigLogic and passed through ConfigServer" do
+  #     context = ErrorContext.new("config_update_operation", %{user: "test", action: "update"})
+
+  #     result = ErrorContext.with_context(context, fn ->
+  #       # Try to update a non-updatable path to trigger an error
+  #       Config.update([:invalid, :path], "invalid_value")
+  #     end)
+
+  #     assert {:error, enhanced_error} = result
+  #     assert enhanced_error.context[:operation_context] == context
+  #     assert enhanced_error.context[:user] == "test"
+  #   end
+
+  #   test "EventStore pruning based on max_age_seconds (from config) triggers telemetry" do
+  #     # Store some events first
+  #     {:ok, _event_id1} = Events.store(%{event_type: :test_event, data: %{test: 1}})
+  #     {:ok, _event_id2} = Events.store(%{event_type: :test_event, data: %{test: 2}})
+
+  #     # Trigger pruning by setting a very short max_age
+  #     :ok = Config.update([:event_store, :hot_storage, :max_age_seconds], 0)
+
+  #     # Wait a bit for async pruning
+  #     Process.sleep(100)
+
+  #     # Check that telemetry was emitted for pruning
+  #     {:ok, metrics} = Telemetry.get_metrics()
+  #     assert Map.has_key?(metrics, [:foundation, :event_store, :events_pruned])
+  #   end
+
+  #   test "TelemetryService cleanup of old metrics uses metric_retention_ms from config" do
+  #     # Emit some metrics
+  #     :ok = Telemetry.emit_counter([:test, :metric1], 1)
+  #     :ok = Telemetry.emit_counter([:test, :metric2], 1)
+
+  #     # Set very short retention time
+  #     :ok = Config.update([:telemetry, :metric_retention_ms], 1)
+
+  #     # Wait for cleanup
+  #     Process.sleep(100)
+
+  #     # Verify metrics were cleaned up
+  #     {:ok, metrics} = Telemetry.get_metrics()
+  #     # Note: This test verifies the integration, exact assertion depends on implementation
+  #     assert is_map(metrics)
+  #   end
+
+  #   test "complex operation using ErrorContext.with_context spanning ConfigServer and EventStore calls correctly aggregates breadcrumbs" do
+  #     parent_context = ErrorContext.new("complex_operation", %{session_id: "12345"})
+
+  #     result = ErrorContext.with_context(parent_context, fn ->
+  #       # Add breadcrumb for config access
+  #       ErrorContext.add_breadcrumb(:info, "config", "accessing config", %{path: [:telemetry, :enable_vm_metrics]})
+
+  #       {:ok, vm_metrics_enabled} = Config.get([:telemetry, :enable_vm_metrics])
+
+  #       # Add breadcrumb for event creation
+  #       ErrorContext.add_breadcrumb(:info, "events", "creating event", %{type: :complex_operation})
+
+  #       {:ok, event_id} = Events.store(%{
+  #         event_type: :complex_operation,
+  #         data: %{vm_metrics_enabled: vm_metrics_enabled, session_id: "12345"}
+  #       })
+
+  #       {:ok, event_id}
+  #     end)
+
+  #     assert {:ok, _event_id} = result
+
+  #     # Verify context was properly maintained throughout
+  #     context = ErrorContext.get_current_context()
+  #     assert is_nil(context) # Should be cleaned up after with_context
+  #   end
+  # end
+
+  # describe "graceful degradation integration" do
+  #   test "GracefulDegradation for ConfigServer uses cached value, then pending update is retried and succeeds after ConfigServer restarts" do
+  #     # Initialize graceful degradation
+  #     :ok = GracefulDegradation.initialize_fallback_system()
+
+  #     # Get a value to cache it
+  #     {:ok, original_value} = GracefulDegradation.get_with_fallback([:telemetry, :enable_vm_metrics])
+
+  #     # Simulate ConfigServer being down by stopping it
+  #     :ok = GenServer.stop(ElixirScope.Foundation.ConfigServer, :normal)
+
+  #     # Should still get cached value
+  #     {:ok, cached_value} = GracefulDegradation.get_with_fallback([:telemetry, :enable_vm_metrics])
+  #     assert cached_value == original_value
+
+  #     # Try to update while down - should cache the update
+  #     :ok = GracefulDegradation.update_with_fallback([:telemetry, :enable_vm_metrics], false)
+
+  #     # Restart the supervisor to bring ConfigServer back
+  #     {:ok, _pid} = Supervisor.restart_child(ElixirScope.Foundation.Supervisor, ElixirScope.Foundation.ConfigServer)
+
+  #     # Retry pending updates
+  #     :ok = GracefulDegradation.retry_pending_updates()
+
+  #     # Verify the update was applied
+  #     {:ok, updated_value} = Config.get([:telemetry, :enable_vm_metrics])
+  #     assert updated_value == false
+  #   end
+
+  #   test "GracefulDegradation for EventStore uses JSON fallback when primary serialization fails, then telemetry records the fallback" do
+  #     # Create an event with potentially problematic data
+  #     problematic_data = %{
+  #       pid: self(),  # PIDs can't be JSON serialized
+  #       reference: make_ref(),  # References can't be JSON serialized
+  #       normal_data: "this is fine"
+  #     }
+
+  #     event = GracefulDegradation.new_event_safe(:test_event, problematic_data)
+
+  #     # Try to serialize it - should use fallback
+  #     serialized = GracefulDegradation.serialize_safe(event)
+  #     assert is_binary(serialized)
+
+  #     # Verify it can be deserialized
+  #     {:ok, deserialized} = GracefulDegradation.deserialize_safe(serialized)
+  #     assert deserialized.event_type == :test_event
+  #     assert deserialized.data.normal_data == "this is fine"
+  #     # PID and reference should be converted to safe representations
+  #     assert is_binary(deserialized.data.pid)
+  #     assert is_binary(deserialized.data.reference)
+
+  #     # Check that telemetry was emitted for fallback usage
+  #     {:ok, metrics} = Telemetry.get_metrics()
+  #     # Note: The exact metric path depends on implementation
+  #     assert is_map(metrics)
+  #   end
+  # end
+
+  # describe "end-to-end service initialization and health" do
+  #   test "Foundation.initialize/1 with custom config options correctly initializes all services with those options" do
+  #     Foundation.shutdown()
+
+  #     custom_opts = [
+  #       config: [telemetry: [enable_vm_metrics: false]],
+  #       event_store: [max_events: 500],
+  #       telemetry: [metric_retention_ms: 30_000]
+  #     ]
+
+  #     :ok = Foundation.initialize(custom_opts)
+
+  #     # Verify config was applied
+  #     {:ok, vm_metrics} = Config.get([:telemetry, :enable_vm_metrics])
+  #     assert vm_metrics == false
+
+  #     # Verify services are healthy
+  #     {:ok, health} = Foundation.health()
+  #     assert health.status == :healthy
+  #   end
+
+  #   test "Foundation.health/0 reflects healthy status when all services are running" do
+  #     {:ok, health} = Foundation.health()
+  #     assert health.status == :healthy
+  #     assert health.services.config == :running
+  #     assert health.services.events == :running
+  #     assert health.services.telemetry == :running
+  #   end
+
+  #   test "Foundation.health/0 reflects degraded status if a core service is down" do
+  #     # Stop a core service
+  #     :ok = GenServer.stop(ElixirScope.Foundation.ConfigServer, :normal)
+
+  #     # Wait a moment for the health check to reflect the change
+  #     Process.sleep(50)
+
+  #     {:ok, health} = Foundation.health()
+  #     assert health.status == :degraded
+  #     assert health.services.config == :stopped
+  #   end
+  # end
 end
