@@ -1,748 +1,733 @@
-# ElixirScope Foundation Layer API Specification
-
-**Version:** 1.0.0  
-**Last Updated:** 2025-05-30
-**Purpose:** Definitive API contract for Foundation layer - no Foundation code needed after this
+# ElixirScope Foundation Layer - Complete API Contract Specification
 
 ## Overview
 
-The Foundation layer provides core infrastructure services for all ElixirScope layers. This API specification defines the complete contract for configuration, events, utilities, telemetry, and error handling.
+This document serves as the **definitive API contract** for ElixirScope's Foundation layer. Based on comprehensive testing, implementation analysis, and real-world usage patterns, this contract specifies every public API, behavior pattern, and integration requirement for the Foundation layer.
 
-## Core Principles
+**Purpose**: This is not just a standardization document, but the complete specification that any Foundation layer implementation must satisfy.
 
-- **Stability First**: Foundation APIs are stable contracts that higher layers depend on
-- **Error Resilience**: All operations handle errors gracefully with structured error types
-- **Type Safety**: Full typespec coverage with Dialyzer validation
-- **Performance**: Sub-millisecond response times for core operations
-- **Observability**: Comprehensive telemetry and logging
+## Table of Contents
 
----
+1. [Foundation Layer Architecture](#foundation-layer-architecture)
+2. [Core Public APIs](#core-public-apis)
+3. [Service APIs](#service-apis)
+4. [Utility APIs](#utility-apis)
+5. [Error Handling Contract](#error-handling-contract)
+6. [Testing Infrastructure Contract](#testing-infrastructure-contract)
+7. [Performance and Monitoring Contract](#performance-and-monitoring-contract)
+8. [Implementation Requirements](#implementation-requirements)
+9. [Contract Validation](#contract-validation)
 
-## 1. Foundation Module (`ElixirScope.Foundation`)
+## Foundation Layer Architecture
 
-### 1.1 Application Lifecycle
+The Foundation layer implements a 6-tier architecture with clear separation of concerns:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Foundation Orchestration (ElixirScope.Foundation)           │ ← High-level coordination
+├─────────────────────────────────────────────────────────────┤
+│ Public APIs (Config, Events, Telemetry, Utils)            │ ← Clean interface layer
+├─────────────────────────────────────────────────────────────┤
+│ Services (ConfigServer, EventStore, TelemetryService)      │ ← Stateful GenServers
+├─────────────────────────────────────────────────────────────┤
+│ Logic (EventLogic, ConfigLogic, etc.)                      │ ← Pure business functions
+├─────────────────────────────────────────────────────────────┤
+│ Types & Contracts (Error, Event, Config, Behaviors)       │ ← Data structures & interfaces
+├─────────────────────────────────────────────────────────────┤
+│ Test Infrastructure (TestHelpers, Fixtures)               │ ← Testing support
+└─────────────────────────────────────────────────────────────┘
+```
+
+## Core Public APIs
+
+### 1. Foundation Orchestration API
+
+**Module**: `ElixirScope.Foundation`
+
+The top-level coordination module that manages the entire Foundation layer.
+
+#### Required Functions
 
 ```elixir
 @spec initialize(keyword()) :: :ok | {:error, Error.t()}
+def initialize(opts \\ [])
 ```
-**Purpose**: Initialize Foundation layer with optional configuration  
-**Usage**: Called once during application startup  
-**Opts**: `[config_overrides: keyword(), debug_mode: boolean()]`  
-**Errors**: `:initialization_failed`, `:dependency_failed`
+- **Purpose**: Start all Foundation services in correct dependency order
+- **Parameters**: `opts` - Configuration options for initialization
+- **Returns**: `:ok` on success, `{:error, Error.t()}` on failure
+- **Contract**: Must start ConfigServer, EventStore, TelemetryService in order
 
 ```elixir
-@spec status() :: foundation_status()
-@type foundation_status :: %{
-  config: :ok | {:error, Error.t()},
-  events: :ok | {:error, Error.t()},
-  telemetry: :ok | {:error, Error.t()},
-  uptime_ms: non_neg_integer()
-}
+@spec status() :: {:ok, map()} | {:error, Error.t()}
+def status()
 ```
-**Purpose**: Get health status of all Foundation subsystems  
-**Returns**: Health map with component status and uptime
-
----
-
-## 2. Configuration (`ElixirScope.Foundation.Config`)
-
-### 2.1 Core Configuration Operations
+- **Purpose**: Get status of all Foundation services
+- **Returns**: `{:ok, status_map}` with service statuses, or `{:error, Error.t()}`
+- **Contract**: Status map must include `config`, `events`, `telemetry` keys
 
 ```elixir
+@spec available?() :: boolean()
+def available?()
+```
+- **Purpose**: Check if all critical Foundation services are running
+- **Returns**: `true` if all services available, `false` otherwise
+- **Contract**: Must check ConfigServer, EventStore, TelemetryService availability
+
+```elixir
+@spec shutdown() :: :ok
+def shutdown()
+```
+- **Purpose**: Gracefully shutdown all Foundation services
+- **Returns**: Always `:ok` (blocking until complete)
+- **Contract**: Must stop services in reverse dependency order
+
+```elixir
+@spec health() :: {:ok, map()} | {:error, Error.t()}
+def health()
+```
+- **Purpose**: Get comprehensive health metrics for monitoring
+- **Returns**: Health data including service details and system metrics
+- **Contract**: Must include overall status, timestamp, service details
+
+```elixir
+@spec version() :: String.t()
+def version()
+```
+- **Purpose**: Get Foundation layer version
+- **Returns**: Version string from application specification
+- **Contract**: Must return semver-compatible version string
+
+### 2. Configuration API
+
+**Module**: `ElixirScope.Foundation.Config`
+
+Manages application configuration with validation and change tracking.
+
+#### Required Functions
+
+```elixir
+@spec initialize() :: :ok | {:error, Error.t()}
 @spec initialize(keyword()) :: :ok | {:error, Error.t()}
+def initialize(opts \\ [])
 ```
-**Purpose**: Start configuration GenServer with initial values  
-**Errors**: `:initialization_failed`, `:service_unavailable`
 
 ```elixir
-@spec get() :: Config.t() | {:error, Error.t()}
-@spec get(config_path()) :: config_value() | nil | {:error, Error.t()}
-@type config_path :: [atom()]
+@spec get() :: {:ok, Config.t()} | {:error, Error.t()}
+def get()
 ```
-**Purpose**: Retrieve complete configuration or value at path  
-**Example**: `Config.get([:ai, :planning, :sampling_rate])`
+- **Contract**: Must return complete configuration structure
+
+```elixir
+@spec get(config_path()) :: {:ok, config_value()} | {:error, Error.t()}
+def get(path) when is_list(path)
+```
+- **Contract**: Path is list of atoms, returns nested value or error
 
 ```elixir
 @spec update(config_path(), config_value()) :: :ok | {:error, Error.t()}
+def update(path, value)
 ```
-**Purpose**: Update configuration at runtime (only allowed paths)  
-**Errors**: `:config_update_forbidden`, `:validation_failed`
+- **Contract**: Only updatable paths can be modified, triggers events
 
 ```elixir
 @spec validate(Config.t()) :: :ok | {:error, Error.t()}
-```
-**Purpose**: Validate configuration structure and values
-
-### 2.2 Configuration Structure
-
-```elixir
-@type Config.t() :: %Config{
-  ai: ai_config(),
-  capture: capture_config(), 
-  storage: storage_config(),
-  interface: interface_config(),
-  dev: dev_config()
-}
-
-@type ai_config :: %{
-  provider: :mock | :openai | :anthropic | :gemini,
-  api_key: String.t() | nil,
-  model: String.t(),
-  analysis: %{
-    max_file_size: pos_integer(),
-    timeout: pos_integer(),
-    cache_ttl: pos_integer()
-  },
-  planning: %{
-    default_strategy: :fast | :balanced | :thorough,
-    performance_target: float(),
-    sampling_rate: float()
-  }
-}
-
-@type capture_config :: %{
-  ring_buffer: %{
-    size: pos_integer(),
-    max_events: pos_integer(),
-    overflow_strategy: :drop_oldest | :drop_newest | :block,
-    num_buffers: pos_integer() | :schedulers
-  },
-  processing: %{
-    batch_size: pos_integer(),
-    flush_interval: pos_integer(),
-    max_queue_size: pos_integer()
-  },
-  vm_tracing: %{
-    enable_spawn_trace: boolean(),
-    enable_exit_trace: boolean(),
-    enable_message_trace: boolean(),
-    trace_children: boolean()
-  }
-}
-
-@type storage_config :: %{
-  hot: %{
-    max_events: pos_integer(),
-    max_age_seconds: pos_integer(),
-    prune_interval: pos_integer()
-  },
-  warm: %{
-    enable: boolean(),
-    path: String.t(),
-    max_size_mb: pos_integer(),
-    compression: :none | :gzip | :zstd
-  },
-  cold: %{enable: boolean()}
-}
-
-@type interface_config :: %{
-  query_timeout: pos_integer(),
-  max_results: pos_integer(),
-  enable_streaming: boolean()
-}
-
-@type dev_config :: %{
-  debug_mode: boolean(),
-  verbose_logging: boolean(), 
-  performance_monitoring: boolean()
-}
+def validate(config)
 ```
 
-### 2.3 Runtime Updatable Paths
+```elixir
+@spec updatable_paths() :: [config_path()]
+def updatable_paths()
+```
+- **Contract**: Returns list of paths that can be updated at runtime
 
 ```elixir
-@updatable_paths [
-  [:ai, :planning, :sampling_rate],
-  [:ai, :planning, :performance_target],
-  [:capture, :processing, :batch_size],
-  [:capture, :processing, :flush_interval],
-  [:interface, :query_timeout],
-  [:interface, :max_results],
-  [:dev, :debug_mode],
-  [:dev, :verbose_logging],
-  [:dev, :performance_monitoring]
-]
+@spec reset() :: :ok | {:error, Error.t()}
+def reset()
 ```
 
----
-
-## 3. Events (`ElixirScope.Foundation.Events`)
-
-### 3.1 Event Creation
-
 ```elixir
-@spec new_event(atom(), term(), keyword()) :: Events.t() | {:error, Error.t()}
+@spec available?() :: boolean()
+def available?()
 ```
-**Purpose**: Create a new event with structured data  
-**Opts**: `[correlation_id: String.t(), parent_id: event_id()]`
 
 ```elixir
-@spec function_entry(module(), atom(), arity(), [term()], keyword()) :: 
-  Events.t() | {:error, Error.t()}
+@spec status() :: {:ok, map()} | {:error, Error.t()}
+def status()
 ```
-**Purpose**: Create function entry event for tracing
 
 ```elixir
-@spec function_exit(module(), atom(), arity(), event_id(), term(), 
-  non_neg_integer(), atom()) :: Events.t() | {:error, Error.t()}
+@spec subscribe() :: :ok | {:error, Error.t()}
+@spec unsubscribe() :: :ok
+def subscribe()
+def unsubscribe()
 ```
-**Purpose**: Create function exit event with result and duration
+- **Contract**: Subscribe to config change notifications
 
 ```elixir
-@spec state_change(pid(), atom(), term(), term(), keyword()) :: 
-  Events.t() | {:error, Error.t()}
+@spec get_with_default(config_path(), config_value()) :: config_value()
+def get_with_default(path, default)
 ```
-**Purpose**: Create GenServer state change event
+- **Contract**: Returns actual value or default, never fails
 
-### 3.2 Event Structure
+#### Type Definitions
 
 ```elixir
-@type Events.t() :: %Events{
-  event_id: event_id(),
-  event_type: atom(),
-  timestamp: timestamp(),
-  wall_time: DateTime.t(),
-  node: node(),
-  pid: pid(),
-  correlation_id: correlation_id() | nil,
-  parent_id: event_id() | nil,
-  data: term()
-}
+@type config_path :: [atom()]
+@type config_value :: term()
+```
 
+### 3. Events API
+
+**Module**: `ElixirScope.Foundation.Events`
+
+Manages event creation, storage, and retrieval with correlation tracking.
+
+#### Required Functions
+
+```elixir
+@spec initialize() :: :ok | {:error, Error.t()}
+def initialize()
+```
+
+```elixir
+@spec new_event(atom(), term()) :: {:ok, Event.t()} | {:error, Error.t()}
+@spec new_event(atom(), term(), keyword()) :: {:ok, Event.t()} | {:error, Error.t()}
+def new_event(event_type, data, opts \\ [])
+```
+- **Contract**: Creates event with unique ID, timestamp, correlation ID
+
+```elixir
+@spec store(Event.t()) :: {:ok, event_id()} | {:error, Error.t()}
+def store(event)
+```
+
+```elixir
+@spec store_batch([Event.t()]) :: {:ok, [event_id()]} | {:error, Error.t()}
+def store_batch(events)
+```
+- **Contract**: Atomic storage of multiple events
+
+```elixir
+@spec get(event_id()) :: {:ok, Event.t()} | {:error, Error.t()}
+def get(event_id) when is_integer(event_id) and event_id > 0
+```
+
+```elixir
+@spec query(keyword()) :: {:ok, [Event.t()]} | {:error, Error.t()}
+def query(query_options)
+```
+- **Contract**: Query events by type, correlation_id, time range, etc.
+
+```elixir
+@spec get_by_correlation(correlation_id()) :: {:ok, [Event.t()]} | {:error, Error.t()}
+def get_by_correlation(correlation_id)
+```
+
+```elixir
+@spec serialize(Event.t()) :: {:ok, binary()} | {:error, Error.t()}
+@spec deserialize(binary()) :: {:ok, Event.t()} | {:error, Error.t()}
+def serialize(event)
+def deserialize(binary)
+```
+
+```elixir
+@spec serialized_size(Event.t()) :: {:ok, non_neg_integer()} | {:error, Error.t()}
+def serialized_size(event)
+```
+
+#### Convenience Functions
+
+```elixir
+@spec function_entry(module(), atom(), arity(), [term()], keyword()) :: {:ok, Event.t()} | {:error, Error.t()}
+def function_entry(module, function, arity, args, opts \\ [])
+
+@spec function_exit(module(), atom(), arity(), pos_integer(), term(), non_neg_integer(), atom()) :: {:ok, Event.t()} | {:error, Error.t()}
+def function_exit(module, function, arity, call_id, result, duration_ns, exit_reason)
+
+@spec state_change(pid(), atom(), term(), term(), keyword()) :: {:ok, Event.t()} | {:error, Error.t()}
+def state_change(server_pid, callback, old_state, new_state, opts \\ [])
+```
+
+#### Required Service Functions
+
+```elixir
+@spec available?() :: boolean()
+@spec status() :: {:ok, map()} | {:error, Error.t()}
+def available?()
+def status()
+```
+
+#### Type Definitions
+
+```elixir
 @type event_id :: pos_integer()
 @type correlation_id :: String.t()
-@type timestamp :: integer()
+@type event_query :: keyword()
 ```
 
-### 3.3 Event Serialization
+### 4. Telemetry API
+
+**Module**: `ElixirScope.Foundation.Telemetry`
+
+Manages metrics collection, performance monitoring, and telemetry events.
+
+#### Required Functions
 
 ```elixir
-@spec serialize(Events.t()) :: binary() | {:error, Error.t()}
-@spec deserialize(binary()) :: Events.t() | {:error, Error.t()}
-@spec serialized_size(Events.t()) :: non_neg_integer()
+@spec initialize() :: :ok | {:error, Error.t()}
+def initialize()
 ```
-**Purpose**: Convert events to/from binary for storage and transport
-
-### 3.4 System Management
 
 ```elixir
-@spec initialize() :: :ok
-@spec status() :: :ok
+@spec execute(event_name(), measurements(), metadata()) :: :ok
+def execute(event_name, measurements, metadata)
 ```
-**Purpose**: Initialize event system and check health
-
----
-
-## 4. Utilities (`ElixirScope.Foundation.Utils`)
-
-### 4.1 ID Generation
 
 ```elixir
-@spec generate_id() :: event_id()
-@spec generate_correlation_id() :: correlation_id()
-@spec id_to_timestamp(event_id()) :: timestamp()
+@spec measure(event_name(), metadata(), (() -> result)) :: result when result: var
+def measure(event_name, metadata, fun)
 ```
-**Purpose**: Generate unique IDs for events and correlations
-
-### 4.2 Time Utilities
+- **Contract**: Executes function and emits timing telemetry
 
 ```elixir
-@spec monotonic_timestamp() :: timestamp()
-@spec wall_timestamp() :: timestamp()
-@spec format_timestamp(timestamp()) :: String.t()
+@spec emit_counter(event_name(), metadata()) :: :ok
+def emit_counter(event_name, metadata)
 ```
-**Purpose**: High-precision time measurement and formatting
-
-### 4.3 Measurement
 
 ```elixir
-@spec measure((-> t)) :: {t, non_neg_integer()} when t: var
-@spec measure_memory((-> t)) :: {t, {non_neg_integer(), non_neg_integer(), integer()}} when t: var
+@spec emit_gauge(event_name(), metric_value(), metadata()) :: :ok
+def emit_gauge(event_name, value, metadata)
 ```
-**Purpose**: Measure execution time and memory usage  
-**Returns**: `{result, duration_ns}` or `{result, {before, after, diff}}`
-
-### 4.4 Data Processing
 
 ```elixir
-@spec safe_inspect(term(), keyword()) :: String.t()
-@spec truncate_if_large(term(), non_neg_integer()) :: term() | truncated_data()
-@spec term_size(term()) :: non_neg_integer()
-
-@type truncated_data :: {:truncated, non_neg_integer(), String.t()}
+@spec get_metrics() :: {:ok, map()} | {:error, Error.t()}
+def get_metrics()
 ```
-**Purpose**: Safe data inspection and size management
-
-### 4.5 System Information
+- **Contract**: Returns collected metrics data
 
 ```elixir
-@spec process_stats(pid()) :: process_stats()
-@spec system_stats() :: system_stats()
+@spec reset_metrics() :: :ok
+def reset_metrics()
+```
+- **Contract**: Clears all collected metrics
 
-@type process_stats :: %{
-  memory: non_neg_integer(),
-  reductions: non_neg_integer(),
-  message_queue_len: non_neg_integer(),
-  timestamp: timestamp()
-}
-
-@type system_stats :: %{
-  timestamp: timestamp(),
-  process_count: non_neg_integer(),
-  total_memory: non_neg_integer(),
-  scheduler_count: pos_integer(),
-  otp_release: String.t()
-}
+```elixir
+@spec attach_handlers([event_name()]) :: :ok | {:error, Error.t()}
+@spec detach_handlers([event_name()]) :: :ok
+def attach_handlers(event_names)
+def detach_handlers(event_names)
 ```
 
-### 4.6 Formatting
+#### Convenience Functions
+
+```elixir
+@spec time_function(module(), atom(), (() -> result)) :: result when result: var
+def time_function(module, function, fun)
+
+@spec emit_performance(atom(), metric_value(), metadata()) :: :ok
+def emit_performance(metric_name, value, metadata \\ %{})
+
+@spec emit_system_event(atom(), metadata()) :: :ok
+def emit_system_event(event_type, metadata \\ %{})
+```
+
+#### Required Service Functions
+
+```elixir
+@spec available?() :: boolean()
+@spec status() :: {:ok, map()} | {:error, Error.t()}
+def available?()
+def status()
+```
+
+#### Type Definitions
+
+```elixir
+@type event_name :: [atom()]
+@type measurements :: map()
+@type metadata :: map()
+@type metric_value :: number()
+```
+
+### 5. Utilities API
+
+**Module**: `ElixirScope.Foundation.Utils`
+
+Pure utility functions for ID generation, data manipulation, and common operations.
+
+#### Required Functions
+
+```elixir
+@spec generate_id() :: pos_integer()
+def generate_id()
+```
+- **Contract**: Must generate unique positive integers across all processes
+
+```elixir
+@spec generate_correlation_id() :: String.t()
+def generate_correlation_id()
+```
+- **Contract**: Must generate 36-character UUID-format strings
+
+```elixir
+@spec monotonic_timestamp() :: integer()
+def monotonic_timestamp()
+```
+
+```elixir
+@spec deep_merge(map(), map()) :: map()
+def deep_merge(left, right)
+```
+- **Contract**: Recursively merge maps, right-hand side wins conflicts
+
+```elixir
+@spec truncate_if_large(term()) :: term()
+@spec truncate_if_large(term(), pos_integer()) :: term()
+def truncate_if_large(data, max_size \\ 10_000)
+```
+
+```elixir
+@spec deep_size(term()) :: non_neg_integer()
+def deep_size(term)
+```
+
+```elixir
+@spec safe_inspect(term()) :: String.t()
+def safe_inspect(term)
+```
+
+```elixir
+@spec get_nested(map(), [atom()], term()) :: term()
+def get_nested(map, path, default \\ nil)
+```
+
+```elixir
+@spec put_nested(map(), [atom()], term()) :: map()
+def put_nested(map, path, value)
+```
+
+#### Performance Measurement Functions
+
+```elixir
+@spec measure((() -> result)) :: {result, non_neg_integer()} when result: any()
+def measure(func)
+```
+- **Contract**: Returns {result, duration_in_microseconds}
+
+```elixir
+@spec measure_memory((() -> result)) :: {result, {non_neg_integer(), non_neg_integer(), integer()}} when result: any()
+def measure_memory(func)
+```
+- **Contract**: Returns {result, {before_bytes, after_bytes, diff_bytes}}
+
+#### System Information Functions
 
 ```elixir
 @spec format_bytes(non_neg_integer()) :: String.t()
-@spec format_duration(non_neg_integer()) :: String.t()
+def format_bytes(bytes)
 ```
-**Purpose**: Human-readable formatting for bytes and durations
+- **Contract**: Formats bytes as human-readable strings (B, KB, MB, GB)
 
-### 4.7 Validation
+```elixir
+@spec process_stats() :: map()
+def process_stats()
+```
+- **Contract**: Returns memory, message_queue_len, reductions, etc.
+
+```elixir
+@spec system_stats() :: map()
+def system_stats()
+```
+- **Contract**: Returns process_count, memory, scheduler info, etc.
 
 ```elixir
 @spec valid_positive_integer?(term()) :: boolean()
-@spec valid_percentage?(term()) :: boolean()
-@spec valid_pid?(term()) :: boolean()
+def valid_positive_integer?(value)
 ```
-**Purpose**: Common validation predicates
 
----
+## Service APIs
 
-## 5. Telemetry (`ElixirScope.Foundation.Telemetry`)
+The Foundation layer implements three core services that public APIs delegate to:
 
-### 5.1 Measurement
+### 1. ConfigServer
+
+**Module**: `ElixirScope.Foundation.Services.ConfigServer`
+
+#### Required GenServer Functions
 
 ```elixir
-@spec measure_event([atom(), ...], map(), (-> t)) :: t when t: var
+@spec start_link(keyword()) :: GenServer.on_start()
+@spec initialize() :: :ok | {:error, Error.t()}
+@spec initialize(keyword()) :: :ok | {:error, Error.t()}
 ```
-**Purpose**: Measure function execution with telemetry events  
-**Example**: `measure_event([:elixir_scope, :cpg, :build], %{module: MyModule}, fn -> build_cpg() end)`
+
+#### Service-Level Functions
 
 ```elixir
-@spec emit_counter([atom(), ...], map()) :: :ok
-@spec emit_gauge([atom(), ...], number(), map()) :: :ok
+@spec get() :: {:ok, Config.t()} | {:error, Error.t()}
+@spec get(config_path()) :: {:ok, config_value()} | {:error, Error.t()}
+@spec update(config_path(), config_value()) :: :ok | {:error, Error.t()}
+@spec validate(Config.t()) :: :ok | {:error, Error.t()}
+@spec available?() :: boolean()
+@spec status() :: {:ok, map()} | {:error, Error.t()}
 ```
-**Purpose**: Emit counter and gauge metrics
 
-### 5.2 Metrics Collection
+### 2. EventStore
+
+**Module**: `ElixirScope.Foundation.Services.EventStore`
+
+#### Required GenServer Functions
 
 ```elixir
-@spec get_metrics() :: metrics_data()
-@type metrics_data :: %{
-  foundation: %{
-    uptime_ms: integer(),
-    memory_usage: non_neg_integer(),
-    process_count: non_neg_integer()
-  },
-  system: system_stats()
+@spec start_link(keyword()) :: GenServer.on_start()
+@spec initialize() :: :ok | {:error, Error.t()}
+```
+
+#### Service-Level Functions
+
+```elixir
+@spec store(Event.t()) :: {:ok, event_id()} | {:error, Error.t()}
+@spec store_batch([Event.t()]) :: {:ok, [event_id()]} | {:error, Error.t()}
+@spec get(event_id()) :: {:ok, Event.t()} | {:error, Error.t()}
+@spec query(keyword()) :: {:ok, [Event.t()]} | {:error, Error.t()}
+@spec get_by_correlation(correlation_id()) :: {:ok, [Event.t()]} | {:error, Error.t()}
+@spec available?() :: boolean()
+@spec status() :: {:ok, map()} | {:error, Error.t()}
+```
+
+### 3. TelemetryService
+
+**Module**: `ElixirScope.Foundation.Services.TelemetryService`
+
+#### Required GenServer Functions
+
+```elixir
+@spec start_link(keyword()) :: GenServer.on_start()
+@spec initialize() :: :ok | {:error, Error.t()}
+```
+
+#### Service-Level Functions
+
+```elixir
+@spec execute(event_name(), measurements(), metadata()) :: :ok
+@spec measure(event_name(), metadata(), (() -> result)) :: result when result: var
+@spec emit_counter(event_name(), metadata()) :: :ok
+@spec emit_gauge(event_name(), metric_value(), metadata()) :: :ok
+@spec get_metrics() :: {:ok, map()} | {:error, Error.t()}
+@spec reset_metrics() :: :ok
+@spec available?() :: boolean()
+@spec status() :: {:ok, map()} | {:error, Error.t()}
+```
+
+## Error Handling Contract
+
+### Error Structure
+
+All errors must use `ElixirScope.Foundation.Types.Error`:
+
+```elixir
+%Error{
+  error_type: atom(),          # For pattern matching
+  message: String.t(),         # Human readable
+  code: pos_integer(),         # Numeric code
+  category: error_category(),  # :config | :system | :data | :external | :validation
+  severity: error_severity(),  # :low | :medium | :high | :critical
+  context: map(),              # Debug information
+  correlation_id: String.t(),  # Request tracing
+  timestamp: DateTime.t()      # When error occurred
 }
 ```
 
-### 5.3 System Management
+### Return Value Patterns
+
+**Rule 1: Operations that can fail AND return data**
+- Must return `{:ok, result} | {:error, Error.t()}`
+- Examples: `Config.get/1`, `Events.query/1`, `Telemetry.get_metrics/0`
+
+**Rule 2: Operations that can fail but perform side-effects**
+- Must return `:ok | {:error, Error.t()}`
+- Examples: `Config.update/2`, `Events.store/1`, `Telemetry.emit_counter/2`
+
+**Rule 3: Pure utility functions that cannot reasonably fail**
+- Return result directly
+- Examples: `Utils.generate_id/0`, `Utils.format_bytes/1`
+
+**Rule 4: Service availability checks**
+- Must return `boolean()`
+- Examples: `Config.available?/0`, `Events.available?/0`
+
+### Error Creation
 
 ```elixir
-@spec initialize() :: :ok
-@spec status() :: :ok
+# Standard error creation
+{:error, Error.new(:error_type, "Message", context: %{...})}
+
+# Error propagation with enrichment
+{:error, Error.enrich(existing_error, %{additional: "context"})}
 ```
 
-### 5.4 Standard Telemetry Events
+## Testing Infrastructure Contract
+
+### TestHelpers Module
+
+**Module**: `ElixirScope.Foundation.TestHelpers`
+
+#### Required Functions
 
 ```elixir
-# Configuration events
-[:elixir_scope, :config, :get]
-[:elixir_scope, :config, :update]
-[:elixir_scope, :config, :validate]
-
-# Event system events  
-[:elixir_scope, :events, :create]
-[:elixir_scope, :events, :serialize]
-[:elixir_scope, :events, :deserialize]
-
-# Performance events
-[:elixir_scope, :performance, :measurement]
-[:elixir_scope, :performance, :memory_usage]
-```
-
----
-
-## 6. Error Handling (`ElixirScope.Foundation.Error`)
-
-### 6.1 Error Structure
-
-```elixir
-@type Error.t() :: %Error{
-  code: error_code(),
-  message: String.t(),
-  context: map(),
-  module: module() | nil,
-  function: atom() | nil,
-  line: non_neg_integer() | nil,
-  stacktrace: [map()] | nil,
-  timestamp: DateTime.t(),
-  correlation_id: String.t() | nil
-}
-
-@type error_code :: 
-  # Configuration Errors
-  :invalid_config_structure | :invalid_config_value | :missing_required_config |
-  :config_validation_failed | :config_not_found | :config_update_forbidden |
-  
-  # Validation Errors  
-  :invalid_input | :validation_failed | :constraint_violation |
-  :type_mismatch | :range_error | :format_error |
-  
-  # System Errors
-  :initialization_failed | :service_unavailable | :timeout |
-  :resource_exhausted | :dependency_failed | :internal_error |
-  :external_error | :test_error |
-  
-  # Data Errors
-  :data_corruption | :serialization_failed | :deserialization_failed |
-  :data_not_found | :data_conflict
-```
-
-### 6.2 Error Construction
-
-```elixir
-@spec new(error_code(), String.t(), keyword()) :: Error.t()
-@spec config_error(error_code(), String.t(), keyword()) :: Error.t()
-@spec validation_error(error_code(), String.t(), keyword()) :: Error.t()
-@spec system_error(error_code(), String.t(), keyword()) :: Error.t()
-@spec data_error(error_code(), String.t(), keyword()) :: Error.t()
-```
-
-### 6.3 Error Result Helpers
-
-```elixir
-@spec error_result(Error.t()) :: {:error, Error.t()}
-@spec error_result(error_code(), String.t(), keyword()) :: {:error, Error.t()}
-```
-
-### 6.4 Error Inspection
-
-```elixir
-@spec to_map(Error.t()) :: map()
-@spec to_string(Error.t()) :: String.t()
-@spec severity(Error.t()) :: :low | :medium | :high | :critical
-```
-
----
-
-## 7. Error Context (`ElixirScope.Foundation.ErrorContext`)
-
-### 7.1 Context Management
-
-```elixir
-@spec new(module(), atom(), keyword()) :: context()
-@type context :: %{
-  module: module(),
-  function: atom(),
-  timestamp: DateTime.t(),
-  metadata: map()
-}
+@spec wait_for_service_availability(module(), non_neg_integer()) :: :ok | :timeout
+def wait_for_service_availability(service_module, timeout_ms \\ 5000)
 ```
 
 ```elixir
-@spec add_context(result(), context(), map()) :: result() when 
-  result: :ok | {:ok, term()} | {:error, Error.t()} | {:error, term()}
+@spec wait_for_all_services_available(non_neg_integer()) :: :ok | :timeout
+def wait_for_all_services_available(timeout_ms \\ 5000)
 ```
-**Purpose**: Add context information to operation results
 
 ```elixir
-@spec with_context(context(), (-> term())) :: term()
+@spec wait_for_service_restart(module(), non_neg_integer()) :: :ok | :timeout
+def wait_for_service_restart(service_module, timeout_ms \\ 5000)
 ```
-**Purpose**: Wrap function execution with error context tracking
-
----
-
-## 8. Types (`ElixirScope.Foundation.Types`)
-
-### 8.1 Core Types
 
 ```elixir
-# Time-related types
-@type timestamp :: integer()
-@type duration :: non_neg_integer()
-
-# ID types
-@type event_id :: pos_integer()
-@type correlation_id :: String.t()
-@type call_id :: pos_integer()
-
-# Result types
-@type result(success, error) :: {:ok, success} | {:error, error}
-@type result(success) :: result(success, term())
-
-# Location types
-@type file_path :: String.t()
-@type line_number :: pos_integer()
-@type column_number :: pos_integer()
-@type source_location :: %{
-  file: file_path(),
-  line: line_number(), 
-  column: column_number() | nil
-}
-
-# Process types
-@type process_info :: %{
-  pid: pid(),
-  registered_name: atom() | nil,
-  status: atom(),
-  memory: non_neg_integer(),
-  reductions: non_neg_integer()
-}
-
-# Function types
-@type module_name :: module()
-@type function_name :: atom()
-@type function_arity :: arity()
-@type function_args :: [term()]
-@type function_call :: {module_name(), function_name(), function_args()}
-
-# Data types
-@type byte_size :: non_neg_integer()
-@type truncated_data :: {:truncated, byte_size(), String.t()}
-@type maybe_truncated(t) :: t | truncated_data()
+@spec create_test_event(keyword()) :: {:ok, Event.t()} | {:error, Error.t()}
+def create_test_event(overrides \\ [])
 ```
-
----
-
-## 9. Test Support (`ElixirScope.Foundation.TestHelpers`)
-
-### 9.1 Setup Helpers
 
 ```elixir
 @spec ensure_config_available() :: :ok | {:error, Error.t()}
-@spec create_test_event(keyword()) :: Events.t() | {:error, Error.t()}
-@spec with_test_config(map(), (-> any())) :: any()
+def ensure_config_available()
 ```
-
-### 9.2 Validation Helpers
 
 ```elixir
 @spec wait_for((-> boolean()), non_neg_integer()) :: :ok | :timeout
-@spec test_error_context(module(), atom(), map()) :: context()
-@spec assert_error_result({:error, Error.t()}, atom()) :: Error.t()
-@spec assert_ok_result(term()) :: term()
+def wait_for(condition, timeout_ms \\ 1000)
 ```
 
----
+## Performance and Monitoring Contract
 
-## 10. Performance Characteristics
+### Performance Requirements
 
-### 10.1 Latency Requirements
+1. **Service startup time**: < 100ms per service
+2. **API response time**: < 10ms for simple operations
+3. **Memory usage**: Stable under load (no leaks)
+4. **Telemetry overhead**: < 200% of baseline operation cost
 
-| Operation | Target Latency | Max Latency |
-|-----------|----------------|-------------|
-| Config.get() | < 1μs | < 10μs |
-| Config.get(path) | < 5μs | < 50μs |
-| Events.new_event() | < 10μs | < 100μs |
-| Events.serialize() | < 50μs | < 500μs |
-| Utils.generate_id() | < 1μs | < 10μs |
-| Telemetry.emit_counter() | < 5μs | < 50μs |
+### Monitoring Requirements
 
-### 10.2 Memory Usage
+1. **Service health checks**: All services must implement `available?/0`
+2. **Status reporting**: All services must implement `status/0`
+3. **Telemetry emission**: Key operations must emit telemetry events
+4. **Error tracking**: All errors must include correlation IDs
 
-- **Config**: < 1MB total
-- **Events**: < 1KB per event
-- **Utils**: Stateless, no persistent memory
-- **Telemetry**: < 100KB for metrics storage
+### Event Names
 
-### 10.3 Throughput
-
-- **Event Creation**: > 100K events/second
-- **ID Generation**: > 1M IDs/second  
-- **Config Access**: > 1M gets/second
-- **Telemetry**: > 10K measurements/second
-
----
-
-## 11. Error Recovery
-
-### 11.1 Failure Modes
-
-| Component | Failure Mode | Recovery Strategy |
-|-----------|--------------|------------------|
-| Config GenServer | Crash | Restart with default config |
-| Event Creation | Memory limit | Return error, continue operation |
-| Telemetry | Handler crash | Log error, continue without telemetry |
-| Utils | Exception | Catch and return error tuple |
-
-### 11.2 Graceful Degradation
-
-- **Config unavailable**: Return cached values or defaults
-- **Events serialization failure**: Log error, continue with best effort
-- **Telemetry failure**: Continue operation without metrics
-- **Utils failure**: Return safe fallback values
-
----
-
-## 12. Integration Points
-
-### 12.1 Application Integration
+Standard telemetry event naming:
 
 ```elixir
-# In your application.ex
-def start(_type, _args) do
-  children = [
-    # Foundation must start first
-    {ElixirScope.Foundation, []},
-    # Other children
-  ]
-  
-  Supervisor.start_link(children, strategy: :one_for_one)
-end
+[:elixir_scope, :foundation, :service, :operation]
+[:elixir_scope, :config, :update, :success]
+[:elixir_scope, :events, :store, :batch]
+[:elixir_scope, :telemetry, :metrics, :collection]
 ```
 
-### 12.2 Configuration Integration
+## Implementation Requirements
+
+### 1. Supervision Tree
+
+Foundation must implement a supervision tree:
 
 ```elixir
-# In config.exs
-config :elixir_scope,
-  ai: [
-    provider: :mock,
-    planning: [
-      default_strategy: :balanced,
-      performance_target: 0.01,
-      sampling_rate: 1.0
-    ]
-  ]
+ElixirScope.Foundation.Application
+├── ConfigServer (permanent restart)
+├── EventStore (permanent restart)  
+├── TelemetryService (permanent restart)
+└── Registry (for dynamic processes)
 ```
 
-### 12.3 Higher Layer Usage
+### 2. Service Dependencies
 
+**Startup Order**: ConfigServer → EventStore → TelemetryService
+**Shutdown Order**: Reverse of startup
+
+### 3. Correlation ID Format
+
+Must generate 36-character UUID-format correlation IDs:
+- Format: `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`
+- Example: `550e8400-e29b-41d4-a716-446655440000`
+
+### 4. Configuration Paths
+
+Updatable configuration paths must include:
 ```elixir
-# AST layer using Foundation
-defmodule ElixirScope.AST.Parser do
-  alias ElixirScope.Foundation.{Events, Utils, Telemetry}
-  
-  def parse(source) do
-    correlation_id = Utils.generate_correlation_id()
-    
-    Telemetry.measure_event([:ast, :parse], %{size: byte_size(source)}, fn ->
-      # Parse implementation
-      event = Events.new_event(:ast_parsed, %{source: source}, 
-                              correlation_id: correlation_id)
-      # Continue processing
-    end)
-  end
-end
+[
+  [:dev, :debug_mode],
+  [:ai, :planning, :sampling_rate],
+  [:capture, :buffer_size],
+  [:telemetry, :enabled]
+]
 ```
 
----
+### 5. Event Structure
 
-## 13. Versioning & Compatibility
-
-### 13.1 API Stability
-
-- **STABLE**: Core APIs will not change in breaking ways
-- **Config structure**: Backwards compatible additions only
-- **Event format**: Versioned with migration support
-- **Error codes**: New codes added, existing codes stable
-
-### 13.2 Deprecation Policy
-
-- **6 months notice** for any API changes
-- **Migration guides** for breaking changes
-- **Backwards compatibility** maintained for 2 major versions
-
----
-
-## 14. Usage Examples
-
-### 14.1 Basic Foundation Usage
-
+Events must include:
 ```elixir
-# Initialize Foundation
-{:ok, _} = ElixirScope.Foundation.initialize()
-
-# Create and serialize an event
-event = ElixirScope.Foundation.Events.new_event(:user_action, %{user_id: 123})
-{:ok, binary} = ElixirScope.Foundation.Events.serialize(event)
-
-# Get configuration
-config = ElixirScope.Foundation.Config.get()
-sampling_rate = ElixirScope.Foundation.Config.get([:ai, :planning, :sampling_rate])
-
-# Measure performance
-{result, duration} = ElixirScope.Foundation.Utils.measure(fn ->
-  expensive_operation()
-end)
-
-# Emit telemetry
-ElixirScope.Foundation.Telemetry.emit_counter([:my_app, :operations])
+%Event{
+  event_id: pos_integer(),           # Unique ID
+  event_type: atom(),                # Event type
+  data: term(),                      # Event data
+  correlation_id: String.t(),        # For tracing
+  timestamp: DateTime.t(),           # When created
+  metadata: map()                    # Additional context
+}
 ```
 
-### 14.2 Error Handling Pattern
+## Contract Validation
 
-```elixir
-defmodule MyModule do
-  alias ElixirScope.Foundation.{Error, ErrorContext}
-  
-  def my_operation(params) do
-    context = ErrorContext.new(__MODULE__, :my_operation, 
-                              metadata: %{params: params})
-    
-    ErrorContext.with_context(context, fn ->
-      with {:ok, validated} <- validate_params(params),
-           {:ok, result} <- process_data(validated) do
-        {:ok, result}
-      end
-    end)
-  end
-end
-```
+### Automated Contract Tests
 
-### 14.3 Configuration Management
+The Foundation layer must pass:
 
-```elixir
-# Development configuration override
-ElixirScope.Foundation.Config.update([:dev, :debug_mode], true)
+1. **Unit Tests**: 100% of core logic functions
+2. **Integration Tests**: 95% of service interactions  
+3. **Contract Tests**: 100% of behavior implementations
+4. **Property Tests**: 75%+ of property-based scenarios
 
-# Runtime performance tuning  
-ElixirScope.Foundation.Config.update([:ai, :planning, :sampling_rate], 0.1)
+### Performance Benchmarks
 
-# Conditional feature enablement
-config = ElixirScope.Foundation.Config.get()
-if config.dev.debug_mode do
-  # Enable verbose logging
-end
-```
+Services must meet:
 
----
+1. **Throughput**: 1000+ operations/second for simple operations
+2. **Latency**: P99 < 50ms for complex operations
+3. **Memory**: < 100MB total for all Foundation services
+4. **Startup**: Complete initialization in < 500ms
 
-## 15. Contract Guarantees
+### Error Handling Coverage
 
-### 15.1 API Contracts
+Must handle:
 
-1. **All functions return either success values or `{:error, Error.t()}`**
-2. **All public functions have complete `@spec` annotations**
-3. **Configuration changes only affect runtime behavior, not API**
-4. **Events maintain backwards-compatible serialization format**
-5. **Telemetry events follow consistent naming conventions**
+1. **Service unavailable**: All APIs gracefully handle service downtime
+2. **Invalid input**: All functions validate input and return proper errors
+3. **Resource exhaustion**: Graceful degradation under resource pressure
+4. **Network failures**: Proper error propagation and retry logic
 
-### 15.2 Performance Contracts
+## Breaking Changes
 
-1. **Foundation operations complete within specified latency bounds**
-2. **Memory usage remains bounded and predictable**
-3. **No unbounded queues or memory leaks**
-4. **Graceful degradation under resource pressure**
+Any changes to this contract that break existing functionality must:
 
-### 15.3 Reliability Contracts
+1. **Version bump**: Increment major version number
+2. **Migration guide**: Provide clear upgrade path
+3. **Deprecation period**: 6 months minimum for public APIs
+4. **Backward compatibility**: Where technically feasible
 
-1. **Foundation components restart cleanly after crashes**
-2. **Configuration maintains consistency across restarts**
-3. **Events are never lost due to Foundation failures**
-4. **Telemetry failures do not affect application operation**
+## Contract Compliance
 
----
+This contract serves as the definitive specification for Foundation layer APIs. All implementations must:
 
-This API specification serves as the definitive contract for the Foundation layer. Higher layers should only use the APIs documented here and should not depend on implementation details. The Foundation layer will maintain backward compatibility for all APIs marked as stable.
+1. **Implement all required functions** with exact specifications
+2. **Pass all contract tests** without modification  
+3. **Meet performance requirements** under specified conditions
+4. **Follow error handling patterns** consistently
+5. **Maintain type contracts** as specified
 
-**Next Steps**: Use this specification to implement higher layers without needing to reference Foundation implementation code.
+Any deviation from this contract constitutes a breaking change and must follow the breaking changes process.

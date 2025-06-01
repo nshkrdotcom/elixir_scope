@@ -48,10 +48,6 @@ ElixirScope is built with a clean 9-layer architecture that ensures modularity, 
 └─────────────────────────────────────┘
 ```
 
-### File Tree
-
-
-
 ### Layer Overview
 
 | Layer | Purpose | Key Components |
