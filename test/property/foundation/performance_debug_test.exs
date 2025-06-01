@@ -2,6 +2,8 @@ defmodule ElixirScope.Foundation.Property.PerformanceDebugTest do
   use ExUnit.Case, async: false
   use ExUnitProperties
   
+  @moduletag :slow  # Property tests are inherently slow
+  
   alias ElixirScope.Foundation.Services.TelemetryService
   
   # Comprehensive timing utilities

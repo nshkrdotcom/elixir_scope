@@ -2,6 +2,8 @@ defmodule ElixirScope.Foundation.Property.EventCorrelationPropertiesTest do
   use ExUnit.Case, async: false  # EventStore operations affect shared state
   use ExUnitProperties
   
+  @moduletag :slow  # Property tests are inherently slow
+  
   alias ElixirScope.Foundation.{Events}
   alias ElixirScope.Foundation.Services.EventStore
   alias ElixirScope.Foundation.Types.Event

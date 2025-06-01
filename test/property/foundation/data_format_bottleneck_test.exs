@@ -2,6 +2,8 @@ defmodule ElixirScope.Foundation.Property.DataFormatBottleneckTest do
   use ExUnit.Case, async: false
   use ExUnitProperties
   
+  @moduletag :slow  # Property tests are inherently slow
+  
   alias ElixirScope.Foundation.{Telemetry}
   alias ElixirScope.Foundation.Services.TelemetryService
   

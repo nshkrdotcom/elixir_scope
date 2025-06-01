@@ -19,8 +19,8 @@ defmodule ElixirScope.Foundation.UtilsTest do
       correlation_id = Utils.generate_correlation_id()
 
       assert is_binary(correlation_id)
-      assert String.starts_with?(correlation_id, "elx-")
-      assert String.length(correlation_id) > 10
+      assert String.length(correlation_id) == 36
+      assert String.match?(correlation_id, ~r/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i)
     end
 
     test "generates unique correlation IDs" do

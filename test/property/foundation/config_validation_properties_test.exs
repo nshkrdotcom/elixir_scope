@@ -2,6 +2,8 @@ defmodule ElixirScope.Foundation.Property.ConfigValidationPropertiesTest do
   use ExUnit.Case, async: false  # Config changes affect global state
   use ExUnitProperties
   
+  @moduletag :slow  # Property tests are inherently slow
+  
   alias ElixirScope.Foundation.{Config}
   alias ElixirScope.Foundation.Services.ConfigServer
   alias ElixirScope.Foundation.TestHelpers

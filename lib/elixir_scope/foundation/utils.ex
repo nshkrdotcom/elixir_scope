@@ -6,6 +6,8 @@ defmodule ElixirScope.Foundation.Utils do
   All functions are pure and have no side effects.
   """
 
+  import Bitwise
+
   @doc """
   Generate a unique ID using monotonic time and randomness.
 

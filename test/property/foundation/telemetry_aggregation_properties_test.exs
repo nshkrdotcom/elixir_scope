@@ -2,6 +2,8 @@ defmodule ElixirScope.Foundation.Property.TelemetryAggregationPropertiesTest do
   use ExUnit.Case, async: false  # Telemetry operations affect shared state
   use ExUnitProperties
   
+  @moduletag :slow  # Property tests are inherently slow
+  
   alias ElixirScope.Foundation.{Telemetry}
   alias ElixirScope.Foundation.Services.TelemetryService
   alias ElixirScope.Foundation.Utils

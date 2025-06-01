@@ -2,6 +2,8 @@ defmodule ElixirScope.Foundation.Property.ErrorPropertiesTest do
   use ExUnit.Case, async: true
   use ExUnitProperties
   
+  @moduletag :slow  # Property tests are inherently slow
+  
   alias ElixirScope.Foundation.Error
   
   # Generators for test data
