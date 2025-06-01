@@ -1,5 +1,4 @@
-# ORIG_FILE
-defmodule ElixirScope.AST.MemoryManager do
+defmodule ElixirScope.ASTRepository.MemoryManager do
   @moduledoc """
   Main memory management coordinator for the Enhanced AST Repository.
 
@@ -43,7 +42,7 @@ defmodule ElixirScope.AST.MemoryManager do
   def start(_type, _args) do
     children = [
       # ... your other children
-      {ElixirScope.AST.MemoryManager.Supervisor, [
+      {ElixirScope.ASTRepository.MemoryManager.Supervisor, [
         monitoring_enabled: true,
         cache_enabled: true
       ]}
@@ -84,7 +83,7 @@ defmodule ElixirScope.AST.MemoryManager do
   use GenServer
   require Logger
 
-  alias ElixirScope.AST.MemoryManager.{
+  alias ElixirScope.ASTRepository.MemoryManager.{
     Monitor,
     Cleaner,
     Compressor,
@@ -93,12 +92,9 @@ defmodule ElixirScope.AST.MemoryManager do
   }
 
   # Configuration
-  # 30 seconds
-  @memory_check_interval 30_000
-  # 5 minutes
-  @cleanup_interval 300_000
-  # 10 minutes
-  @compression_interval 600_000
+  @memory_check_interval 30_000      # 30 seconds
+  @cleanup_interval 300_000          # 5 minutes
+  @compression_interval 600_000      # 10 minutes
 
   defstruct [
     :memory_stats,
@@ -242,7 +238,6 @@ defmodule ElixirScope.AST.MemoryManager do
       {:ok, memory_stats} ->
         new_state = %{state | memory_stats: memory_stats}
         {:reply, {:ok, memory_stats}, new_state}
-
       {:error, reason} ->
         # Fallback to basic memory info if Monitor is not available
         basic_stats = %{
@@ -251,12 +246,9 @@ defmodule ElixirScope.AST.MemoryManager do
           cache_memory: 0,
           ets_memory: :erlang.memory(:ets),
           process_memory: :erlang.memory(:processes),
-          # Default safe value
-          memory_usage_percent: 50.0,
-          # Estimate
-          available_memory: :erlang.memory(:total) * 2
+          memory_usage_percent: 50.0,  # Default safe value
+          available_memory: :erlang.memory(:total) * 2  # Estimate
         }
-
         new_state = %{state | memory_stats: basic_stats}
         {:reply, {:ok, basic_stats}, new_state}
     end
@@ -271,7 +263,10 @@ defmodule ElixirScope.AST.MemoryManager do
         duration = end_time - start_time
 
         new_cleanup_stats = Cleaner.update_stats(state.cleanup_stats, cleanup_result, duration)
-        new_state = %{state | cleanup_stats: new_cleanup_stats, last_cleanup: end_time}
+        new_state = %{state |
+          cleanup_stats: new_cleanup_stats,
+          last_cleanup: end_time
+        }
 
         # Return the cleanup result, not just :ok
         {:reply, {:ok, cleanup_result}, new_state}
@@ -289,10 +284,11 @@ defmodule ElixirScope.AST.MemoryManager do
         end_time = System.monotonic_time(:millisecond)
         duration = end_time - start_time
 
-        new_compression_stats =
-          Compressor.update_stats(state.compression_stats, compression_result, duration)
-
-        new_state = %{state | compression_stats: new_compression_stats, last_compression: end_time}
+        new_compression_stats = Compressor.update_stats(state.compression_stats, compression_result, duration)
+        new_state = %{state |
+          compression_stats: new_compression_stats,
+          last_compression: end_time
+        }
 
         {:reply, {:ok, compression_result}, new_state}
 
@@ -305,7 +301,6 @@ defmodule ElixirScope.AST.MemoryManager do
     case CacheManager.configure_cache(cache_type, opts) do
       :ok ->
         {:reply, :ok, state}
-
       error ->
         {:reply, error, state}
     end
@@ -316,7 +311,6 @@ defmodule ElixirScope.AST.MemoryManager do
       :ok ->
         new_state = %{state | pressure_level: pressure_level}
         {:reply, :ok, new_state}
-
       error ->
         {:reply, error, state}
     end
@@ -333,7 +327,6 @@ defmodule ElixirScope.AST.MemoryManager do
       pressure_level: state.pressure_level,
       monitoring_enabled: state.monitoring_enabled
     }
-
     {:reply, {:ok, stats}, state}
   end
 
@@ -361,18 +354,17 @@ defmodule ElixirScope.AST.MemoryManager do
       case Monitor.collect_memory_stats() do
         {:ok, memory_stats} ->
           # Check for memory pressure
-          pressure_level =
-            PressureHandler.determine_pressure_level(memory_stats.memory_usage_percent)
+          pressure_level = PressureHandler.determine_pressure_level(memory_stats.memory_usage_percent)
 
           if pressure_level != :normal and pressure_level != state.pressure_level do
-            Logger.warning(
-              "Memory pressure detected: #{pressure_level} (#{memory_stats.memory_usage_percent}%)"
-            )
-
+            Logger.warning("Memory pressure detected: #{pressure_level} (#{memory_stats.memory_usage_percent}%)")
             PressureHandler.handle_pressure(pressure_level)
           end
 
-          new_state = %{state | memory_stats: memory_stats, pressure_level: pressure_level}
+          new_state = %{state |
+            memory_stats: memory_stats,
+            pressure_level: pressure_level
+          }
 
           schedule_memory_check()
           {:noreply, new_state}
@@ -390,7 +382,7 @@ defmodule ElixirScope.AST.MemoryManager do
 
   def handle_info(:cleanup, state) do
     # Perform automatic cleanup
-    Cleaner.perform_cleanup(max_age: 3600)
+    Cleaner.perform_cleanup([max_age: 3600])
 
     schedule_cleanup()
     {:noreply, state}
@@ -398,7 +390,7 @@ defmodule ElixirScope.AST.MemoryManager do
 
   def handle_info(:compression, state) do
     # Perform automatic compression
-    Compressor.perform_compression(access_threshold: 5, age_threshold: 1800)
+    Compressor.perform_compression([access_threshold: 5, age_threshold: 1800])
 
     schedule_compression()
     {:noreply, state}
@@ -410,7 +402,6 @@ defmodule ElixirScope.AST.MemoryManager do
     case GenServer.whereis(process) do
       nil ->
         {:error, :process_not_found}
-
       pid when is_pid(pid) ->
         if Process.alive?(pid) do
           try do

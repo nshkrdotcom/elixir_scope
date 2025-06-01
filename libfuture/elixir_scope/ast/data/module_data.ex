@@ -1,9 +1,8 @@
-# ORIG_FILE
 # ==============================================================================
 # Core Module Data Structure
 # ==============================================================================
 
-defmodule ElixirScope.AST.ModuleData do
+defmodule ElixirScope.ASTRepository.ModuleData do
   @moduledoc """
   Core module representation with static AST and runtime correlation data.
 
@@ -12,8 +11,7 @@ defmodule ElixirScope.AST.ModuleData do
   """
 
   alias ElixirScope.Utils
-
-  alias ElixirScope.AST.ModuleData.{
+  alias ElixirScope.ASTRepository.ModuleData.{
     ASTAnalyzer,
     ComplexityCalculator,
     DependencyExtractor,
@@ -103,7 +101,10 @@ defmodule ElixirScope.AST.ModuleData do
   """
   @spec update_runtime_insights(t(), map()) :: t()
   def update_runtime_insights(%__MODULE__{} = module_data, insights) do
-    %{module_data | runtime_insights: insights, updated_at: Utils.monotonic_timestamp()}
+    %{module_data |
+      runtime_insights: insights,
+      updated_at: Utils.monotonic_timestamp()
+    }
   end
 
   @doc """
@@ -113,7 +114,10 @@ defmodule ElixirScope.AST.ModuleData do
   def update_execution_frequency(%__MODULE__{} = module_data, function_key, frequency) do
     updated_frequency = Map.put(module_data.execution_frequency, function_key, frequency)
 
-    %{module_data | execution_frequency: updated_frequency, updated_at: Utils.monotonic_timestamp()}
+    %{module_data |
+      execution_frequency: updated_frequency,
+      updated_at: Utils.monotonic_timestamp()
+    }
   end
 
   @doc """
@@ -123,7 +127,10 @@ defmodule ElixirScope.AST.ModuleData do
   def update_performance_data(%__MODULE__{} = module_data, function_key, performance_metrics) do
     updated_performance = Map.put(module_data.performance_data, function_key, performance_metrics)
 
-    %{module_data | performance_data: updated_performance, updated_at: Utils.monotonic_timestamp()}
+    %{module_data |
+      performance_data: updated_performance,
+      updated_at: Utils.monotonic_timestamp()
+    }
   end
 
   @doc """
@@ -133,7 +140,10 @@ defmodule ElixirScope.AST.ModuleData do
   def add_error_pattern(%__MODULE__{} = module_data, error_pattern) do
     updated_patterns = [error_pattern | module_data.error_patterns]
 
-    %{module_data | error_patterns: updated_patterns, updated_at: Utils.monotonic_timestamp()}
+    %{module_data |
+      error_patterns: updated_patterns,
+      updated_at: Utils.monotonic_timestamp()
+    }
   end
 
   @doc """
@@ -151,9 +161,9 @@ defmodule ElixirScope.AST.ModuleData do
   @spec has_runtime_data?(t()) :: boolean()
   def has_runtime_data?(%__MODULE__{} = module_data) do
     not is_nil(module_data.runtime_insights) or
-      map_size(module_data.execution_frequency) > 0 or
-      map_size(module_data.performance_data) > 0 or
-      length(module_data.error_patterns) > 0
+    map_size(module_data.execution_frequency) > 0 or
+    map_size(module_data.performance_data) > 0 or
+    length(module_data.error_patterns) > 0
   end
 
   @doc """

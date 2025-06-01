@@ -1,5 +1,4 @@
-# ORIG_FILE
-defmodule ElixirScope.AST.QueryBuilder do
+defmodule ElixirScope.ASTRepository.QueryBuilder do
   @moduledoc """
   Advanced query builder for the Enhanced AST Repository.
 
@@ -53,7 +52,7 @@ defmodule ElixirScope.AST.QueryBuilder do
   use GenServer
   require Logger
 
-  alias ElixirScope.AST.QueryBuilder.{
+  alias ElixirScope.ASTRepository.QueryBuilder.{
     Types,
     Normalizer,
     Validator,
@@ -78,8 +77,7 @@ defmodule ElixirScope.AST.QueryBuilder do
     ensure_cache_started()
 
     state = %__MODULE__{
-      # We'll use the named process
-      cache_pid: nil,
+      cache_pid: nil,  # We'll use the named process
       opts: opts
     }
 
@@ -122,10 +120,8 @@ defmodule ElixirScope.AST.QueryBuilder do
     case Cache.get_stats() do
       {:ok, %{cache: cache_stats, performance: _perf_stats}} ->
         {:reply, {:ok, cache_stats}, state}
-
       {:ok, stats} ->
         {:reply, {:ok, stats}, state}
-
       error ->
         {:reply, error, state}
     end
@@ -176,8 +172,7 @@ defmodule ElixirScope.AST.QueryBuilder do
   - `{:ok, query_result()}` - Successful execution with results and metadata
   - `{:error, term()}` - Error during execution
   """
-  @spec execute_query(pid() | atom(), map() | Types.query_t()) ::
-          {:ok, Types.query_result()} | {:error, term()}
+  @spec execute_query(pid() | atom(), map() | Types.query_t()) :: {:ok, Types.query_result()} | {:error, term()}
   def execute_query(repo, query_spec) do
     GenServer.call(__MODULE__, {:execute_query, repo, query_spec}, 30_000)
   end
@@ -231,7 +226,6 @@ defmodule ElixirScope.AST.QueryBuilder do
           {:error, {:already_started, _pid}} -> :ok
           error -> error
         end
-
       _pid ->
         # Cache already running
         :ok
@@ -278,8 +272,7 @@ defmodule ElixirScope.AST.QueryBuilder do
                 Cache.put(cache_key, result)
                 {:ok, Map.put(result, :cache_hit, false)}
 
-              error ->
-                error
+              error -> error
             end
         end
     end
@@ -291,20 +284,18 @@ defmodule ElixirScope.AST.QueryBuilder do
 
   defp add_execution_metadata(result, execution_time, query_spec) do
     # Determine performance score based on execution time
-    performance_score =
-      cond do
-        execution_time <= Types.simple_query_threshold() -> :excellent
-        execution_time <= Types.complex_query_threshold() -> :good
-        execution_time <= Types.complex_query_threshold() * 2 -> :fair
-        true -> :poor
-      end
+    performance_score = cond do
+      execution_time <= Types.simple_query_threshold() -> :excellent
+      execution_time <= Types.complex_query_threshold() -> :good
+      execution_time <= Types.complex_query_threshold() * 2 -> :fair
+      true -> :poor
+    end
 
     # Extract optimization hints and estimated cost from query if it's a Types struct
-    {optimization_hints, estimated_cost} =
-      case query_spec do
-        %Types{optimization_hints: hints, estimated_cost: cost} -> {hints || [], cost}
-        _ -> {[], nil}
-      end
+    {optimization_hints, estimated_cost} = case query_spec do
+      %Types{optimization_hints: hints, estimated_cost: cost} -> {hints || [], cost}
+      _ -> {[], nil}
+    end
 
     metadata = %{
       execution_time_ms: execution_time,

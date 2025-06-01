@@ -1,4 +1,5 @@
-defmodule ElixirScope.ASTRepository.PatternMatcher do
+# ORIG_FILE
+defmodule ElixirScope.AST.PatternMatcher do
   @moduledoc """
   Advanced pattern matcher for the Enhanced AST Repository.
 
@@ -40,7 +41,7 @@ defmodule ElixirScope.ASTRepository.PatternMatcher do
 
   ```elixir
   # Start the pattern matcher
-  {:ok, _pid} = ElixirScope.ASTRepository.PatternMatcher.start_link()
+  {:ok, _pid} = ElixirScope.AST.PatternMatcher.start_link()
 
   # Find GenServer implementations
   {:ok, genservers} = PatternMatcher.match_behavioral_pattern(repo, %{
@@ -124,7 +125,7 @@ defmodule ElixirScope.ASTRepository.PatternMatcher do
   use GenServer
   require Logger
 
-  alias ElixirScope.ASTRepository.PatternMatcher.{
+  alias ElixirScope.AST.PatternMatcher.{
     Core,
     PatternLibrary,
     Validators,
@@ -203,15 +204,21 @@ defmodule ElixirScope.ASTRepository.PatternMatcher do
   @doc """
   Matches behavioral patterns (OTP, design patterns).
   """
-  @spec match_behavioral_pattern(pid() | atom(), map()) :: {:ok, Types.pattern_result()} | {:error, term()}
+  @spec match_behavioral_pattern(pid() | atom(), map()) ::
+          {:ok, Types.pattern_result()} | {:error, term()}
   def match_behavioral_pattern(repo, pattern_spec) do
-    GenServer.call(__MODULE__, {:match_behavioral_pattern, repo, pattern_spec}, @pattern_match_timeout)
+    GenServer.call(
+      __MODULE__,
+      {:match_behavioral_pattern, repo, pattern_spec},
+      @pattern_match_timeout
+    )
   end
 
   @doc """
   Matches anti-patterns and code smells.
   """
-  @spec match_anti_pattern(pid() | atom(), map()) :: {:ok, Types.pattern_result()} | {:error, term()}
+  @spec match_anti_pattern(pid() | atom(), map()) ::
+          {:ok, Types.pattern_result()} | {:error, term()}
   def match_anti_pattern(repo, pattern_spec) do
     GenServer.call(__MODULE__, {:match_anti_pattern, repo, pattern_spec}, @pattern_match_timeout)
   end

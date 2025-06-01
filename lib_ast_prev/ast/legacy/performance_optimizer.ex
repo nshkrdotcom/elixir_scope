@@ -1,8 +1,9 @@
+# ORIG_FILE
 # ==============================================================================
 # Main Performance Optimizer Coordinator
 # ==============================================================================
 
-defmodule ElixirScope.ASTRepository.PerformanceOptimizer do
+defmodule ElixirScope.AST.PerformanceOptimizer do
   @moduledoc """
   Main coordinator for performance optimization features.
 
@@ -13,9 +14,10 @@ defmodule ElixirScope.ASTRepository.PerformanceOptimizer do
   use GenServer
   require Logger
 
-  alias ElixirScope.ASTRepository.{MemoryManager, EnhancedRepository}
-  alias ElixirScope.ASTRepository.Enhanced.{EnhancedModuleData, EnhancedFunctionData}
-  alias ElixirScope.ASTRepository.PerformanceOptimizer.{
+  alias ElixirScope.AST.{MemoryManager, EnhancedRepository}
+  alias ElixirScope.AST.Enhanced.{EnhancedModuleData, EnhancedFunctionData}
+
+  alias ElixirScope.AST.PerformanceOptimizer.{
     CacheManager,
     BatchProcessor,
     LazyLoader,
@@ -32,13 +34,13 @@ defmodule ElixirScope.ASTRepository.PerformanceOptimizer do
   ]
 
   @type optimization_stats :: %{
-    modules_optimized: non_neg_integer(),
-    functions_optimized: non_neg_integer(),
-    cache_optimizations: non_neg_integer(),
-    memory_optimizations: non_neg_integer(),
-    query_optimizations: non_neg_integer(),
-    total_time_saved_ms: non_neg_integer()
-  }
+          modules_optimized: non_neg_integer(),
+          functions_optimized: non_neg_integer(),
+          cache_optimizations: non_neg_integer(),
+          memory_optimizations: non_neg_integer(),
+          query_optimizations: non_neg_integer(),
+          total_time_saved_ms: non_neg_integer()
+        }
 
   # GenServer API
 
@@ -71,7 +73,8 @@ defmodule ElixirScope.ASTRepository.PerformanceOptimizer do
   @doc """
   Optimizes module storage with intelligent caching and batching.
   """
-  @spec store_module_optimized(atom(), term(), keyword()) :: {:ok, EnhancedModuleData.t()} | {:error, term()}
+  @spec store_module_optimized(atom(), term(), keyword()) ::
+          {:ok, EnhancedModuleData.t()} | {:error, term()}
   def store_module_optimized(module_name, ast, opts \\ []) do
     GenServer.call(__MODULE__, {:store_module_optimized, module_name, ast, opts})
   end
@@ -80,15 +83,19 @@ defmodule ElixirScope.ASTRepository.PerformanceOptimizer do
   Optimizes function storage with CFG/DFG lazy loading.
   """
   @spec store_function_optimized(atom(), atom(), non_neg_integer(), term(), keyword()) ::
-    {:ok, EnhancedFunctionData.t()} | {:error, term()}
+          {:ok, EnhancedFunctionData.t()} | {:error, term()}
   def store_function_optimized(module_name, function_name, arity, ast, opts \\ []) do
-    GenServer.call(__MODULE__, {:store_function_optimized, module_name, function_name, arity, ast, opts})
+    GenServer.call(
+      __MODULE__,
+      {:store_function_optimized, module_name, function_name, arity, ast, opts}
+    )
   end
 
   @doc """
   Performs batch storage operations for multiple modules.
   """
-  @spec store_modules_batch([{atom(), term()}], keyword()) :: {:ok, [EnhancedModuleData.t()]} | {:error, term()}
+  @spec store_modules_batch([{atom(), term()}], keyword()) ::
+          {:ok, [EnhancedModuleData.t()]} | {:error, term()}
   def store_modules_batch(modules, opts \\ []) do
     BatchProcessor.process_modules(modules, opts)
   end
@@ -104,7 +111,8 @@ defmodule ElixirScope.ASTRepository.PerformanceOptimizer do
   @doc """
   Retrieves function with lazy analysis loading.
   """
-  @spec get_function_optimized(atom(), atom(), non_neg_integer()) :: {:ok, EnhancedFunctionData.t()} | {:error, term()}
+  @spec get_function_optimized(atom(), atom(), non_neg_integer()) ::
+          {:ok, EnhancedFunctionData.t()} | {:error, term()}
   def get_function_optimized(module_name, function_name, arity) do
     LazyLoader.get_function_lazy(module_name, function_name, arity)
   end
@@ -159,17 +167,24 @@ defmodule ElixirScope.ASTRepository.PerformanceOptimizer do
         lazy_analysis = Keyword.get(opts, :lazy_analysis, true)
         batch_mode = Keyword.get(opts, :batch_mode, false)
 
-        result = if batch_mode do
-          BatchProcessor.queue_module(module_name, ast, opts)
-          {:ok, :queued_for_batch}
-        else
-          store_module_with_optimizations(module_name, ast, lazy_analysis)
-        end
+        result =
+          if batch_mode do
+            BatchProcessor.queue_module(module_name, ast, opts)
+            {:ok, :queued_for_batch}
+          else
+            store_module_with_optimizations(module_name, ast, lazy_analysis)
+          end
 
         end_time = System.monotonic_time(:microsecond)
         duration = end_time - start_time
 
-        new_stats = StatisticsCollector.update_optimization_stats(state.optimization_stats, :module_storage, duration)
+        new_stats =
+          StatisticsCollector.update_optimization_stats(
+            state.optimization_stats,
+            :module_storage,
+            duration
+          )
+
         new_state = %{state | optimization_stats: new_stats}
 
         {:reply, result, new_state}
@@ -184,7 +199,11 @@ defmodule ElixirScope.ASTRepository.PerformanceOptimizer do
     end
   end
 
-  def handle_call({:store_function_optimized, module_name, function_name, arity, ast, opts}, _from, state) do
+  def handle_call(
+        {:store_function_optimized, module_name, function_name, arity, ast, opts},
+        _from,
+        state
+      ) do
     if state.enabled do
       start_time = System.monotonic_time(:microsecond)
 
@@ -194,7 +213,13 @@ defmodule ElixirScope.ASTRepository.PerformanceOptimizer do
         end_time = System.monotonic_time(:microsecond)
         duration = end_time - start_time
 
-        new_stats = StatisticsCollector.update_optimization_stats(state.optimization_stats, :function_storage, duration)
+        new_stats =
+          StatisticsCollector.update_optimization_stats(
+            state.optimization_stats,
+            :function_storage,
+            duration
+          )
+
         new_state = %{state | optimization_stats: new_stats}
 
         {:reply, result, new_state}
@@ -204,7 +229,9 @@ defmodule ElixirScope.ASTRepository.PerformanceOptimizer do
           {:reply, {:error, {:optimization_failed, error}}, state}
       end
     else
-      result = EnhancedRepository.store_enhanced_function(module_name, function_name, arity, ast, opts)
+      result =
+        EnhancedRepository.store_enhanced_function(module_name, function_name, arity, ast, opts)
+
       {:reply, result, state}
     end
   end
@@ -218,7 +245,13 @@ defmodule ElixirScope.ASTRepository.PerformanceOptimizer do
       end_time = System.monotonic_time(:microsecond)
       duration = end_time - start_time
 
-      new_stats = StatisticsCollector.update_optimization_stats(state.optimization_stats, :query_optimization, duration)
+      new_stats =
+        StatisticsCollector.update_optimization_stats(
+          state.optimization_stats,
+          :query_optimization,
+          duration
+        )
+
       new_state = %{state | optimization_stats: new_stats}
 
       {:reply, result, new_state}
@@ -250,11 +283,12 @@ defmodule ElixirScope.ASTRepository.PerformanceOptimizer do
   defp store_module_with_optimizations(module_name, ast, lazy_analysis) do
     optimized_ast = preprocess_ast_for_storage(ast)
 
-    immediate_analysis = if lazy_analysis do
-      [:basic_metrics, :dependencies]
-    else
-      [:all]
-    end
+    immediate_analysis =
+      if lazy_analysis do
+        [:basic_metrics, :dependencies]
+      else
+        [:all]
+      end
 
     opts = [analysis_level: immediate_analysis, optimized: true]
     EnhancedRepository.store_enhanced_module(module_name, optimized_ast, opts)
