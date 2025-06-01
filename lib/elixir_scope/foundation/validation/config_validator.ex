@@ -225,21 +225,35 @@ defmodule ElixirScope.Foundation.Validation.ConfigValidator do
 
   ## Error Creation Helpers
 
+  @spec create_validation_error(String.t()) :: {:error, Error.t()}
   defp create_validation_error(message) do
     create_error(:validation_failed, message)
   end
 
+  @spec create_error(atom(), String.t(), map()) :: {:error, Error.t()}
   defp create_error(error_type, message, context \\ %{}) do
     error =
       Error.new(
+        code: error_code_for_type(error_type),
         error_type: error_type,
         message: message,
+        severity: severity_for_type(error_type),
         context: context,
         category: :config,
-        subcategory: :validation,
-        severity: :medium
+        subcategory: :validation
       )
 
     {:error, error}
   end
+
+  @spec error_code_for_type(:validation_failed | :invalid_config_value | :constraint_violation | :range_error) :: 1001 | 1002 | 1003 | 1004
+  defp error_code_for_type(:validation_failed), do: 1001
+  defp error_code_for_type(:invalid_config_value), do: 1002
+  defp error_code_for_type(:constraint_violation), do: 1003
+  defp error_code_for_type(:range_error), do: 1004
+
+  @spec severity_for_type(:validation_failed | :invalid_config_value | :constraint_violation | :range_error) :: Error.error_severity()
+  defp severity_for_type(:constraint_violation), do: :high
+  defp severity_for_type(:range_error), do: :high
+  defp severity_for_type(_), do: :medium
 end

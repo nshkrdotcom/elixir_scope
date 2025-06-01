@@ -4,10 +4,26 @@ defmodule ElixirScope.Foundation.Types.Config do
 
   Contains no business logic - just data and Access implementation.
   All validation and manipulation logic is in separate modules.
+
+  This struct defines the complete configuration schema for ElixirScope,
+  including AI, capture, storage, interface, and development settings.
+
+  See `@type t` for the complete type specification.
+
+  ## Examples
+
+      iex> config = ElixirScope.Foundation.Types.Config.new()
+      iex> config.ai.provider
+      :mock
+
+      iex> config = ElixirScope.Foundation.Types.Config.new(dev: %{debug_mode: true})
+      iex> config.dev.debug_mode
+      true
   """
 
   @behaviour Access
 
+  # All fields have meaningful defaults, so no @enforce_keys needed
   defstruct [
     # AI Configuration
     ai: %{
@@ -80,24 +96,107 @@ defmodule ElixirScope.Foundation.Types.Config do
     }
   ]
 
+  @typedoc "AI configuration section"
+  @type ai_config :: %{
+          provider: :mock | :openai | :anthropic,
+          api_key: String.t() | nil,
+          model: String.t(),
+          analysis: %{
+            max_file_size: pos_integer(),
+            timeout: pos_integer(),
+            cache_ttl: pos_integer()
+          },
+          planning: %{
+            default_strategy: :balanced | :fast | :thorough,
+            performance_target: float(),
+            sampling_rate: float()
+          }
+        }
+
+  @typedoc "Capture configuration section"
+  @type capture_config :: %{
+          ring_buffer: %{
+            size: pos_integer(),
+            max_events: pos_integer(),
+            overflow_strategy: :drop_oldest | :drop_newest | :error,
+            num_buffers: :schedulers | pos_integer()
+          },
+          processing: %{
+            batch_size: pos_integer(),
+            flush_interval: pos_integer(),
+            max_queue_size: pos_integer()
+          },
+          vm_tracing: %{
+            enable_spawn_trace: boolean(),
+            enable_exit_trace: boolean(),
+            enable_message_trace: boolean(),
+            trace_children: boolean()
+          }
+        }
+
+  @typedoc "Storage configuration section"
+  @type storage_config :: %{
+          hot: %{
+            max_events: pos_integer(),
+            max_age_seconds: pos_integer(),
+            prune_interval: pos_integer()
+          },
+          warm: %{
+            enable: boolean(),
+            path: String.t(),
+            max_size_mb: pos_integer(),
+            compression: :zstd | :gzip | :none
+          },
+          cold: %{
+            enable: boolean()
+          }
+        }
+
+  @typedoc "Interface configuration section"
+  @type interface_config :: %{
+          query_timeout: pos_integer(),
+          max_results: pos_integer(),
+          enable_streaming: boolean()
+        }
+
+  @typedoc "Development configuration section"
+  @type dev_config :: %{
+          debug_mode: boolean(),
+          verbose_logging: boolean(),
+          performance_monitoring: boolean()
+        }
+
   @type t :: %__MODULE__{
-          ai: map(),
-          capture: map(),
-          storage: map(),
-          interface: map(),
-          dev: map()
+          ai: ai_config(),
+          capture: capture_config(),
+          storage: storage_config(),
+          interface: interface_config(),
+          dev: dev_config()
         }
 
   ## Access Behavior Implementation
 
+  @doc """
+  Fetch a configuration key.
+
+  Implementation of the Access behaviour for configuration structs.
+  """
   @impl Access
+  @spec fetch(t(), atom()) :: {:ok, term()} | :error
   def fetch(%__MODULE__{} = config, key) do
     config
     |> Map.from_struct()
     |> Map.fetch(key)
   end
 
+  @doc """
+  Get and update a configuration key.
+
+  Implementation of the Access behaviour for configuration structs.
+  """
   @impl Access
+  @spec get_and_update(t(), atom(), (term() -> {term(), term()} | :pop)) ::
+          {term(), t()}
   def get_and_update(%__MODULE__{} = config, key, function) do
     map_config = Map.from_struct(config)
 
@@ -113,7 +212,13 @@ defmodule ElixirScope.Foundation.Types.Config do
     end
   end
 
+  @doc """
+  Pop a configuration key.
+
+  Implementation of the Access behaviour for configuration structs.
+  """
   @impl Access
+  @spec pop(t(), atom()) :: {term(), t()}
   def pop(%__MODULE__{} = config, key) do
     map_config = Map.from_struct(config)
     {value, updated_map} = Map.pop(map_config, key)
@@ -123,55 +228,36 @@ defmodule ElixirScope.Foundation.Types.Config do
 
   @doc """
   Create a new configuration with default values.
+
+  ## Examples
+
+      iex> config = ElixirScope.Foundation.Types.Config.new()
+      iex> config.ai.provider
+      :mock
+
+      iex> config.capture.ring_buffer.size
+      1024
   """
-  @spec new() :: %__MODULE__{
-          ai: %{
-            analysis: %{cache_ttl: 3600, max_file_size: 1_000_000, timeout: 30000},
-            api_key: nil,
-            model: <<_::40>>,
-            planning: %{
-              default_strategy: :balanced,
-              performance_target: float(),
-              sampling_rate: float()
-            },
-            provider: :mock
-          },
-          capture: %{
-            processing: %{batch_size: 100, flush_interval: 50, max_queue_size: 1000},
-            ring_buffer: %{
-              max_events: 1000,
-              num_buffers: :schedulers,
-              overflow_strategy: :drop_oldest,
-              size: 1024
-            },
-            vm_tracing: %{
-              enable_exit_trace: true,
-              enable_message_trace: false,
-              enable_spawn_trace: true,
-              trace_children: true
-            }
-          },
-          dev: %{
-            debug_mode: false,
-            performance_monitoring: true,
-            verbose_logging: false
-          },
-          interface: %{enable_streaming: true, max_results: 1000, query_timeout: 10000},
-          storage: %{
-            cold: %{enable: false},
-            hot: %{max_age_seconds: 3600, max_events: 100_000, prune_interval: 60000},
-            warm: %{
-              compression: :zstd,
-              enable: false,
-              max_size_mb: 100,
-              path: <<_::152>>
-            }
-          }
-        }
+  @spec new() :: t()
   def new, do: %__MODULE__{}
 
   @doc """
   Create a new configuration with overrides.
+
+  Performs deep merging of nested configuration maps.
+
+  ## Parameters
+  - `overrides`: Keyword list of configuration overrides
+
+  ## Examples
+
+      iex> config = ElixirScope.Foundation.Types.Config.new(dev: %{debug_mode: true})
+      iex> config.dev.debug_mode
+      true
+
+      iex> config = ElixirScope.Foundation.Types.Config.new(ai: %{provider: :openai})
+      iex> config.ai.provider
+      :openai
   """
   @spec new(keyword()) :: t()
   def new(overrides) do
@@ -192,6 +278,7 @@ defmodule ElixirScope.Foundation.Types.Config do
   end
 
   # Helper function for deep merging maps
+  @spec deep_merge(map(), map()) :: map()
   defp deep_merge(original, override) when is_map(original) and is_map(override) do
     Map.merge(original, override, fn _key, v1, v2 ->
       if is_map(v1) and is_map(v2) do
