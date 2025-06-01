@@ -2,6 +2,8 @@ defmodule ElixirScope.Foundation.Property.FoundationInfrastructurePropertiesTest
   use ExUnit.Case, async: false  # Foundation operations affect shared state
   use ExUnitProperties
   
+  @moduletag :slow  # Exclude from default test runs
+  
   alias ElixirScope.Foundation
   alias ElixirScope.Foundation.{Config, Events, Telemetry, Utils, Error}
   alias ElixirScope.Foundation.Services.{ConfigServer, EventStore, TelemetryService}

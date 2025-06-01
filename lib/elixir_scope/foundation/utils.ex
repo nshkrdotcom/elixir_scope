@@ -43,19 +43,28 @@ defmodule ElixirScope.Foundation.Utils do
   end
 
   @doc """
-  Generate a correlation ID string.
+  Generate a correlation ID string in UUID v4 format.
 
   ## Examples
 
       iex> correlation_id = ElixirScope.Foundation.Utils.generate_correlation_id()
-      iex> String.starts_with?(correlation_id, "elx-")
+      iex> String.length(correlation_id)
+      36
+      iex> String.match?(correlation_id, ~r/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i)
       true
   """
   @spec generate_correlation_id() :: String.t()
   def generate_correlation_id do
-    timestamp = System.monotonic_time(:microsecond)
-    random = :rand.uniform(999999)
-    "elx-#{timestamp}-#{random}"
+    # Generate UUID v4 format (36 characters)
+    <<u0::32, u1::16, u2::16, u3::16, u4::48>> = :crypto.strong_rand_bytes(16)
+    
+    # Set version (4) and variant bits
+    u2_v4 = (u2 &&& 0x0FFF) ||| 0x4000
+    u3_var = (u3 &&& 0x3FFF) ||| 0x8000
+    
+    :io_lib.format("~8.16.0b-~4.16.0b-~4.16.0b-~4.16.0b-~12.16.0b",
+                   [u0, u1, u2_v4, u3_var, u4])
+    |> IO.iodata_to_binary()
   end
 
   @doc """
@@ -376,6 +385,137 @@ defmodule ElixirScope.Foundation.Utils do
   @spec wall_timestamp() :: integer()
   def wall_timestamp do
     System.system_time(:nanosecond)
+  end
+
+  @doc """
+  Measure execution time of a function in microseconds.
+
+  ## Examples
+
+      iex> {result, duration} = ElixirScope.Foundation.Utils.measure(fn -> :timer.sleep(10); :ok end)
+      iex> result
+      :ok
+      iex> duration > 10_000  # At least 10ms in microseconds
+      true
+  """
+  @spec measure((() -> result)) :: {result, non_neg_integer()} when result: any()
+  def measure(func) when is_function(func, 0) do
+    start = System.monotonic_time(:microsecond)
+    result = func.()
+    stop = System.monotonic_time(:microsecond)
+    {result, stop - start}
+  end
+
+  @doc """
+  Measure memory consumption before and after a function execution.
+
+  ## Examples
+
+      iex> {result, {before, after, diff}} = ElixirScope.Foundation.Utils.measure_memory(fn -> "test" end)
+      iex> result
+      "test"
+      iex> is_integer(before) and is_integer(after) and is_integer(diff)
+      true
+  """
+  @spec measure_memory((() -> result)) :: {result, {non_neg_integer(), non_neg_integer(), integer()}} when result: any()
+  def measure_memory(func) when is_function(func, 0) do
+    :erlang.garbage_collect()
+    before_memory = :erlang.memory(:total)
+    result = func.()
+    :erlang.garbage_collect()
+    after_memory = :erlang.memory(:total)
+    {result, {before_memory, after_memory, after_memory - before_memory}}
+  end
+
+  @doc """
+  Format byte size into human-readable string.
+
+  ## Examples
+
+      iex> ElixirScope.Foundation.Utils.format_bytes(1024)
+      "1.0 KB"
+      
+      iex> ElixirScope.Foundation.Utils.format_bytes(1536)
+      "1.5 KB"
+      
+      iex> ElixirScope.Foundation.Utils.format_bytes(1048576)
+      "1.0 MB"
+  """
+  @spec format_bytes(non_neg_integer()) :: String.t()
+  def format_bytes(bytes) when is_integer(bytes) and bytes >= 0 do
+    cond do
+      bytes < 1024 -> "#{bytes} B"
+      bytes < 1024*1024 -> "#{Float.round(bytes/1024, 1)} KB"
+      bytes < 1024*1024*1024 -> "#{Float.round(bytes/(1024*1024), 1)} MB"
+      true -> "#{Float.round(bytes/(1024*1024*1024), 1)} GB"
+    end
+  end
+
+  @doc """
+  Returns process statistics for the current process.
+
+  ## Examples
+
+      iex> stats = ElixirScope.Foundation.Utils.process_stats()
+      iex> Map.has_key?(stats, :memory)
+      true
+      iex> Map.has_key?(stats, :message_queue_len)
+      true
+  """
+  @spec process_stats() :: map()
+  def process_stats do
+    info = Process.info(self())
+    %{
+      memory: Keyword.get(info, :memory, 0),
+      message_queue_len: Keyword.get(info, :message_queue_len, 0),
+      reductions: Keyword.get(info, :reductions, 0),
+      garbage_collection: Keyword.get(info, :garbage_collection, %{}),
+      status: Keyword.get(info, :status, :unknown)
+    }
+  end
+
+  @doc """
+  Returns system statistics.
+
+  ## Examples
+
+      iex> stats = ElixirScope.Foundation.Utils.system_stats()
+      iex> Map.has_key?(stats, :process_count)
+      true
+      iex> Map.has_key?(stats, :memory)
+      true
+  """
+  @spec system_stats() :: map()
+  def system_stats do
+    %{
+      process_count: :erlang.system_info(:process_count),
+      atom_count: :erlang.system_info(:atom_count),
+      memory: :erlang.memory(),
+      scheduler_count: :erlang.system_info(:schedulers),
+      scheduler_online: :erlang.system_info(:schedulers_online)
+    }
+  end
+
+  @doc """
+  Check if a value is a valid positive integer.
+
+  ## Examples
+
+      iex> ElixirScope.Foundation.Utils.valid_positive_integer?(42)
+      true
+      
+      iex> ElixirScope.Foundation.Utils.valid_positive_integer?(0)
+      false
+      
+      iex> ElixirScope.Foundation.Utils.valid_positive_integer?(-1)
+      false
+      
+      iex> ElixirScope.Foundation.Utils.valid_positive_integer?("42")
+      false
+  """
+  @spec valid_positive_integer?(term()) :: boolean()
+  def valid_positive_integer?(value) do
+    is_integer(value) and value > 0
   end
 
   ## Private Functions
