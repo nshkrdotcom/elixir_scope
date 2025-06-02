@@ -309,4 +309,4 @@ defmodule ElixirScope.Foundation.TestSupervisor do
       end
     end)
   end
-end 
+end

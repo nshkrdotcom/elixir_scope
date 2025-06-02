@@ -343,3 +343,168 @@ mix test --include slow --include integration --max-failures 1 --trace
 
 *Last updated: June 1, 2025*
 *Test suite version: ElixirScope Foundation v0.1.0*
+
+## Detailed Excluded and Skipped Tests Analysis
+
+### Summary
+From the latest test run: `30 properties, 202 tests, 0 failures, 30 excluded, 1 skipped`
+
+### The 30 Excluded Tests (Property-Based Tests)
+
+All 30 excluded tests are **property-based tests** marked with `@moduletag :slow`. These tests use the StreamData library to generate hundreds of test cases and can take several minutes to complete.
+
+#### Property Tests by Module
+
+**1. ElixirScope.Foundation.Property.ErrorPropertiesTest** (9 properties)
+- `test/property/foundation/error_properties_test.exs`
+- Tests error handling under all possible conditions
+- All properties marked with `@moduletag :slow`
+
+**2. ElixirScope.Foundation.Property.ConfigValidationPropertiesTest** (10 properties)  
+- `test/property/foundation/config_validation_properties_test.exs`
+- Tests configuration validation with random inputs
+- All properties marked with `@moduletag :slow`
+
+**3. ElixirScope.Foundation.Property.EventCorrelationPropertiesTest** (11 properties)
+- `test/property/foundation/event_correlation_properties_test.exs` 
+- Tests event correlation and data integrity
+- All properties marked with `@moduletag :slow`
+
+#### Complete List of 30 Excluded Property Tests
+
+##### Error Properties (9 tests)
+1. `Error.retry_delay/2 exponential backoff never exceeds maximum delay cap`
+2. `Error.is_retryable?/1 with any error always returns boolean`
+3. `Error.new/3 with random context maps preserves all provided context`
+4. `Error.wrap_error/4 with nested error chains maintains error hierarchy`
+5. `Error.retry_delay/2 with random attempt numbers never returns negative values`
+6. `Error.format_stacktrace/1 with malformed stacktraces never crashes`
+7. `All Error.new(type) calls result in an error struct with a valid code and category`
+8. `Error.suggest_recovery_actions/2 always returns list of strings`
+9. `Error serialization and deserialization roundtrip preserves all fields`
+
+##### Config Validation Properties (10 tests)
+1. `ConfigServer restart preserves all previously set valid configurations`
+2. `Config path traversal with deeply nested structures never crashes`
+3. `Config.get/1 with any path always returns consistent result`
+4. `Config validation with random nested maps maintains structure integrity`
+5. `Config.reset/0 always restores to valid default state`
+6. `No matter the order of concurrent ConfigServer.subscribe and unsubscribe calls, the subscriber list remains consistent`
+7. `For any valid initial config and sequence of valid updates, ConfigServer state is always valid`
+8. `Config value type validation rejects incompatible types consistently`
+9. `Config change notifications are delivered for every successful update`
+10. `Config.update/2 with valid values never corrupts existing config`
+
+##### Event Correlation Properties (11 tests)
+1. `Event correlation IDs are preserved through any number of related events`
+2. `Event timestamps are monotonic within correlation groups`
+3. `EventStore.query/1 with random query parameters never crashes`
+4. `EventStore.get_by_correlation/1 always returns events in chronological order`
+5. `Event parent-child relationships form valid tree structures`
+6. `EventStore state after a series of stores and prunes is consistent with operations`
+7. `Any event stored and retrieved from EventStore retains data integrity (for serializable data)`
+8. `Event data serialization preserves complex nested structures`
+9. `EventStore concurrent operations maintain referential integrity`
+10. `EventStore.store/1 with any valid event always succeeds or fails gracefully`
+11. `Error.new/3 with random messages never crashes regardless of input`
+
+### The 1 Skipped Test
+
+**Test**: `rapid service restart maintains data consistency`
+- **File**: `test/integration/foundation/cross_service_integration_test.exs:206`
+- **Tag**: `@tag :skip`
+- **Reason**: Intentionally skipped due to aggressive restart sequence causing test instability
+- **Purpose**: Tests data consistency during rapid service restarts
+
+### How to Run Excluded Tests
+
+#### Running All Property-Based Tests (30 excluded tests)
+```bash
+# Include slow tests to run all property-based tests
+mix test --include slow
+
+# Run only slow tests (property-based tests only)
+mix test --only slow
+
+# Run slow tests with extended timeout
+mix test --include slow --timeout 120000
+
+# Run with limited failures for faster feedback
+mix test --include slow --max-failures 3
+```
+
+#### Running Property Tests by Module
+```bash
+# Run only error property tests
+mix test test/property/foundation/error_properties_test.exs --include slow
+
+# Run only config validation property tests  
+mix test test/property/foundation/config_validation_properties_test.exs --include slow
+
+# Run only event correlation property tests
+mix test test/property/foundation/event_correlation_properties_test.exs --include slow
+```
+
+#### Running Individual Property Tests
+```bash
+# Run specific property test with line number
+mix test test/property/foundation/error_properties_test.exs:178 --include slow
+
+# Run with trace for detailed output
+mix test test/property/foundation/config_validation_properties_test.exs:273 --include slow --trace
+```
+
+### How to Run the Skipped Test
+
+#### Temporarily Enable Skipped Test
+```bash
+# Option 1: Include skip tag (if test is tagged with :skip)
+mix test test/integration/foundation/cross_service_integration_test.exs:206 --include skip
+
+# Option 2: Run with all tags included
+mix test test/integration/foundation/cross_service_integration_test.exs:206 --include slow --include integration --include skip
+
+# Option 3: Remove @tag :skip from the test file temporarily and run normally
+mix test test/integration/foundation/cross_service_integration_test.exs:206 --include integration
+```
+
+#### Permanently Enable Skipped Test
+1. Edit `test/integration/foundation/cross_service_integration_test.exs`
+2. Remove or comment out the `@tag :skip` line before the test
+3. Run with integration tests: `mix test --include integration`
+
+### Why These Tests Are Excluded
+
+#### Property-Based Tests (`:slow` tag)
+- **Runtime**: Can take 5-30+ seconds each (vs <1s for unit tests)
+- **Resource Usage**: Generate hundreds of test cases consuming significant CPU/memory
+- **Development Workflow**: Too slow for rapid feedback during development
+- **CI/CD**: Should be run in dedicated performance test stages
+
+#### Skipped Test (`:skip` tag)  
+- **Stability**: Test has intermittent failures due to aggressive service restart timing
+- **Complexity**: Requires precise timing coordination between multiple services
+- **Maintenance**: Needs refactoring to be more robust before inclusion
+
+### Running All Tests (Including Excluded)
+
+```bash
+# Run absolutely everything (may take 10+ minutes)
+mix test --include slow --include integration --include end_to_end --include skip --timeout 300000
+
+# More practical: Run slow tests with reasonable timeout
+mix test --include slow --timeout 180000 --max-failures 5
+
+# CI/CD pipeline command
+mix test --include slow --include integration --cover --timeout 600000
+```
+
+### Performance Expectations
+
+When running excluded tests:
+- **Property tests**: 5-600+ seconds total runtime  
+- **Individual properties**: 0.7s to 583.7s per test
+- **Memory usage**: Significantly higher due to data generation
+- **CPU usage**: High during property generation and validation
+
+*Note: Property-based tests use randomized data generation. Run times can vary significantly based on the generated test cases and system performance.*

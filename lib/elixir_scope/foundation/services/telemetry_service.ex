@@ -32,6 +32,7 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
   ## Public API (Telemetry Behaviour Implementation)
 
   @impl Telemetry
+  @spec execute([atom()], map(), map()) :: :ok
   def execute(event_name, measurements, metadata) when is_list(event_name) do
     case ElixirScope.Foundation.ServiceRegistry.lookup(:production, :telemetry_service) do
       # Fail silently for telemetry
@@ -41,6 +42,7 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
   end
 
   @impl Telemetry
+  @spec measure([atom()], map(), (-> term())) :: term()
   def measure(event_name, metadata, fun) when is_list(event_name) and is_function(fun, 0) do
     start_time = System.monotonic_time()
 
@@ -67,24 +69,28 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
   end
 
   @impl Telemetry
+  @spec emit_counter([atom()], map()) :: :ok
   def emit_counter(event_name, metadata) when is_list(event_name) do
     measurements = %{counter: 1}
     execute(event_name, measurements, metadata)
   end
 
   # Overloaded version for tests that pass a value
+  @spec emit_counter([atom()], number(), map()) :: :ok
   def emit_counter(event_name, value, metadata) when is_list(event_name) and is_number(value) do
     measurements = %{counter: value}
     execute(event_name, measurements, metadata)
   end
 
   @impl Telemetry
+  @spec emit_gauge([atom()], number(), map()) :: :ok
   def emit_gauge(event_name, value, metadata) when is_list(event_name) and is_number(value) do
     measurements = %{gauge: value}
     execute(event_name, measurements, metadata)
   end
 
   @impl Telemetry
+  @spec get_metrics() :: {:ok, map()} | {:error, Error.t()}
   def get_metrics do
     case ElixirScope.Foundation.ServiceRegistry.lookup(:production, :telemetry_service) do
       {:error, _} -> create_service_error("Telemetry service not started")
@@ -93,6 +99,7 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
   end
 
   @impl Telemetry
+  @spec attach_handlers([[atom()]]) :: :ok | {:error, Error.t()}
   def attach_handlers(event_names) when is_list(event_names) do
     case ElixirScope.Foundation.ServiceRegistry.lookup(:production, :telemetry_service) do
       {:error, _} -> create_service_error("Telemetry service not started")
@@ -101,6 +108,7 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
   end
 
   @impl Telemetry
+  @spec detach_handlers([[atom()]]) :: :ok
   def detach_handlers(event_names) when is_list(event_names) do
     case ElixirScope.Foundation.ServiceRegistry.lookup(:production, :telemetry_service) do
       # Fail silently
@@ -110,6 +118,7 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
   end
 
   @impl Telemetry
+  @spec available?() :: boolean()
   def available? do
     case ElixirScope.Foundation.ServiceRegistry.lookup(:production, :telemetry_service) do
       {:ok, _pid} -> true
@@ -118,11 +127,13 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
   end
 
   @impl Telemetry
+  @spec initialize() :: :ok | {:error, Error.t()}
   def initialize do
     initialize([])
   end
 
   @impl Telemetry
+  @spec status() :: {:ok, map()} | {:error, Error.t()}
   def status do
     case ElixirScope.Foundation.ServiceRegistry.lookup(:production, :telemetry_service) do
       {:error, _} -> create_service_error("Telemetry service not started")
