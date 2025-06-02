@@ -519,3 +519,4 @@ ElixirScope is released under the [MIT License](LICENSE).
 **Built with ❤️ by the ElixirScope team**
 
 *ElixirScope - Illuminating the path to better Elixir code*
+
