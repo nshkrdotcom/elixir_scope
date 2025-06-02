@@ -1,13 +1,15 @@
 # ElixirScope OTP Architecture Specification
 
-**Version:** 1.0  
-**Date:** June 1, 2025  
+**Version:** 1.1  
+**Date:** June 2025  
 **Status:** Active  
 **Scope:** Foundation Layer through Application Layer
 
 ## Executive Summary
 
 This document establishes the formal OTP (Open Telecom Platform) architectural patterns, design principles, and implementation standards for all ElixirScope layers. These specifications ensure consistent, reliable, and maintainable concurrent systems across the entire platform.
+
+**Implementation Status:** ✅ **Foundation Layer COMPLETE** - All patterns documented here have been implemented and validated in the Foundation layer, serving as the reference implementation for other layers.
 
 ## Table of Contents
 
@@ -45,12 +47,12 @@ Infrastructure Layer (Handles external system failures)
 Foundation Layer (Provides basic process reliability)
 ```
 
-### Actor Model Implementation
+### Actor Model Implementation (ACTUAL IMPLEMENTATION)
 
 - **Processes as Actors**: Each GenServer represents a single actor
-- **Message Passing**: All communication via async/sync messages
-- **Isolation**: No shared state between processes
-- **Location Transparency**: Processes addressable via Registry
+- **Message Passing**: All communication via async/sync messages through Registry
+- **Isolation**: No shared state between processes, namespace isolation
+- **Location Transparency**: Processes addressable via `ServiceRegistry.via_tuple/2`
 
 ---
 
@@ -65,35 +67,31 @@ Foundation Layer (Provides basic process reliability)
 | `:rest_for_one` | Pipeline dependencies | Downstream restart cascade |
 | `:simple_one_for_one` | Dynamic workers | Template-based spawning |
 
-### Foundation Layer Pattern (Reference Implementation)
+### Foundation Layer Pattern (ACTUAL IMPLEMENTATION)
 
 ```elixir
-defmodule ElixirScope.Foundation.Supervisor do
-  use Supervisor
+defmodule ElixirScope.Foundation.Application do
+  use Application
 
-  def start_link(opts) do
-    Supervisor.start_link(__MODULE__, opts, name: __MODULE__)
-  end
-
-  @impl true
-  def init(_opts) do
+  def start(_type, _args) do
     children = [
-      # Registry first - other services depend on it
-      {Registry, keys: :unique, name: ElixirScope.Foundation.ProcessRegistry},
-      
-      # Core services - independent, use one_for_one
-      ElixirScope.Foundation.Services.ConfigServer,
-      ElixirScope.Foundation.Services.EventStore,
-      ElixirScope.Foundation.Services.TelemetryService,
-      
-      # Test infrastructure
-      ElixirScope.Foundation.TestSupervisor,
-      
-      # Task supervisor for async operations
+      # Registry must start first for service discovery
+      {ElixirScope.Foundation.ProcessRegistry, []},
+
+      # Core foundation services with production namespace
+      {ElixirScope.Foundation.Services.ConfigServer, [namespace: :production]},
+      {ElixirScope.Foundation.Services.EventStore, [namespace: :production]},
+      {ElixirScope.Foundation.Services.TelemetryService, [namespace: :production]},
+
+      # TestSupervisor for dynamic test isolation
+      {ElixirScope.Foundation.TestSupervisor, []},
+
+      # Task supervisor for dynamic tasks
       {Task.Supervisor, name: ElixirScope.Foundation.TaskSupervisor}
     ]
 
-    Supervisor.init(children, strategy: :one_for_one)
+    opts = [strategy: :one_for_one, name: ElixirScope.Foundation.Supervisor]
+    Supervisor.start_link(children, opts)
   end
 end
 ```
@@ -122,22 +120,20 @@ end
 
 ## Process Management Patterns
 
-### Registry-Based Process Discovery
+### Registry-Based Process Discovery (ACTUAL IMPLEMENTATION)
 
 All processes MUST be discoverable through the Registry pattern:
 
 ```elixir
-# Registration Pattern
-{:via, Registry, {namespace, service_name}}
+# Registration Pattern (ACTUAL IMPLEMENTATION)
+{:via, Registry, {ElixirScope.Foundation.ProcessRegistry, {namespace, service_name}}}
 
-# Namespace Isolation
+# Namespace Isolation (ACTUAL IMPLEMENTATION)  
 :production                    # Global production namespace
 {:test, reference()}          # Test-isolated namespace
-{:layer, layer_name}          # Layer-specific namespace
-{:tenant, tenant_id}          # Multi-tenant namespace
 ```
 
-### Process Lifecycle Management
+### Process Lifecycle Management (ACTUAL IMPLEMENTATION)
 
 #### Standard GenServer Template
 
@@ -147,37 +143,48 @@ defmodule MyService do
   require Logger
 
   # Public API
-  def start_link(opts) do
+  def start_link(opts \\ []) do
     namespace = Keyword.get(opts, :namespace, :production)
-    GenServer.start_link(__MODULE__, opts, name: via_tuple(namespace))
+    name = ElixirScope.Foundation.ServiceRegistry.via_tuple(namespace, :my_service)
+    GenServer.start_link(__MODULE__, Keyword.put(opts, :namespace, namespace), name: name)
   end
 
   def stop(namespace \\ :production) do
-    GenServer.stop(via_tuple(namespace))
-  end
-
-  # Registry Integration
-  defp via_tuple(namespace) do
-    {:via, Registry, {ElixirScope.Foundation.ProcessRegistry, {namespace, __MODULE__}}}
+    case ElixirScope.Foundation.ServiceRegistry.lookup(namespace, :my_service) do
+      {:ok, pid} -> GenServer.stop(pid)
+      {:error, _} -> :ok
+    end
   end
 
   # Health Check (Required)
   def health_check(namespace \\ :production) do
     try do
-      GenServer.call(via_tuple(namespace), :health_check, 5_000)
+      case ElixirScope.Foundation.ServiceRegistry.lookup(namespace, :my_service) do
+        {:ok, pid} -> GenServer.call(pid, :health_check, 5_000)
+        {:error, _} -> {:error, :service_unavailable}
+      end
     catch
-      :exit, {:noproc, _} -> {:error, :service_unavailable}
       :exit, {:timeout, _} -> {:error, :service_timeout}
+    end
+  end
+
+  # Available check (Required)
+  def available?(namespace \\ :production) do
+    case ElixirScope.Foundation.ServiceRegistry.lookup(namespace, :my_service) do
+      {:ok, _pid} -> true
+      {:error, _} -> false
     end
   end
 
   # GenServer Callbacks
   @impl true
   def init(opts) do
-    # Initialize with graceful failure handling
+    namespace = Keyword.get(opts, :namespace, :production)
+    
     case initialize_service(opts) do
       {:ok, state} ->
-        {:ok, state}
+        Logger.info("#{__MODULE__} initialized in namespace #{inspect(namespace)}")
+        {:ok, Map.put(state, :namespace, namespace)}
       {:error, reason} ->
         Logger.error("Failed to initialize #{__MODULE__}: #{inspect(reason)}")
         {:stop, reason}
@@ -186,7 +193,7 @@ defmodule MyService do
 
   @impl true
   def handle_call(:health_check, _from, state) do
-    {:reply, {:ok, %{status: :healthy, service: __MODULE__}}, state}
+    {:reply, {:ok, %{status: :healthy, service: __MODULE__, namespace: state.namespace}}, state}
   end
 
   @impl true
@@ -202,14 +209,14 @@ defmodule MyService do
 end
 ```
 
-### Child Specification Requirements
+### Child Specification Requirements (ACTUAL IMPLEMENTATION)
 
 Every GenServer MUST implement proper child_spec:
 
 ```elixir
 def child_spec(opts) do
   %{
-    id: {__MODULE__, Keyword.get(opts, :namespace, :production)},
+    id: __MODULE__,
     start: {__MODULE__, :start_link, [opts]},
     restart: :permanent,
     shutdown: 5_000,
@@ -223,56 +230,54 @@ end
 
 ## Registry Architecture
 
-### Namespace Design Patterns
+### Namespace Design Patterns (ACTUAL IMPLEMENTATION)
 
 #### Production Namespace
 ```elixir
 # Global singleton services
-{:via, Registry, {ProcessRegistry, {:production, ServiceName}}}
+{:via, Registry, {ElixirScope.Foundation.ProcessRegistry, {:production, :config_server}}}
+{:via, Registry, {ElixirScope.Foundation.ProcessRegistry, {:production, :event_store}}}
+{:via, Registry, {ElixirScope.Foundation.ProcessRegistry, {:production, :telemetry_service}}}
 ```
 
 #### Test Isolation Namespace
 ```elixir
 # Per-test isolated instances
 test_ref = make_ref()
-{:via, Registry, {ProcessRegistry, {{:test, test_ref}, ServiceName}}}
+{:via, Registry, {ElixirScope.Foundation.ProcessRegistry, {{:test, test_ref}, :config_server}}}
 ```
 
-#### Multi-Tenant Namespace
-```elixir
-# Tenant-specific service instances
-{:via, Registry, {ProcessRegistry, {{:tenant, tenant_id}, ServiceName}}}
-```
-
-#### Layer-Specific Namespace
-```elixir
-# Layer-isolated services
-{:via, Registry, {ProcessRegistry, {{:layer, :business}, ServiceName}}}
-```
-
-### Registry Service Discovery
+### Registry Service Discovery (ACTUAL IMPLEMENTATION)
 
 ```elixir
-defmodule ServiceRegistry do
-  @spec lookup(namespace(), atom()) :: pid() | nil
+defmodule ElixirScope.Foundation.ServiceRegistry do
+  @spec lookup(namespace(), atom()) :: {:ok, pid()} | {:error, Error.t()}
   def lookup(namespace, service) do
-    case Registry.lookup(ProcessRegistry, {namespace, service}) do
-      [{pid, _}] -> pid
-      [] -> nil
+    case ElixirScope.Foundation.ProcessRegistry.lookup(namespace, service) do
+      {:ok, pid} -> {:ok, pid}
+      :error -> {:error, create_service_not_found_error(namespace, service)}
     end
   end
 
-  @spec register(namespace(), atom(), pid()) :: :ok | {:error, term()}
-  def register(namespace, service, pid) do
-    Registry.register(ProcessRegistry, {namespace, service}, pid)
+  @spec via_tuple(namespace(), atom()) :: {:via, Registry, {atom(), {namespace(), atom()}}}
+  def via_tuple(namespace, service) do
+    ElixirScope.Foundation.ProcessRegistry.via_tuple(namespace, service)
   end
 
-  @spec list_services(namespace()) :: [atom()]
-  def list_services(namespace) do
-    ProcessRegistry
-    |> Registry.select([{{:"$1", :"$2", :"$3"}, [], [:"$1"]}])
-    |> Enum.filter(fn {ns, _service} -> ns == namespace end)
-    |> Enum.map(fn {_ns, service} -> service end)
+  @spec health_check(namespace(), atom(), keyword()) :: {:ok, pid()} | {:error, term()}
+  def health_check(namespace, service, opts \\ []) do
+    case lookup(namespace, service) do
+      {:ok, pid} ->
+        if Process.alive?(pid) do
+          case Keyword.get(opts, :health_check) do
+            nil -> {:ok, pid}
+            health_check_fun -> health_check_fun.(pid)
+          end
+        else
+          {:error, :process_dead}
+        end
+      error -> error
+    end
   end
 end
 ```
@@ -281,7 +286,7 @@ end
 
 ## GenServer Patterns
 
-### State Management
+### State Management (ACTUAL IMPLEMENTATION)
 
 #### Immutable State Pattern
 ```elixir
@@ -290,6 +295,7 @@ defmodule StatefulService do
     data: map(),
     config: map(),
     metrics: map(),
+    namespace: ProcessRegistry.namespace(),
     last_updated: DateTime.t()
   }
 
@@ -303,21 +309,26 @@ defmodule StatefulService do
 end
 ```
 
-#### Configuration Management Pattern
+#### Configuration Management Pattern (ACTUAL IMPLEMENTATION)
 ```elixir
-def handle_call(:get_config, _from, state) do
-  config = Map.get(state, :config, %{})
-  {:reply, {:ok, config}, state}
+def handle_call({:get_config_path, path}, _from, %{config: config} = state) do
+  result = ConfigLogic.get_config_value(config, path)
+  {:reply, result, state}
 end
 
-def handle_call({:update_config, new_config}, _from, state) do
-  updated_config = Map.merge(state.config, new_config)
-  new_state = %{state | config: updated_config}
-  {:reply, :ok, new_state}
+def handle_call({:update_config, path, value}, _from, %{config: config} = state) do
+  case ConfigLogic.update_config(config, path, value) do
+    {:ok, new_config} ->
+      new_state = %{state | config: new_config}
+      notify_subscribers(state.subscribers, {:config_updated, path, value})
+      {:reply, :ok, new_state}
+    {:error, _} = error ->
+      {:reply, error, state}
+  end
 end
 ```
 
-### Message Handling Patterns
+### Message Handling Patterns (ACTUAL IMPLEMENTATION)
 
 #### Synchronous Operations (GenServer.call)
 - Configuration reads/writes
@@ -327,7 +338,7 @@ end
 
 #### Asynchronous Operations (GenServer.cast)
 - Event notifications
-- Logging operations
+- Logging operations  
 - Metric updates
 - Fire-and-forget operations
 
@@ -337,16 +348,18 @@ end
 - External system messages
 
 ```elixir
-# Timer-based operations
-def handle_info(:periodic_cleanup, state) do
-  new_state = perform_cleanup(state)
-  schedule_next_cleanup()
+# Timer-based operations (ACTUAL IMPLEMENTATION)
+def handle_info(:cleanup_old_metrics, %{config: config} = state) do
+  new_state = cleanup_old_metrics(state, config.metric_retention_ms)
+  schedule_cleanup(config.cleanup_interval)
   {:noreply, new_state}
 end
 
-# Monitor notifications
-def handle_info({:DOWN, ref, :process, pid, reason}, state) do
-  new_state = handle_process_down(state, pid, reason)
+# Monitor notifications (ACTUAL IMPLEMENTATION)
+def handle_info({:DOWN, ref, :process, pid, _reason}, %{subscribers: subscribers, monitors: monitors} = state) do
+  new_subscribers = List.delete(subscribers, pid)
+  new_monitors = Map.delete(monitors, ref)
+  new_state = %{state | subscribers: new_subscribers, monitors: new_monitors}
   {:noreply, new_state}
 end
 ```
@@ -355,7 +368,7 @@ end
 
 ## Error Handling & Recovery
 
-### Error Classification
+### Error Classification (ACTUAL IMPLEMENTATION)
 
 #### Recoverable Errors
 - Network timeouts
@@ -373,82 +386,35 @@ end
 
 **Strategy**: Let it crash, supervisor restart
 
-### Error Handling Patterns
+### Error Handling Patterns (ACTUAL IMPLEMENTATION)
 
-#### Circuit Breaker Pattern
+#### Foundation Error Structure
 ```elixir
-defmodule CircuitBreaker do
-  @type state :: :closed | :open | :half_open
-  
-  defstruct [
-    state: :closed,
-    failure_count: 0,
-    failure_threshold: 5,
-    timeout: 60_000,
-    last_failure: nil
-  ]
-
-  def call(circuit, operation) do
-    case circuit.state do
-      :closed -> attempt_operation(circuit, operation)
-      :open -> check_timeout(circuit, operation)
-      :half_open -> test_operation(circuit, operation)
-    end
-  end
-end
+%ElixirScope.Foundation.Types.Error{
+  code: pos_integer(),
+  error_type: :validation_failed | :service_unavailable | :operation_forbidden,
+  message: binary(),
+  severity: :low | :medium | :high | :critical,
+  category: :system | :config | :events | :telemetry | :validation | :security,
+  subcategory: :initialization | :operation | :authorization | :timeout | :resource,
+  timestamp: DateTime.t(),
+  metadata: map()
+}
 ```
 
-#### Graceful Degradation Pattern
+#### Graceful Degradation (ACTUAL IMPLEMENTATION)
 ```elixir
-def get_user_data(user_id) do
-  case ExternalService.fetch_user(user_id) do
-    {:ok, data} -> {:ok, data}
-    {:error, :timeout} -> {:ok, get_cached_data(user_id)}
-    {:error, :unavailable} -> {:ok, get_default_data(user_id)}
-    {:error, reason} -> {:error, reason}
-  end
-end
-```
-
-### Monitoring & Alerting
-
-#### Health Check Implementation
-```elixir
-def health_check do
-  checks = [
-    database_check(),
-    external_service_check(),
-    memory_check(),
-    queue_length_check()
-  ]
-  
-  case Enum.all?(checks, fn {status, _} -> status == :ok end) do
-    true -> {:ok, %{status: :healthy, checks: checks}}
-    false -> {:error, %{status: :degraded, checks: checks}}
-  end
-end
-```
-
-#### Telemetry Integration
-```elixir
-def handle_call(request, from, state) do
-  start_time = System.monotonic_time()
-  
-  try do
-    result = process_request(request, state)
-    
-    :telemetry.execute([:service, :request, :success], %{
-      duration: System.monotonic_time() - start_time
-    }, %{service: __MODULE__, request_type: elem(request, 0)})
-    
-    result
-  catch
-    kind, reason ->
-      :telemetry.execute([:service, :request, :error], %{
-        duration: System.monotonic_time() - start_time
-      }, %{service: __MODULE__, error_kind: kind, error_reason: reason})
+defmodule YourService do
+  def operation_with_fallback(params) do
+    case ConfigServer.available?() do
+      true ->
+        {:ok, config} = ConfigServer.get([:your_service])
+        perform_operation(params, config)
       
-      reraise reason, __STACKTRACE__
+      false ->
+        Logger.warning("Config service unavailable, using defaults")
+        perform_operation(params, default_config())
+    end
   end
 end
 ```
@@ -457,83 +423,79 @@ end
 
 ## Testing Patterns
 
-### Concurrent Test Infrastructure
+### Test Isolation Architecture (ACTUAL IMPLEMENTATION)
 
-#### Test Namespace Isolation
+#### ConcurrentTestCase Usage
 ```elixir
-defmodule ConcurrentTestCase do
-  use ExUnit.CaseTemplate
+defmodule MyServiceTest do
+  use ElixirScope.Foundation.ConcurrentTestCase, async: true
 
-  using do
-    quote do
-      use ExUnit.Case, async: true
-      import ConcurrentTestCase
-      
-      setup do
-        test_ref = make_ref()
-        namespace = {:test, test_ref}
-        
-        # Start isolated service instances
-        {:ok, _} = TestSupervisor.start_test_services(namespace)
-        
-        on_exit(fn ->
-          TestSupervisor.cleanup_test_services(namespace)
-        end)
-        
-        {:ok, test_namespace: namespace}
-      end
-    end
+  test "service operates correctly", %{test_ref: test_ref, namespace: namespace} do
+    # Services automatically started in isolated namespace
+    assert {:ok, _pid} = ServiceRegistry.lookup(namespace, :config_server)
+    assert {:ok, _pid} = ServiceRegistry.lookup(namespace, :event_store)
+    assert {:ok, _pid} = ServiceRegistry.lookup(namespace, :telemetry_service)
+    
+    # Test isolated operations
+    :ok = ConfigServer.update(namespace, [:test_key], "test_value")
+    {:ok, value} = ConfigServer.get(namespace, [:test_key])
+    assert value == "test_value"
   end
 end
 ```
 
-#### Property-Based Testing
+#### Test Isolation Infrastructure (ACTUAL IMPLEMENTATION)
 ```elixir
-defmodule ServicePropertyTest do
-  use ExUnit.Case
-  use ExUnitProperties
-
-  property "service maintains consistency under concurrent operations" do
-    check all operations <- list_of(valid_operation_generator(), min_length: 1, max_length: 100) do
-      test_ref = make_ref()
-      namespace = {:test, test_ref}
-      
-      {:ok, _} = TestSupervisor.start_test_services(namespace)
-      
-      # Execute operations concurrently
-      tasks = Enum.map(operations, fn op ->
-        Task.async(fn -> execute_operation(namespace, op) end)
-      end)
-      
-      results = Task.await_many(tasks)
-      
-      # Verify consistency
-      assert service_is_consistent?(namespace)
-      assert all_operations_successful?(results)
-      
-      TestSupervisor.cleanup_test_services(namespace)
+defmodule ElixirScope.Foundation.TestSupervisor do
+  @spec start_isolated_services(reference()) :: {:ok, [pid()]} | {:error, term()}
+  def start_isolated_services(test_ref) when is_reference(test_ref) do
+    namespace = {:test, test_ref}
+    
+    service_specs = [
+      {ConfigServer, [namespace: namespace]},
+      {EventStore, [namespace: namespace]}, 
+      {TelemetryService, [namespace: namespace]}
+    ]
+    
+    results = Enum.map(service_specs, fn {module, opts} ->
+      DynamicSupervisor.start_child(__MODULE__, {module, opts})
+    end)
+    
+    case Enum.split_with(results, &match?({:ok, _}, &1)) do
+      {successes, []} ->
+        pids = Enum.map(successes, fn {:ok, pid} -> pid end)
+        {:ok, pids}
+      {_successes, failures} ->
+        cleanup_namespace(test_ref)
+        List.first(failures)
     end
+  end
+  
+  @spec cleanup_namespace(reference()) :: :ok
+  def cleanup_namespace(test_ref) do
+    namespace = {:test, test_ref}
+    ServiceRegistry.cleanup_test_namespace(test_ref)
   end
 end
 ```
 
-### Integration Testing Patterns
+### Property-Based Testing (ACTUAL IMPLEMENTATION)
 
-#### Service Interaction Testing
+#### Test Structure
 ```elixir
-test "services communicate correctly", %{test_namespace: namespace} do
-  # Given: Services are running in isolated namespace
-  assert {:ok, _} = ConfigServer.health_check(namespace)
-  assert {:ok, _} = EventStore.health_check(namespace)
-  
-  # When: Configuration change triggers event
-  :ok = ConfigServer.update_config(namespace, %{key: "value"})
-  
-  # Then: Event is recorded
-  assert {:ok, events} = EventStore.get_events(namespace)
-  assert Enum.any?(events, fn event -> 
-    event.type == :config_updated and event.data.key == "value"
-  end)
+defmodule PropertyTest do
+  use ElixirScope.Foundation.ConcurrentTestCase, async: true
+  use PropCheck
+
+  @moduletag :slow
+
+  property "config operations are consistent", %{namespace: namespace} do
+    forall {path, value} <- {config_path(), config_value()} do
+      :ok = ConfigServer.update(namespace, path, value)
+      {:ok, retrieved_value} = ConfigServer.get(namespace, path)
+      retrieved_value == value
+    end
+  end
 end
 ```
 
@@ -541,13 +503,13 @@ end
 
 ## Performance & Monitoring
 
-### Performance Metrics
+### Performance Metrics (ACTUAL IMPLEMENTATION)
 
 #### Service-Level Metrics
-- Request latency (p50, p95, p99)
-- Throughput (requests/second)
-- Error rate (percentage)
-- Availability (uptime percentage)
+- Request latency (via TelemetryService.measure/3)
+- Throughput (via TelemetryService.emit_counter/2)
+- Error rate (via event correlation)
+- Availability (via health checks)
 
 #### System-Level Metrics
 - Process count and memory usage
@@ -555,42 +517,39 @@ end
 - Supervision tree restarts
 - Registry lookup performance
 
-### Monitoring Implementation
+### Monitoring Implementation (ACTUAL IMPLEMENTATION)
 
-#### Custom Telemetry Events
+#### Telemetry Events
 ```elixir
-# Define telemetry events
-:telemetry.execute([:elixir_scope, :service, :operation], measurements, metadata)
+# Actual Foundation implementation
+TelemetryService.execute([:foundation, :config_server, :operation], 
+                        %{duration: duration_ms}, 
+                        %{operation: :get, path: path})
 
-# Measurements (quantitative)
-measurements = %{
-  duration: duration_microseconds,
-  queue_length: current_queue_length,
-  memory_usage: process_memory_bytes
-}
+TelemetryService.emit_counter([:foundation, :event_store, :events_stored], 
+                             %{event_type: event.event_type})
 
-# Metadata (qualitative)
-metadata = %{
-  service: service_module,
-  operation: operation_name,
-  namespace: current_namespace,
-  result: :success | :error
-}
+TelemetryService.emit_gauge([:foundation, :service, :memory_usage], 
+                           process_memory_bytes, 
+                           %{service: __MODULE__})
 ```
 
-#### Health Check Aggregation
+#### Health Check Aggregation (ACTUAL IMPLEMENTATION)
 ```elixir
-defmodule SystemHealth do
-  def overall_health do
-    service_healths = [
-      ConfigServer.health_check(),
-      EventStore.health_check(),
-      TelemetryService.health_check()
-    ]
+defmodule ElixirScope.Foundation.HealthMonitor do
+  def system_health(namespace \\ :production) do
+    services = [:config_server, :event_store, :telemetry_service]
     
-    case Enum.all?(service_healths, fn {status, _} -> status == :ok end) do
-      true -> {:ok, %{status: :healthy, services: service_healths}}
-      false -> {:error, %{status: :degraded, services: service_healths}}
+    health_results = Enum.map(services, fn service ->
+      case ServiceRegistry.health_check(namespace, service) do
+        {:ok, _pid} -> {service, :healthy}
+        {:error, reason} -> {service, {:unhealthy, reason}}
+      end
+    end)
+    
+    case Enum.all?(health_results, fn {_service, status} -> status == :healthy end) do
+      true -> {:ok, %{status: :healthy, services: health_results}}
+      false -> {:error, %{status: :degraded, services: health_results}}
     end
   end
 end
@@ -600,64 +559,35 @@ end
 
 ## Layer Integration Standards
 
-### Foundation → Infrastructure Integration
+### Foundation → Higher Layer Integration (TEMPLATE)
 
 #### Service Registration Pattern
 ```elixir
-defmodule Infrastructure.DatabasePool do
+defmodule YourLayer.SomeService do
   use GenServer
   
-  def start_link(opts) do
+  def start_link(opts \\ []) do
     namespace = Keyword.get(opts, :namespace, :production)
-    
-    # Register with Foundation layer
-    GenServer.start_link(__MODULE__, opts, 
-      name: {:via, Registry, {ProcessRegistry, {namespace, __MODULE__}}}
-    )
+    name = ServiceRegistry.via_tuple(namespace, :your_service)
+    GenServer.start_link(__MODULE__, Keyword.put(opts, :namespace, namespace), name: name)
   end
   
   # Use Foundation services
   def init(opts) do
-    config = ConfigServer.get_config(opts[:namespace])
-    {:ok, initialize_pool(config)}
-  end
-end
-```
-
-### Infrastructure → Business Integration
-
-#### Domain Service Pattern
-```elixir
-defmodule Business.UserService do
-  # Depend on Infrastructure services
-  def create_user(params, namespace \\ :production) do
-    with {:ok, validated_params} <- validate_user_params(params),
-         {:ok, user} <- Database.insert_user(validated_params, namespace),
-         :ok <- EventStore.append_event(:user_created, user, namespace) do
-      {:ok, user}
-    end
-  end
-end
-```
-
-### Business → Application Integration
-
-#### API Gateway Pattern
-```elixir
-defmodule Application.UserController do
-  # Use Business layer services
-  def create_user(conn, params) do
-    namespace = get_request_namespace(conn)
+    namespace = Keyword.get(opts, :namespace, :production)
     
-    case Business.UserService.create_user(params, namespace) do
-      {:ok, user} -> json(conn, user)
-      {:error, reason} -> handle_error(conn, reason)
+    with {:ok, config} <- ConfigServer.get(namespace, [:your_layer, :settings]),
+         :ok <- validate_config(config) do
+      state = %{config: config, namespace: namespace}
+      {:ok, state}
+    else
+      {:error, reason} -> {:stop, reason}
     end
   end
 end
 ```
 
-### Cross-Layer Error Propagation
+### Cross-Layer Error Propagation (DESIGN)
 
 ```elixir
 # Error flows upward through layers
@@ -671,38 +601,39 @@ Application Layer -> Business Layer -> Infrastructure Layer -> Foundation Layer
 
 ## Compliance Checklist
 
-### Process Design ✓
-- [ ] Uses GenServer for stateful processes
-- [ ] Implements proper child_spec/1
-- [ ] Registers via Registry pattern
-- [ ] Supports namespace isolation
-- [ ] Implements health_check/1
+### Process Design ✅
+- [x] Uses GenServer for stateful processes
+- [x] Implements proper child_spec/1
+- [x] Registers via Registry pattern with ServiceRegistry.via_tuple/2
+- [x] Supports namespace isolation with {:test, reference()} pattern
+- [x] Implements health_check/1 and available?/0
 
-### Supervision ✓
-- [ ] Included in supervision tree
-- [ ] Proper restart strategy
-- [ ] Graceful shutdown handling
-- [ ] Resource cleanup in terminate/2
+### Supervision ✅
+- [x] Included in supervision tree
+- [x] Proper restart strategy (:one_for_one for Foundation)
+- [x] Graceful shutdown handling via terminate/2
+- [x] Resource cleanup in terminate/2
 
-### Error Handling ✓
-- [ ] Follows "let it crash" philosophy
-- [ ] Implements circuit breaker for external deps
-- [ ] Provides graceful degradation
-- [ ] Emits telemetry on errors
+### Error Handling ✅
+- [x] Follows "let it crash" philosophy
+- [x] Uses structured Error types with categories/subcategories
+- [x] Provides graceful degradation via available?/0 checks
+- [x] Emits telemetry on errors and operations
 
-### Testing ✓
-- [ ] Uses ConcurrentTestCase for service tests
-- [ ] Implements property-based tests
-- [ ] Tests error scenarios
-- [ ] Validates concurrent behavior
+### Testing ✅
+- [x] Uses ConcurrentTestCase for service tests
+- [x] Implements property-based tests with @moduletag :slow
+- [x] Tests error scenarios and edge cases
+- [x] Validates concurrent behavior with async: true
 
-### Monitoring ✓
-- [ ] Emits telemetry events
-- [ ] Implements health checks
-- [ ] Monitors key metrics
-- [ ] Provides debug information
+### Monitoring ✅
+- [x] Emits telemetry events via TelemetryService
+- [x] Implements health checks via ServiceRegistry
+- [x] Monitors key metrics (operations, errors, performance)
+- [x] Provides debug information via status/0 calls
 
 ---
 
 **Document Revision History:**
+- v1.1: Updated to reflect actual Foundation layer implementation details
 - v1.0: Initial specification based on Foundation layer implementation
