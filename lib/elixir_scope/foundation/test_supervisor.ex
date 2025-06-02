@@ -31,11 +31,13 @@ defmodule ElixirScope.Foundation.TestSupervisor do
 
       {:ok, pid} = TestSupervisor.start_link([])
   """
+  @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(init_arg) do
     DynamicSupervisor.start_link(__MODULE__, init_arg, name: __MODULE__)
   end
 
   @impl true
+  @spec init(term()) :: {:ok, DynamicSupervisor.sup_flags()}
   def init(_init_arg) do
     DynamicSupervisor.init(strategy: :one_for_one)
   end
@@ -307,4 +309,4 @@ defmodule ElixirScope.Foundation.TestSupervisor do
       end
     end)
   end
-end
+end 
