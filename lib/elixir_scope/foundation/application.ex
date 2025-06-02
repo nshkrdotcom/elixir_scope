@@ -3,6 +3,8 @@ defmodule ElixirScope.Foundation.Application do
   Main application module for ElixirScope Foundation layer.
 
   Starts and supervises all the core Foundation services in the proper order.
+  Now includes ProcessRegistry for namespace isolation and TestSupervisor
+  for test isolation support.
   """
 
   use Application
@@ -10,13 +12,19 @@ defmodule ElixirScope.Foundation.Application do
   @impl Application
   def start(_type, _args) do
     children = [
-      # Core foundation services
+      # Registry must start first for service discovery
+      {ElixirScope.Foundation.ProcessRegistry, []},
+      
+      # Core foundation services with production namespace
       {ElixirScope.Foundation.Services.ConfigServer,
-       name: ElixirScope.Foundation.Services.ConfigServer},
+       [namespace: :production]},
       {ElixirScope.Foundation.Services.EventStore,
-       name: ElixirScope.Foundation.Services.EventStore},
+       [namespace: :production]},
       {ElixirScope.Foundation.Services.TelemetryService,
-       name: ElixirScope.Foundation.Services.TelemetryService},
+       [namespace: :production]},
+
+      # TestSupervisor for dynamic test isolation
+      {ElixirScope.Foundation.TestSupervisor, []},
 
       # Task supervisor for dynamic tasks
       {Task.Supervisor, name: ElixirScope.Foundation.TaskSupervisor}

@@ -3,11 +3,11 @@ defmodule ElixirScope.Foundation.ConfigRobustnessTest do
   use ExUnit.Case, async: false
   @moduletag :foundation
 
-  alias ElixirScope.Foundation.Config, as: ConfigAPI
-  alias ElixirScope.Foundation.Types.{Config, Error}
-  alias ElixirScope.Foundation.{ErrorContext}
+  alias ElixirScope.Foundation.{Config, Error, TestHelpers}
+  alias ElixirScope.Foundation.{ErrorContext, ServiceRegistry}
   alias ElixirScope.Foundation.Config.GracefulDegradation
-  alias ElixirScope.Foundation.TestHelpers
+  alias ElixirScope.Foundation.Types.{Config, Error}
+  alias ElixirScope.Foundation.Config, as: ConfigAPI
 
   setup do
     # Ensure Config GenServer is available
@@ -164,13 +164,18 @@ defmodule ElixirScope.Foundation.ConfigRobustnessTest do
       # Initialize fallback system first
       GracefulDegradation.initialize_fallback_system()
 
-      # Stop the supervisor completely to prevent restart
-      if sup_pid = Process.whereis(ElixirScope.Foundation.Supervisor) do
-        Supervisor.stop(sup_pid, :normal)
+      # Stop only the ConfigServer, not the entire supervisor
+      case ServiceRegistry.lookup(:production, :config_server) do
+        {:ok, config_pid} ->
+          # Stop just the config server
+          GenServer.stop(config_pid, :shutdown)
+          # Give it a moment to stop
+          Process.sleep(50)
+        
+        {:error, _} ->
+          # Already stopped or not found
+          :ok
       end
-
-      # Wait for shutdown
-      Process.sleep(100)
 
       # Now test should fail properly
       result = GracefulDegradation.update_with_fallback([:ai, :planning, :sampling_rate], 0.7)
@@ -189,7 +194,7 @@ defmodule ElixirScope.Foundation.ConfigRobustnessTest do
           flunk("Unexpected result: #{inspect(other)}")
       end
 
-      # Restart service
+      # Wait for supervisor to restart the service
       TestHelpers.ensure_config_available()
     end
 

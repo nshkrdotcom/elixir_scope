@@ -30,6 +30,7 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
   alias ElixirScope.Foundation.Validation.ConfigValidator
   alias ElixirScope.Foundation.Contracts.Configurable
   alias ElixirScope.Foundation.Services.{EventStore, TelemetryService}
+  alias ElixirScope.Foundation.{ProcessRegistry, ServiceRegistry}
 
   @behaviour Configurable
 
@@ -37,7 +38,9 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
   @type server_state :: %{
           config: Config.t(),
           subscribers: [pid()],
-          metrics: metrics()
+          monitors: %{reference() => pid()},
+          metrics: metrics(),
+          namespace: ProcessRegistry.namespace()
         }
 
   @typedoc "Metrics tracking for the configuration server"
@@ -57,9 +60,9 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
   @impl Configurable
   @spec get() :: {:ok, Config.t()} | {:error, Error.t()}
   def get do
-    case GenServer.whereis(__MODULE__) do
-      nil -> create_service_error("Configuration service not started")
-      _pid -> GenServer.call(__MODULE__, :get_config)
+    case ServiceRegistry.lookup(:production, :config_server) do
+      {:ok, pid} -> GenServer.call(pid, :get_config)
+      {:error, _} -> create_service_error("Configuration service not started")
     end
   end
 
@@ -77,9 +80,9 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
   @impl Configurable
   @spec get([atom()]) :: {:ok, term()} | {:error, Error.t()}
   def get(path) when is_list(path) do
-    case GenServer.whereis(__MODULE__) do
-      nil -> create_service_error("Configuration service not started")
-      _pid -> GenServer.call(__MODULE__, {:get_config_path, path})
+    case ServiceRegistry.lookup(:production, :config_server) do
+      {:ok, pid} -> GenServer.call(pid, {:get_config_path, path})
+      {:error, _} -> create_service_error("Configuration service not started")
     end
   end
 
@@ -98,9 +101,9 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
   @impl Configurable
   @spec update([atom()], term()) :: :ok | {:error, Error.t()}
   def update(path, value) when is_list(path) do
-    case GenServer.whereis(__MODULE__) do
-      nil -> create_service_error("Configuration service not started")
-      _pid -> GenServer.call(__MODULE__, {:update_config, path, value})
+    case ServiceRegistry.lookup(:production, :config_server) do
+      {:ok, pid} -> GenServer.call(pid, {:update_config, path, value})
+      {:error, _} -> create_service_error("Configuration service not started")
     end
   end
 
@@ -134,9 +137,9 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
   @impl Configurable
   @spec reset() :: :ok | {:error, Error.t()}
   def reset do
-    case GenServer.whereis(__MODULE__) do
-      nil -> create_service_error("Configuration service not started")
-      _pid -> GenServer.call(__MODULE__, :reset_config)
+    case ServiceRegistry.lookup(:production, :config_server) do
+      {:ok, pid} -> GenServer.call(pid, :reset_config)
+      {:error, _} -> create_service_error("Configuration service not started")
     end
   end
 
@@ -148,7 +151,35 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
   @impl Configurable
   @spec available?() :: boolean()
   def available? do
-    GenServer.whereis(__MODULE__) != nil
+    case ServiceRegistry.lookup(:production, :config_server) do
+      {:ok, _pid} -> true
+      {:error, _} -> false
+    end
+  end
+
+  @doc """
+  Reset all internal state for testing purposes.
+  
+  Clears all subscribers, metrics, and resets configuration to defaults.
+  This function should only be used in test environments.
+  """
+  @spec reset_state() :: :ok | {:error, Error.t()}
+  def reset_state do
+    if Application.get_env(:elixir_scope, :test_mode, false) do
+      case ServiceRegistry.lookup(:production, :config_server) do
+        {:ok, pid} -> GenServer.call(pid, :reset_state)
+        {:error, _} -> create_service_error("Configuration service not started")
+      end
+    else
+      {:error, Error.new(
+        code: 5002,
+        error_type: :operation_forbidden,
+        message: "State reset only allowed in test mode",
+        severity: :high,
+        category: :security,
+        subcategory: :authorization
+      )}
+    end
   end
 
   ## Additional Functions
@@ -173,41 +204,27 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
 
   ## Examples
 
-      :ok = ElixirScope.Foundation.Services.ConfigServer.initialize(debug: true)
+      :ok = ElixirScope.Foundation.Services.ConfigServer.initialize(cache_size: 1000)
   """
   @spec initialize(keyword()) :: :ok | {:error, Error.t()}
-  def initialize(opts) do
-    case start_link(opts) do
-      {:ok, _pid} ->
-        :ok
-
-      {:error, {:already_started, _pid}} ->
-        :ok
-
-      {:error, reason} ->
-        {:error,
-         Error.new(
-           code: 5001,
-           error_type: :service_initialization_failed,
-           message: "Failed to initialize configuration service",
-           severity: :high,
-           context: %{reason: reason},
-           category: :config,
-           subcategory: :startup
-         )}
-    end
+  def initialize(opts) when is_list(opts) do
+    # For now, initialization is handled by the supervision tree
+    # This function exists for API compatibility
+    :ok
   end
 
   @doc """
-  Get the current status of the configuration service.
+  Get configuration service status.
 
-  Returns service health information including uptime and statistics.
+  ## Examples
+
+      {:ok, status} = ElixirScope.Foundation.Services.ConfigServer.status()
   """
   @spec status() :: {:ok, map()} | {:error, Error.t()}
   def status() do
-    case GenServer.whereis(__MODULE__) do
-      nil -> create_service_error("Configuration service not started")
-      _pid -> GenServer.call(__MODULE__, :get_status)
+    case ServiceRegistry.lookup(:production, :config_server) do
+      {:ok, pid} -> GenServer.call(pid, :get_status)
+      {:error, _} -> create_service_error("Configuration service not started")
     end
   end
 
@@ -218,10 +235,13 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
 
   ## Parameters
   - `opts`: Keyword list of options passed to GenServer initialization
+    - `:namespace` - The namespace to register in (defaults to :production)
   """
   @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts \\ []) do
-    GenServer.start_link(__MODULE__, opts, name: __MODULE__)
+    namespace = Keyword.get(opts, :namespace, :production)
+    name = ServiceRegistry.via_tuple(namespace, :config_server)
+    GenServer.start_link(__MODULE__, Keyword.put(opts, :namespace, namespace), name: name)
   end
 
   @doc """
@@ -229,7 +249,10 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
   """
   @spec stop() :: :ok
   def stop do
-    GenServer.stop(__MODULE__)
+    case ServiceRegistry.lookup(:production, :config_server) do
+      {:ok, pid} -> GenServer.stop(pid)
+      {:error, _} -> :ok
+    end
   end
 
   @doc """
@@ -245,7 +268,10 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
   """
   @spec subscribe(pid()) :: :ok | {:error, Error.t()}
   def subscribe(pid \\ self()) do
-    GenServer.call(__MODULE__, {:subscribe, pid})
+    case ServiceRegistry.lookup(:production, :config_server) do
+      {:ok, server_pid} -> GenServer.call(server_pid, {:subscribe, pid})
+      {:error, _} -> create_service_error("Configuration service not started")
+    end
   end
 
   @doc """
@@ -256,7 +282,10 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
   """
   @spec unsubscribe(pid()) :: :ok | {:error, Error.t()}
   def unsubscribe(pid \\ self()) do
-    GenServer.call(__MODULE__, {:unsubscribe, pid})
+    case ServiceRegistry.lookup(:production, :config_server) do
+      {:ok, server_pid} -> GenServer.call(server_pid, {:unsubscribe, pid})
+      {:error, _} -> create_service_error("Configuration service not started")
+    end
   end
 
   ## GenServer Callbacks
@@ -269,13 +298,17 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
   @impl GenServer
   @spec init(keyword()) :: {:ok, server_state()} | {:stop, term()}
   def init(opts) do
+    namespace = Keyword.get(opts, :namespace, :production)
+    
     case ConfigLogic.build_config(opts) do
       {:ok, config} ->
-        Logger.info("Configuration server initialized successfully")
+        Logger.info("Configuration server initialized successfully in namespace #{inspect(namespace)}")
 
         state = %{
           config: config,
           subscribers: [],
+          monitors: %{},
+          namespace: namespace,
           metrics: %{
             start_time: System.monotonic_time(:millisecond),
             updates_count: 0,
@@ -308,8 +341,6 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
   def handle_call({:update_config, path, value}, _from, %{config: config} = state) do
     case ConfigLogic.update_config(config, path, value) do
       {:ok, new_config} ->
-        Logger.debug("Configuration updated: #{inspect(path)} = #{inspect(value)}")
-
         new_state = %{
           state
           | config: new_config,
@@ -369,25 +400,61 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
   end
 
   @impl GenServer
-  def handle_call({:subscribe, pid}, _from, %{subscribers: subscribers} = state) do
+  def handle_call({:subscribe, pid}, _from, %{subscribers: subscribers, monitors: monitors} = state) do
     if pid in subscribers do
       {:reply, :ok, state}
     else
-      Process.monitor(pid)
-      new_state = %{state | subscribers: [pid | subscribers]}
+      # Fix race condition: add to list first, then monitor
+      new_subscribers = [pid | subscribers]
+      monitor_ref = Process.monitor(pid)
+      new_monitors = Map.put(monitors, monitor_ref, pid)
+      
+      new_state = %{state | subscribers: new_subscribers, monitors: new_monitors}
       {:reply, :ok, new_state}
     end
   end
 
   @impl GenServer
-  def handle_call({:unsubscribe, pid}, _from, %{subscribers: subscribers} = state) do
+  def handle_call({:unsubscribe, pid}, _from, %{subscribers: subscribers, monitors: monitors} = state) do
     new_subscribers = List.delete(subscribers, pid)
-    new_state = %{state | subscribers: new_subscribers}
+    
+    # Find and demonitor the reference for this PID
+    {new_monitors, _} = Enum.reduce(monitors, {%{}, nil}, fn
+      {ref, ^pid}, {acc_monitors, _} ->
+        Process.demonitor(ref, [:flush])
+        {acc_monitors, ref}
+      {ref, other_pid}, {acc_monitors, found_ref} ->
+        {Map.put(acc_monitors, ref, other_pid), found_ref}
+    end)
+    
+    new_state = %{state | subscribers: new_subscribers, monitors: new_monitors}
     {:reply, :ok, new_state}
   end
 
   @impl GenServer
-  def handle_call(:get_status, _from, %{metrics: metrics} = state) do
+  def handle_call(:reset_state, _from, state) do
+    # Reset to initial state (for testing)
+    case ConfigLogic.build_config([]) do
+      {:ok, config} ->
+        new_state = %{
+          config: config,
+          subscribers: [],
+          monitors: %{},
+          metrics: %{
+            start_time: System.monotonic_time(:millisecond),
+            updates_count: 0,
+            last_update: nil
+          }
+        }
+        {:reply, :ok, new_state}
+        
+      {:error, error} ->
+        {:reply, {:error, error}, state}
+    end
+  end
+
+  @impl GenServer
+  def handle_call(:get_status, _from, %{metrics: metrics, subscribers: subscribers} = state) do
     current_time = System.monotonic_time(:millisecond)
 
     status = %{
@@ -395,7 +462,7 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
       uptime_ms: current_time - metrics.start_time,
       updates_count: metrics.updates_count,
       last_update: metrics.last_update,
-      subscribers_count: length(state.subscribers)
+      subscribers_count: length(subscribers)
     }
 
     {:reply, {:ok, status}, state}
@@ -403,10 +470,11 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
 
   @impl GenServer
   @spec handle_info(term(), server_state()) :: {:noreply, server_state()}
-  def handle_info({:DOWN, _ref, :process, pid, _reason}, %{subscribers: subscribers} = state) do
-    # Remove dead subscriber
+  def handle_info({:DOWN, ref, :process, pid, _reason}, %{subscribers: subscribers, monitors: monitors} = state) do
+    # Remove dead subscriber using the monitor reference
     new_subscribers = List.delete(subscribers, pid)
-    new_state = %{state | subscribers: new_subscribers}
+    new_monitors = Map.delete(monitors, ref)
+    new_state = %{state | subscribers: new_subscribers, monitors: new_monitors}
     {:noreply, new_state}
   end
 

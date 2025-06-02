@@ -2,6 +2,9 @@
 
 ExUnit.start()
 
+# The ProcessRegistry is already started by ElixirScope.Foundation.Application
+# Just ensure test mode is configured for proper service behavior
+
 # Configure ExUnit
 ExUnit.configure(
   exclude: [
@@ -46,6 +49,8 @@ ExUnit.configure(
 
 # Load all support modules
 Code.require_file("support/helpers.ex", __DIR__)
+Code.require_file("support/concurrent_test_case.exs", __DIR__)
+Code.require_file("support/foundation_test_helper.exs", __DIR__)
 
 # Global test setup
 defmodule ElixirScope.TestCase do

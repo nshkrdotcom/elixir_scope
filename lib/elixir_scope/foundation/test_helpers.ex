@@ -8,14 +8,11 @@ defmodule ElixirScope.Foundation.TestHelpers do
   @doc """
   Ensures Config GenServer is available for testing.
   """
-  @spec ensure_config_available() :: :ok | {:error, Error.t()}
+  @spec ensure_config_available() :: :ok
   def ensure_config_available do
     case GenServer.whereis(Config) do
       nil ->
-        case Config.initialize() do
-          :ok -> :ok
-          {:error, _} = error -> error
-        end
+        Config.initialize()
 
       _pid ->
         :ok

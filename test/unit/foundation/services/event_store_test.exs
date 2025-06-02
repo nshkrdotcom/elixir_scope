@@ -3,18 +3,24 @@ defmodule ElixirScope.Foundation.Services.EventStoreTest do
 
   alias ElixirScope.Foundation.Services.EventStore
   alias ElixirScope.Foundation.Types.Event
+  alias ElixirScope.Foundation.FoundationTestHelper
 
   setup do
-    # Start EventStore for testing
-    {:ok, pid} = EventStore.start_link()
-
+    # Use our modern test helper instead of manual service startup
+    FoundationTestHelper.setup_foundation_test()
+    
+    # Wait for services to be ready (should be quick)
+    case FoundationTestHelper.wait_for_services(2000) do
+      :ok -> :ok
+      {:error, :timeout} -> 
+        raise "Foundation services not available within timeout"
+    end
+    
     on_exit(fn ->
-      if Process.alive?(pid) do
-        EventStore.stop()
-      end
+      FoundationTestHelper.cleanup_foundation_test()
     end)
 
-    %{server_pid: pid}
+    :ok
   end
 
   describe "store/1" do
@@ -70,7 +76,7 @@ defmodule ElixirScope.Foundation.Services.EventStoreTest do
 
     test "returns error for non-existent event" do
       assert {:error, error} = EventStore.get(99999)
-      assert error.error_type == :not_found
+      assert %ElixirScope.Foundation.Types.Error{error_type: :not_found} = error
     end
   end
 

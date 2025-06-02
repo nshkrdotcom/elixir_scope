@@ -33,10 +33,10 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
 
   @impl Telemetry
   def execute(event_name, measurements, metadata) when is_list(event_name) do
-    case GenServer.whereis(__MODULE__) do
+    case ElixirScope.Foundation.ServiceRegistry.lookup(:production, :telemetry_service) do
       # Fail silently for telemetry
-      nil -> :ok
-      _pid -> GenServer.cast(__MODULE__, {:execute_event, event_name, measurements, metadata})
+      {:error, _} -> :ok
+      {:ok, pid} -> GenServer.cast(pid, {:execute_event, event_name, measurements, metadata})
     end
   end
 
@@ -86,32 +86,35 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
 
   @impl Telemetry
   def get_metrics do
-    case GenServer.whereis(__MODULE__) do
-      nil -> create_service_error("Telemetry service not started")
-      _pid -> GenServer.call(__MODULE__, :get_metrics)
+    case ElixirScope.Foundation.ServiceRegistry.lookup(:production, :telemetry_service) do
+      {:error, _} -> create_service_error("Telemetry service not started")
+      {:ok, pid} -> GenServer.call(pid, :get_metrics)
     end
   end
 
   @impl Telemetry
   def attach_handlers(event_names) when is_list(event_names) do
-    case GenServer.whereis(__MODULE__) do
-      nil -> create_service_error("Telemetry service not started")
-      _pid -> GenServer.call(__MODULE__, {:attach_handlers, event_names})
+    case ElixirScope.Foundation.ServiceRegistry.lookup(:production, :telemetry_service) do
+      {:error, _} -> create_service_error("Telemetry service not started")
+      {:ok, pid} -> GenServer.call(pid, {:attach_handlers, event_names})
     end
   end
 
   @impl Telemetry
   def detach_handlers(event_names) when is_list(event_names) do
-    case GenServer.whereis(__MODULE__) do
+    case ElixirScope.Foundation.ServiceRegistry.lookup(:production, :telemetry_service) do
       # Fail silently
-      nil -> :ok
-      _pid -> GenServer.cast(__MODULE__, {:detach_handlers, event_names})
+      {:error, _} -> :ok
+      {:ok, pid} -> GenServer.cast(pid, {:detach_handlers, event_names})
     end
   end
 
   @impl Telemetry
   def available? do
-    GenServer.whereis(__MODULE__) != nil
+    case ElixirScope.Foundation.ServiceRegistry.lookup(:production, :telemetry_service) do
+      {:ok, _pid} -> true
+      {:error, _} -> false
+    end
   end
 
   @impl Telemetry
@@ -121,20 +124,27 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
 
   @impl Telemetry
   def status do
-    case GenServer.whereis(__MODULE__) do
-      nil -> create_service_error("Telemetry service not started")
-      _pid -> GenServer.call(__MODULE__, :get_status)
+    case ElixirScope.Foundation.ServiceRegistry.lookup(:production, :telemetry_service) do
+      {:error, _} -> create_service_error("Telemetry service not started")
+      {:ok, pid} -> GenServer.call(pid, :get_status)
     end
   end
 
   ## GenServer API
 
+  @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts \\ []) do
-    GenServer.start_link(__MODULE__, opts, name: __MODULE__)
+    namespace = Keyword.get(opts, :namespace, :production)
+    name = ElixirScope.Foundation.ServiceRegistry.via_tuple(namespace, :telemetry_service)
+    GenServer.start_link(__MODULE__, Keyword.put(opts, :namespace, namespace), name: name)
   end
 
+  @spec stop() :: :ok
   def stop do
-    GenServer.stop(__MODULE__)
+    case ElixirScope.Foundation.ServiceRegistry.lookup(:production, :telemetry_service) do
+      {:ok, pid} -> GenServer.stop(pid)
+      {:error, _} -> :ok
+    end
   end
 
   @doc """
@@ -142,9 +152,34 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
   """
   @spec reset_metrics() :: :ok | {:error, Error.t()}
   def reset_metrics do
-    case GenServer.whereis(__MODULE__) do
-      nil -> create_service_error("Telemetry service not started")
-      _pid -> GenServer.call(__MODULE__, :clear_metrics)
+    case ElixirScope.Foundation.ServiceRegistry.lookup(:production, :telemetry_service) do
+      {:error, _} -> create_service_error("Telemetry service not started")
+      {:ok, pid} -> GenServer.call(pid, :clear_metrics)
+    end
+  end
+
+  @doc """
+  Reset all internal state for testing purposes.
+  
+  Clears all metrics, handlers, and resets configuration to defaults.
+  This function should only be used in test environments.
+  """
+  @spec reset_state() :: :ok | {:error, Error.t()}
+  def reset_state do
+    if Application.get_env(:elixir_scope, :test_mode, false) do
+      case ElixirScope.Foundation.ServiceRegistry.lookup(:production, :telemetry_service) do
+        {:error, _} -> create_service_error("Telemetry service not started")
+        {:ok, pid} -> GenServer.call(pid, :reset_state)
+      end
+    else
+      {:error, Error.new(
+        code: 7002,
+        error_type: :operation_forbidden,
+        message: "State reset only allowed in test mode",
+        severity: :high,
+        category: :security,
+        subcategory: :authorization
+      )}
     end
   end
 
@@ -153,11 +188,13 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
   @impl GenServer
   def init(opts) do
     config = Map.merge(@default_config, Map.new(opts))
+    namespace = Keyword.get(opts, :namespace, :production)
 
     state = %{
       metrics: %{},
       handlers: %{},
-      config: config
+      config: config,
+      namespace: namespace
     }
 
     # Schedule periodic cleanup
@@ -168,7 +205,7 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
       attach_vm_metrics()
     end
 
-    Logger.info("Telemetry service initialized successfully")
+    Logger.info("Telemetry service initialized successfully in namespace #{inspect(namespace)}")
     {:ok, state}
   end
 
@@ -215,6 +252,21 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
   @impl GenServer
   def handle_call(:clear_metrics, _from, state) do
     new_state = %{state | metrics: %{}}
+    {:reply, :ok, new_state}
+  end
+
+  @impl GenServer
+  def handle_call(:reset_state, _from, %{namespace: namespace} = _state) do
+    # Reset to initial state (for testing)
+    config = Map.merge(@default_config, %{})
+    
+    new_state = %{
+      metrics: %{},
+      handlers: %{},
+      config: config,
+      namespace: namespace
+    }
+    
     {:reply, :ok, new_state}
   end
 
