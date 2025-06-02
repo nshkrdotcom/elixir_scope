@@ -41,7 +41,9 @@ defmodule ElixirScope.MixProject do
         ],
         ignore_warnings: ".dialyzer.ignore.exs",
         # Only include your app in the PLT
-        plt_add_apps: [:elixir_scope]
+        plt_add_apps: [:elixir_scope],
+        # Exclude test support files from analysis
+        paths: ["_build/dev/lib/elixir_scope/ebin"]
         # plt_ignore_apps: [:some_dep] # Ignore specific dependencies
       ],
 

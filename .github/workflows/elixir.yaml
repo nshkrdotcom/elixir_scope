@@ -79,6 +79,18 @@ jobs:
           ${{ runner.os }}-mix-${{ env.cache-name }}-
           ${{ runner.os }}-mix-
 
+    # Step: Cache dev build for Dialyzer
+    - name: Cache dev build
+      id: cache-dev-build
+      uses: actions/cache@v3
+      env:
+        cache-name: cache-dev-build
+      with:
+        path: _build/dev
+        key: ${{ runner.os }}-mix-${{ env.cache-name }}-${{ hashFiles('**/mix.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-mix-${{ env.cache-name }}-
+
     # Step: Conditionally bust the cache when job is re-run.
     # Sometimes, we may have issues with incremental builds that are fixed by
     # doing a full recompile. In order to not waste dev time on such trivial
@@ -115,12 +127,20 @@ jobs:
         cache-name: cache-plt
       with:
         path: priv/plts
-        key: ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-plt-${{ hashFiles('**/mix.lock') }}
+        key: ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-plt-dev-${{ hashFiles('**/mix.lock') }}
         restore-keys: |
+          ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-plt-dev-
           ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-plt-
 
     # Step: Run Dialyzer for static analysis
+    - name: Compile for Dialyzer
+      env:
+        MIX_ENV: dev
+      run: mix compile
+
     - name: Run Dialyzer
+      env:
+        MIX_ENV: dev
       run: mix dialyzer
 
     # Step: Execute the tests.
