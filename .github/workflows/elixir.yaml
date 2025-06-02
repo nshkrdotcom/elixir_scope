@@ -108,6 +108,21 @@ jobs:
     - name: Check Formatting
       run: mix format --check-formatted
 
+    # Step: Cache PLT files for Dialyzer
+    - name: Cache PLT
+      uses: actions/cache@v3
+      env:
+        cache-name: cache-plt
+      with:
+        path: priv/plts
+        key: ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-plt-${{ hashFiles('**/mix.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-plt-
+
+    # Step: Run Dialyzer for static analysis
+    - name: Run Dialyzer
+      run: mix dialyzer
+
     # Step: Execute the tests.
     - name: Run tests
       run: mix test
