@@ -211,13 +211,23 @@ defmodule ElixirScope.Foundation.Validation.EventValidator do
     {:error, error}
   end
 
-  @spec error_code_for_type(:validation_failed | :type_mismatch | :data_too_large | :invalid_event_type) :: 2001 | 2002 | 2003 | 2004
+  @spec error_code_for_type(
+          :validation_failed
+          | :type_mismatch
+          | :data_too_large
+          | :invalid_event_type
+        ) :: 2001 | 2002 | 2003 | 2004
   defp error_code_for_type(:validation_failed), do: 2001
   defp error_code_for_type(:type_mismatch), do: 2002
   defp error_code_for_type(:data_too_large), do: 2003
   defp error_code_for_type(:invalid_event_type), do: 2004
 
-  @spec severity_for_type(:validation_failed | :type_mismatch | :data_too_large | :invalid_event_type) :: Error.error_severity()
+  @spec severity_for_type(
+          :validation_failed
+          | :type_mismatch
+          | :data_too_large
+          | :invalid_event_type
+        ) :: Error.error_severity()
   defp severity_for_type(:data_too_large), do: :high
   defp severity_for_type(:validation_failed), do: :high
   defp severity_for_type(_), do: :medium

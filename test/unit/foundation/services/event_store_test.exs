@@ -8,14 +8,16 @@ defmodule ElixirScope.Foundation.Services.EventStoreTest do
   setup do
     # Use our modern test helper instead of manual service startup
     FoundationTestHelper.setup_foundation_test()
-    
+
     # Wait for services to be ready (should be quick)
     case FoundationTestHelper.wait_for_services(2000) do
-      :ok -> :ok
-      {:error, :timeout} -> 
+      :ok ->
+        :ok
+
+      {:error, :timeout} ->
         raise "Foundation services not available within timeout"
     end
-    
+
     on_exit(fn ->
       FoundationTestHelper.cleanup_foundation_test()
     end)

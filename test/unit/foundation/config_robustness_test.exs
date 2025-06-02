@@ -171,7 +171,7 @@ defmodule ElixirScope.Foundation.ConfigRobustnessTest do
           GenServer.stop(config_pid, :shutdown)
           # Give it a moment to stop
           Process.sleep(50)
-        
+
         {:error, _} ->
           # Already stopped or not found
           :ok

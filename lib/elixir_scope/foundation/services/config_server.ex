@@ -159,7 +159,7 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
 
   @doc """
   Reset all internal state for testing purposes.
-  
+
   Clears all subscribers, metrics, and resets configuration to defaults.
   This function should only be used in test environments.
   """
@@ -171,14 +171,15 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
         {:error, _} -> create_service_error("Configuration service not started")
       end
     else
-      {:error, Error.new(
-        code: 5002,
-        error_type: :operation_forbidden,
-        message: "State reset only allowed in test mode",
-        severity: :high,
-        category: :security,
-        subcategory: :authorization
-      )}
+      {:error,
+       Error.new(
+         code: 5002,
+         error_type: :operation_forbidden,
+         message: "State reset only allowed in test mode",
+         severity: :high,
+         category: :security,
+         subcategory: :authorization
+       )}
     end
   end
 
@@ -299,10 +300,12 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
   @spec init(keyword()) :: {:ok, server_state()} | {:stop, term()}
   def init(opts) do
     namespace = Keyword.get(opts, :namespace, :production)
-    
+
     case ConfigLogic.build_config(opts) do
       {:ok, config} ->
-        Logger.info("Configuration server initialized successfully in namespace #{inspect(namespace)}")
+        Logger.info(
+          "Configuration server initialized successfully in namespace #{inspect(namespace)}"
+        )
 
         state = %{
           config: config,
@@ -408,25 +411,31 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
       new_subscribers = [pid | subscribers]
       monitor_ref = Process.monitor(pid)
       new_monitors = Map.put(monitors, monitor_ref, pid)
-      
+
       new_state = %{state | subscribers: new_subscribers, monitors: new_monitors}
       {:reply, :ok, new_state}
     end
   end
 
   @impl GenServer
-  def handle_call({:unsubscribe, pid}, _from, %{subscribers: subscribers, monitors: monitors} = state) do
+  def handle_call(
+        {:unsubscribe, pid},
+        _from,
+        %{subscribers: subscribers, monitors: monitors} = state
+      ) do
     new_subscribers = List.delete(subscribers, pid)
-    
+
     # Find and demonitor the reference for this PID
-    {new_monitors, _} = Enum.reduce(monitors, {%{}, nil}, fn
-      {ref, ^pid}, {acc_monitors, _} ->
-        Process.demonitor(ref, [:flush])
-        {acc_monitors, ref}
-      {ref, other_pid}, {acc_monitors, found_ref} ->
-        {Map.put(acc_monitors, ref, other_pid), found_ref}
-    end)
-    
+    {new_monitors, _} =
+      Enum.reduce(monitors, {%{}, nil}, fn
+        {ref, ^pid}, {acc_monitors, _} ->
+          Process.demonitor(ref, [:flush])
+          {acc_monitors, ref}
+
+        {ref, other_pid}, {acc_monitors, found_ref} ->
+          {Map.put(acc_monitors, ref, other_pid), found_ref}
+      end)
+
     new_state = %{state | subscribers: new_subscribers, monitors: new_monitors}
     {:reply, :ok, new_state}
   end
@@ -446,8 +455,9 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
             last_update: nil
           }
         }
+
         {:reply, :ok, new_state}
-        
+
       {:error, error} ->
         {:reply, {:error, error}, state}
     end
@@ -470,7 +480,10 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
 
   @impl GenServer
   @spec handle_info(term(), server_state()) :: {:noreply, server_state()}
-  def handle_info({:DOWN, ref, :process, pid, _reason}, %{subscribers: subscribers, monitors: monitors} = state) do
+  def handle_info(
+        {:DOWN, ref, :process, pid, _reason},
+        %{subscribers: subscribers, monitors: monitors} = state
+      ) do
     # Remove dead subscriber using the monitor reference
     new_subscribers = List.delete(subscribers, pid)
     new_monitors = Map.delete(monitors, ref)

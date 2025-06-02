@@ -246,13 +246,23 @@ defmodule ElixirScope.Foundation.Validation.ConfigValidator do
     {:error, error}
   end
 
-  @spec error_code_for_type(:validation_failed | :invalid_config_value | :constraint_violation | :range_error) :: 1001 | 1002 | 1003 | 1004
+  @spec error_code_for_type(
+          :validation_failed
+          | :invalid_config_value
+          | :constraint_violation
+          | :range_error
+        ) :: 1001 | 1002 | 1003 | 1004
   defp error_code_for_type(:validation_failed), do: 1001
   defp error_code_for_type(:invalid_config_value), do: 1002
   defp error_code_for_type(:constraint_violation), do: 1003
   defp error_code_for_type(:range_error), do: 1004
 
-  @spec severity_for_type(:validation_failed | :invalid_config_value | :constraint_violation | :range_error) :: Error.error_severity()
+  @spec severity_for_type(
+          :validation_failed
+          | :invalid_config_value
+          | :constraint_violation
+          | :range_error
+        ) :: Error.error_severity()
   defp severity_for_type(:constraint_violation), do: :high
   defp severity_for_type(:range_error), do: :high
   defp severity_for_type(_), do: :medium

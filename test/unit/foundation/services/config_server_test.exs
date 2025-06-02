@@ -8,14 +8,16 @@ defmodule ElixirScope.Foundation.Services.ConfigServerTest do
   setup do
     # Use our modern test helper instead of TestProcessManager
     FoundationTestHelper.setup_foundation_test()
-    
+
     # Wait for services to be ready (should be quick)
     case FoundationTestHelper.wait_for_services(2000) do
-      :ok -> :ok
-      {:error, :timeout} -> 
+      :ok ->
+        :ok
+
+      {:error, :timeout} ->
         raise "Foundation services not available within timeout"
     end
-    
+
     on_exit(fn ->
       FoundationTestHelper.cleanup_foundation_test()
     end)
@@ -75,22 +77,22 @@ defmodule ElixirScope.Foundation.Services.ConfigServerTest do
       # This test verifies that state doesn't leak between tests
       # First, verify default state
       assert {:ok, false} = ConfigServer.get([:dev, :debug_mode])
-      
+
       # Update something
       :ok = ConfigServer.update([:dev, :debug_mode], true)
       assert {:ok, true} = ConfigServer.get([:dev, :debug_mode])
-      
+
       # The next test should start fresh due to our setup/teardown
     end
-    
+
     test "state reset works correctly" do
       # Update configuration
       :ok = ConfigServer.update([:dev, :debug_mode], true)
       assert {:ok, true} = ConfigServer.get([:dev, :debug_mode])
-      
+
       # Reset state manually
       :ok = ConfigServer.reset_state()
-      
+
       # Should be back to defaults
       assert {:ok, false} = ConfigServer.get([:dev, :debug_mode])
     end
@@ -116,8 +118,9 @@ defmodule ElixirScope.Foundation.Services.ConfigServerTest do
         spawn(fn ->
           # In test mode, we need to set the test process context to find the right server
           Process.put(:elixir_scope_test_process, test_pid)
-          
+
           result = ConfigServer.subscribe()
+
           case result do
             :ok -> send(test_pid, :subscribed)
             {:error, _} -> send(test_pid, :subscription_failed)
@@ -156,17 +159,17 @@ defmodule ElixirScope.Foundation.Services.ConfigServerTest do
       assert is_integer(status.uptime_ms)
       assert status.uptime_ms >= 0
     end
-    
+
     test "reset_state only works in test mode" do
       # Should work since we're in test mode
       assert :ok = ConfigServer.reset_state()
-      
+
       # Temporarily disable test mode
       Application.put_env(:elixir_scope, :test_mode, false)
-      
+
       assert {:error, error} = ConfigServer.reset_state()
       assert error.error_type == :operation_forbidden
-      
+
       # Re-enable test mode
       Application.put_env(:elixir_scope, :test_mode, true)
     end

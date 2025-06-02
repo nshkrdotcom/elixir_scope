@@ -142,7 +142,7 @@ The current approach treats GenServer processes as isolated units rather than de
 - [ ] State management through restarts, not manual reset
 
 ## Test Architecture
-- [ ] Test isolation through supervision
+- [ ] Test isolation through supervisaion
 - [ ] No manual process management in tests
 - [ ] Proper setup/teardown using OTP lifecycle
 - [ ] Concurrent test safety through process boundaries

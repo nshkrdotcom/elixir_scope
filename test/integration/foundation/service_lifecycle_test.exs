@@ -22,7 +22,7 @@ defmodule ElixirScope.Foundation.Integration.ServiceLifecycleTest do
     test "services start in correct dependency order" do
       # Record original PIDs to verify restarts
       _original_config_pid = GenServer.whereis(ConfigServer)
-      _original_event_pid = GenServer.whereis(EventStore) 
+      _original_event_pid = GenServer.whereis(EventStore)
       _original_telemetry_pid = GenServer.whereis(TelemetryService)
 
       # Stop all services (supervisor will restart them)
@@ -33,8 +33,10 @@ defmodule ElixirScope.Foundation.Integration.ServiceLifecycleTest do
 
       # Verify services are available (either stayed up or were restarted)
       assert ConfigServer.available?(), "ConfigServer should be available (stayed up or restarted)"
-      assert EventStore.available?(), "EventStore should be available (stayed up or restarted)" 
-      assert TelemetryService.available?(), "TelemetryService should be available (stayed up or restarted)"
+      assert EventStore.available?(), "EventStore should be available (stayed up or restarted)"
+
+      assert TelemetryService.available?(),
+             "TelemetryService should be available (stayed up or restarted)"
 
       # Should be able to get config
       assert {:ok, _config} = Config.get()
@@ -78,13 +80,13 @@ defmodule ElixirScope.Foundation.Integration.ServiceLifecycleTest do
         # Service was restarted by supervisor - verify it's functional
         assert config_was_restarted or original_config_pid == new_config_pid,
                "Expected ConfigServer to be restarted or maintained"
-        
+
         # Since service is back up, everything should work normally
         assert {:ok, _config} = Config.get()
       else
         # Service stayed down - test graceful degradation
         refute ConfigServer.available?(), "ConfigServer should be unavailable"
-        
+
         # EventStore should still function but may have limited config access
         {:ok, event} = Events.new_event(:test_dependency_failure, %{phase: "failure_test"})
 
@@ -153,9 +155,12 @@ defmodule ElixirScope.Foundation.Integration.ServiceLifecycleTest do
       # Test that either the service is unavailable OR it was restarted with a different PID
       if TelemetryService.available?() do
         # Service was restarted - verify it's a different process or same one that survived
-        telemetry_was_restarted = original_telemetry_pid != new_telemetry_pid and new_telemetry_pid != nil
+        telemetry_was_restarted =
+          original_telemetry_pid != new_telemetry_pid and new_telemetry_pid != nil
+
         assert telemetry_was_restarted or original_telemetry_pid == new_telemetry_pid,
                "Expected TelemetryService to be either restarted or maintained"
+
         assert TelemetryService.available?(), "TelemetryService should be available after restart"
       else
         # Service stayed down as expected in test environment
@@ -181,11 +186,12 @@ defmodule ElixirScope.Foundation.Integration.ServiceLifecycleTest do
         # Service was restarted by supervisor - verify it's functional
         assert event_was_restarted or original_event_pid == new_event_pid,
                "Expected EventStore to be either restarted or maintained"
+
         assert EventStore.available?(), "Restarted EventStore should be available"
       else
         # Service stayed down as expected
         refute EventStore.available?()
-        
+
         # Restart EventStore manually
         :ok = EventStore.initialize()
         # Allow time for service to fully restart
@@ -210,8 +216,10 @@ defmodule ElixirScope.Foundation.Integration.ServiceLifecycleTest do
       if ConfigServer.available?() do
         # Service was restarted - verify it's a different process
         config_was_restarted = original_config_pid != new_config_pid and new_config_pid != nil
+
         assert config_was_restarted or original_config_pid == new_config_pid,
                "Expected ConfigServer to be either restarted or maintained"
+
         assert ConfigServer.available?(), "ConfigServer should be available after restart"
       else
         # Service stayed down as expected
@@ -302,11 +310,12 @@ defmodule ElixirScope.Foundation.Integration.ServiceLifecycleTest do
         # Service was restarted by supervisor - verify it's functional
         assert event_was_restarted or original_event_pid == new_event_pid,
                "Expected EventStore to be either restarted or maintained"
+
         assert EventStore.available?(), "Restarted EventStore should be available"
       else
         # Service stayed down as expected
         refute EventStore.available?()
-        
+
         # Restart EventStore manually
         :ok = EventStore.initialize()
         # Allow time for service to fully restart
@@ -388,11 +397,12 @@ defmodule ElixirScope.Foundation.Integration.ServiceLifecycleTest do
       # Verify services are either down or restarted with different PIDs
       if config_stopped do
         config_was_restarted = original_config_pid != new_config_pid and new_config_pid != nil
-        
+
         if ConfigServer.available?() do
           # Service was restarted by supervisor - verify it's functional
           assert config_was_restarted or original_config_pid == new_config_pid,
                  "Expected ConfigServer to be either restarted or maintained"
+
           assert ConfigServer.available?(), "Restarted ConfigServer should be available"
         else
           # Service stayed down as expected
@@ -402,11 +412,12 @@ defmodule ElixirScope.Foundation.Integration.ServiceLifecycleTest do
 
       if event_stopped do
         event_was_restarted = original_event_pid != new_event_pid and new_event_pid != nil
-        
+
         if EventStore.available?() do
           # Service was restarted by supervisor - verify it's functional
           assert event_was_restarted or original_event_pid == new_event_pid,
                  "Expected EventStore to be either restarted or maintained"
+
           assert EventStore.available?(), "Restarted EventStore should be available"
         else
           # Service stayed down as expected
@@ -497,6 +508,7 @@ defmodule ElixirScope.Foundation.Integration.ServiceLifecycleTest do
         # Service was restarted by supervisor - verify it's functional
         assert config_was_restarted or original_config_pid == new_config_pid,
                "Expected ConfigServer to be either restarted or maintained"
+
         assert ConfigServer.available?(), "Restarted ConfigServer should be available"
       else
         # Service stayed down - test dependency health propagation

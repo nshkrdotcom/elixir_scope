@@ -59,7 +59,9 @@ defmodule ElixirScope.Foundation.ConcurrentTestCase do
             fun.(pid)
 
           {:error, reason} ->
-            flunk("Service #{service} not found in namespace #{inspect(namespace)}: #{inspect(reason)}")
+            flunk(
+              "Service #{service} not found in namespace #{inspect(namespace)}: #{inspect(reason)}"
+            )
         end
       end
 
@@ -92,12 +94,14 @@ defmodule ElixirScope.Foundation.ConcurrentTestCase do
             {:ok, test_pid} ->
               case ServiceRegistry.lookup(:production, service) do
                 {:ok, prod_pid} ->
-                  assert test_pid != prod_pid, 
+                  assert test_pid != prod_pid,
                          "Service #{service} should have different PIDs in test (#{inspect(test_pid)}) and production (#{inspect(prod_pid)}) namespaces"
+
                 {:error, _} ->
                   # Production service not running, that's fine
                   :ok
               end
+
             {:error, reason} ->
               flunk("Service #{service} not found in test namespace: #{inspect(reason)}")
           end
@@ -128,7 +132,7 @@ defmodule ElixirScope.Foundation.ConcurrentTestCase do
         %{
           duration_ms: duration_ms,
           operations_count: concurrency_level * length(operations),
-          ops_per_second: (concurrency_level * length(operations)) / (duration_ms / 1000),
+          ops_per_second: concurrency_level * length(operations) / (duration_ms / 1000),
           results: List.flatten(results)
         }
       end
@@ -153,4 +157,4 @@ defmodule ElixirScope.Foundation.ConcurrentTestCase do
       import ElixirScope.Foundation.ConcurrentTestCase
     end
   end
-end 
+end

@@ -61,7 +61,7 @@ defmodule ElixirScope.Foundation.TestSupervisor do
   @spec start_isolated_services(test_ref()) :: {:ok, [pid()]} | {:error, term()}
   def start_isolated_services(test_ref) when is_reference(test_ref) do
     namespace = {:test, test_ref}
-    
+
     Logger.debug("Starting isolated services for test namespace #{inspect(namespace)}")
 
     # Define the services to start with their configurations
@@ -72,19 +72,28 @@ defmodule ElixirScope.Foundation.TestSupervisor do
     ]
 
     # Start each service and collect results
-    results = 
+    results =
       Enum.map(service_specs, fn {module, opts} ->
         case DynamicSupervisor.start_child(__MODULE__, {module, opts}) do
           {:ok, pid} ->
-            Logger.debug("Started #{module} for test namespace #{inspect(namespace)}: #{inspect(pid)}")
+            Logger.debug(
+              "Started #{module} for test namespace #{inspect(namespace)}: #{inspect(pid)}"
+            )
+
             {:ok, pid}
 
           {:error, {:already_started, pid}} ->
-            Logger.warning("Service #{module} already started for namespace #{inspect(namespace)}: #{inspect(pid)}")
+            Logger.warning(
+              "Service #{module} already started for namespace #{inspect(namespace)}: #{inspect(pid)}"
+            )
+
             {:ok, pid}
 
           {:error, reason} = error ->
-            Logger.error("Failed to start #{module} for namespace #{inspect(namespace)}: #{inspect(reason)}")
+            Logger.error(
+              "Failed to start #{module} for namespace #{inspect(namespace)}: #{inspect(reason)}"
+            )
+
             error
         end
       end)
@@ -93,14 +102,22 @@ defmodule ElixirScope.Foundation.TestSupervisor do
     case Enum.split_with(results, &match?({:ok, _}, &1)) do
       {successes, []} ->
         pids = Enum.map(successes, fn {:ok, pid} -> pid end)
-        Logger.info("Successfully started #{length(pids)} services for test namespace #{inspect(namespace)}")
+
+        Logger.info(
+          "Successfully started #{length(pids)} services for test namespace #{inspect(namespace)}"
+        )
+
         {:ok, pids}
 
       {_successes, failures} ->
         # If any failed, cleanup what we started and return error
         cleanup_namespace(test_ref)
         first_error = List.first(failures)
-        Logger.error("Failed to start isolated services for test namespace #{inspect(namespace)}: #{inspect(first_error)}")
+
+        Logger.error(
+          "Failed to start isolated services for test namespace #{inspect(namespace)}: #{inspect(first_error)}"
+        )
+
         first_error
     end
   end
@@ -126,10 +143,10 @@ defmodule ElixirScope.Foundation.TestSupervisor do
   @spec cleanup_namespace(test_ref()) :: :ok
   def cleanup_namespace(test_ref) when is_reference(test_ref) do
     namespace = {:test, test_ref}
-    
+
     # Only log cleanup debug for non-empty namespaces
     services = ProcessRegistry.get_all_services(namespace)
-    
+
     if map_size(services) > 0 do
       # Terminate each service through the DynamicSupervisor
       Enum.each(services, fn {_service_name, pid} ->
@@ -148,7 +165,7 @@ defmodule ElixirScope.Foundation.TestSupervisor do
 
       # Wait a moment for cleanup to complete
       Process.sleep(50)
-      
+
       # Use ProcessRegistry cleanup as backup
       ProcessRegistry.cleanup_test_namespace(test_ref)
     end
@@ -181,10 +198,10 @@ defmodule ElixirScope.Foundation.TestSupervisor do
   def get_test_namespaces_info() do
     # Get all children of the DynamicSupervisor
     children = DynamicSupervisor.which_children(__MODULE__)
-    
+
     # Get registry stats
     registry_stats = ProcessRegistry.stats()
-    
+
     %{
       active_children: length(children),
       test_namespaces: registry_stats.test_namespaces,
@@ -213,12 +230,12 @@ defmodule ElixirScope.Foundation.TestSupervisor do
   @spec wait_for_services_ready(reference(), pos_integer()) :: :ok | {:error, :timeout}
   def wait_for_services_ready(test_ref, timeout \\ 5000) when is_reference(test_ref) do
     namespace = {:test, test_ref}
-    
+
     Logger.debug("Waiting for services to be ready in namespace #{inspect(namespace)}")
 
     # Only check for services we actually start (now including TelemetryService)
     services_to_check = [:config_server, :event_store, :telemetry_service]
-    
+
     start_time = System.monotonic_time(:millisecond)
     wait_for_services_loop(namespace, services_to_check, timeout, start_time)
   end
@@ -242,7 +259,7 @@ defmodule ElixirScope.Foundation.TestSupervisor do
   def namespace_healthy?(test_ref) when is_reference(test_ref) do
     namespace = {:test, test_ref}
     expected_services = [:config_server, :event_store, :telemetry_service]
-    
+
     Enum.all?(expected_services, fn service ->
       case ServiceRegistry.health_check(namespace, service) do
         {:ok, _pid} -> true
@@ -253,12 +270,16 @@ defmodule ElixirScope.Foundation.TestSupervisor do
 
   ## Private Functions
 
-  @spec wait_for_services_loop(namespace(), [atom()], pos_integer(), integer()) :: :ok | {:error, :timeout}
+  @spec wait_for_services_loop(namespace(), [atom()], pos_integer(), integer()) ::
+          :ok | {:error, :timeout}
   defp wait_for_services_loop(namespace, services, timeout, start_time) do
     elapsed = System.monotonic_time(:millisecond) - start_time
-    
+
     if elapsed >= timeout do
-      Logger.warning("Timeout waiting for services in namespace #{inspect(namespace)} after #{elapsed}ms")
+      Logger.warning(
+        "Timeout waiting for services in namespace #{inspect(namespace)} after #{elapsed}ms"
+      )
+
       {:error, :timeout}
     else
       case check_all_services_ready(namespace, services) do
@@ -286,4 +307,4 @@ defmodule ElixirScope.Foundation.TestSupervisor do
       end
     end)
   end
-end 
+end

@@ -133,7 +133,7 @@ defmodule ElixirScope.Foundation.Services.EventStore do
 
   @doc """
   Reset all stored events and metrics for testing purposes.
-  
+
   This function should only be used in test environments.
   """
   @spec reset_state() :: :ok | {:error, Error.t()}
@@ -144,14 +144,15 @@ defmodule ElixirScope.Foundation.Services.EventStore do
         {:error, _} -> create_service_error("Event store not available")
       end
     else
-      {:error, Error.new(
-        code: 3002,
-        error_type: :operation_forbidden,
-        message: "State reset only allowed in test mode",
-        severity: :high,
-        category: :security,
-        subcategory: :authorization
-      )}
+      {:error,
+       Error.new(
+         code: 3002,
+         error_type: :operation_forbidden,
+         message: "State reset only allowed in test mode",
+         severity: :high,
+         category: :security,
+         subcategory: :authorization
+       )}
     end
   end
 
@@ -198,15 +199,16 @@ defmodule ElixirScope.Foundation.Services.EventStore do
     case EventValidator.validate(event) do
       :ok ->
         # Use event's ID if provided, otherwise assign next available ID
-        event_id = if event.event_id && event.event_id > 0 do
-          event.event_id
-        else
-          state.next_id
-        end
+        event_id =
+          if event.event_id && event.event_id > 0 do
+            event.event_id
+          else
+            state.next_id
+          end
 
         updated_event = %{event | event_id: event_id}
         new_events = Map.put(state.events, event_id, updated_event)
-        
+
         new_next_id = max(state.next_id, event_id) + 1
         new_metrics = Map.update!(state.metrics, :events_stored, &(&1 + 1))
 
@@ -247,15 +249,17 @@ defmodule ElixirScope.Foundation.Services.EventStore do
   def handle_call({:get_event, event_id}, _from, %{events: events} = state) do
     case Map.get(events, event_id) do
       nil ->
-        error = Error.new(
-          code: 3001,
-          error_type: :not_found,
-          message: "Event not found",
-          severity: :low,
-          context: %{event_id: event_id},
-          category: :data,
-          subcategory: :retrieval
-        )
+        error =
+          Error.new(
+            code: 3001,
+            error_type: :not_found,
+            message: "Event not found",
+            severity: :low,
+            context: %{event_id: event_id},
+            category: :data,
+            subcategory: :retrieval
+          )
+
         {:reply, {:error, error}, state}
 
       event ->
@@ -300,12 +304,13 @@ defmodule ElixirScope.Foundation.Services.EventStore do
   @impl GenServer
   def handle_call(:get_stats, _from, %{events: events, metrics: metrics} = state) do
     current_time = System.monotonic_time(:millisecond)
-    
-    stats = Map.merge(metrics, %{
-      current_event_count: map_size(events),
-      uptime_ms: current_time - metrics.start_time,
-      memory_usage_estimate: estimate_memory_usage(events)
-    })
+
+    stats =
+      Map.merge(metrics, %{
+        current_event_count: map_size(events),
+        uptime_ms: current_time - metrics.start_time,
+        memory_usage_estimate: estimate_memory_usage(events)
+      })
 
     {:reply, {:ok, stats}, state}
   end
@@ -333,6 +338,7 @@ defmodule ElixirScope.Foundation.Services.EventStore do
         start_time: System.monotonic_time(:millisecond)
       }
     }
+
     {:reply, :ok, new_state}
   end
 
@@ -358,11 +364,12 @@ defmodule ElixirScope.Foundation.Services.EventStore do
   defp store_events_batch(events, state) do
     {new_state, event_ids} =
       Enum.reduce(events, {state, []}, fn event, {acc_state, acc_ids} ->
-        event_id = if event.event_id && event.event_id > 0 do
-          event.event_id
-        else
-          acc_state.next_id
-        end
+        event_id =
+          if event.event_id && event.event_id > 0 do
+            event.event_id
+          else
+            acc_state.next_id
+          end
 
         updated_event = %{event | event_id: event_id}
         new_events = Map.put(acc_state.events, event_id, updated_event)
@@ -401,12 +408,14 @@ defmodule ElixirScope.Foundation.Services.EventStore do
 
   @spec filter_by_event_type([Event.t()], atom() | nil) :: [Event.t()]
   defp filter_by_event_type(events, nil), do: events
+
   defp filter_by_event_type(events, event_type) do
     Enum.filter(events, fn event -> event.event_type == event_type end)
   end
 
   @spec filter_by_time_range([Event.t()], {integer(), integer()} | nil) :: [Event.t()]
   defp filter_by_time_range(events, nil), do: events
+
   defp filter_by_time_range(events, {start_time, end_time}) do
     Enum.filter(events, fn event ->
       event.timestamp >= start_time && event.timestamp <= end_time
@@ -440,19 +449,22 @@ defmodule ElixirScope.Foundation.Services.EventStore do
   @spec estimate_memory_usage(map()) :: non_neg_integer()
   defp estimate_memory_usage(events) do
     # Simple estimation - in a real implementation this might be more sophisticated
-    map_size(events) * 1000  # Rough estimate of 1KB per event
+    # Rough estimate of 1KB per event
+    map_size(events) * 1000
   end
 
   @spec create_service_error(String.t()) :: {:error, Error.t()}
   defp create_service_error(message) do
-    error = Error.new(
-      code: 3000,
-      error_type: :service_unavailable,
-      message: message,
-      severity: :high,
-      category: :system,
-      subcategory: :availability
-    )
+    error =
+      Error.new(
+        code: 3000,
+        error_type: :service_unavailable,
+        message: message,
+        severity: :high,
+        category: :system,
+        subcategory: :availability
+      )
+
     {:error, error}
   end
 end

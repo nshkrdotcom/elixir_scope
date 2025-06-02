@@ -14,14 +14,11 @@ defmodule ElixirScope.Foundation.Application do
     children = [
       # Registry must start first for service discovery
       {ElixirScope.Foundation.ProcessRegistry, []},
-      
+
       # Core foundation services with production namespace
-      {ElixirScope.Foundation.Services.ConfigServer,
-       [namespace: :production]},
-      {ElixirScope.Foundation.Services.EventStore,
-       [namespace: :production]},
-      {ElixirScope.Foundation.Services.TelemetryService,
-       [namespace: :production]},
+      {ElixirScope.Foundation.Services.ConfigServer, [namespace: :production]},
+      {ElixirScope.Foundation.Services.EventStore, [namespace: :production]},
+      {ElixirScope.Foundation.Services.TelemetryService, [namespace: :production]},
 
       # TestSupervisor for dynamic test isolation
       {ElixirScope.Foundation.TestSupervisor, []},

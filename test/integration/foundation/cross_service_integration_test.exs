@@ -8,7 +8,8 @@ defmodule ElixirScope.Foundation.Integration.CrossServiceIntegrationTest do
 
   use ExUnit.Case, async: false
 
-  alias ElixirScope.Foundation.{Config, Events, Telemetry} #, ErrorContext, GracefulDegradation}
+  # , ErrorContext, GracefulDegradation}
+  alias ElixirScope.Foundation.{Config, Events, Telemetry}
   alias ElixirScope.Foundation.Services.{ConfigServer, EventStore, TelemetryService}
   alias ElixirScope.Foundation.TestHelpers
 

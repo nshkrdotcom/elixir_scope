@@ -54,14 +54,18 @@ defmodule ElixirScope.Foundation.ServiceRegistry do
 
     case ProcessRegistry.register(namespace, service, pid) do
       :ok ->
-        Logger.info("Successfully registered service #{inspect(service)} in namespace #{inspect(namespace)}")
+        Logger.info(
+          "Successfully registered service #{inspect(service)} in namespace #{inspect(namespace)}"
+        )
+
         :ok
 
       {:error, {:already_registered, existing_pid}} = error ->
         Logger.warning(
           "Failed to register service #{inspect(service)} in namespace #{inspect(namespace)}: " <>
-          "already registered to PID #{inspect(existing_pid)}"
+            "already registered to PID #{inspect(existing_pid)}"
         )
+
         error
     end
   end
@@ -97,12 +101,14 @@ defmodule ElixirScope.Foundation.ServiceRegistry do
         if match?({:test, _}, namespace) do
           Logger.debug("Found service #{inspect(service)} at PID #{inspect(pid)}")
         end
+
         {:ok, pid}
 
       :error ->
         if match?({:test, _}, namespace) do
           Logger.debug("Service #{inspect(service)} not found in namespace #{inspect(namespace)}")
         end
+
         {:error, create_service_not_found_error(namespace, service)}
     end
   end
@@ -125,9 +131,9 @@ defmodule ElixirScope.Foundation.ServiceRegistry do
   @spec unregister(namespace(), service_name()) :: :ok
   def unregister(namespace, service) do
     Logger.debug("Unregistering service #{inspect(service)} from namespace #{inspect(namespace)}")
-    
+
     result = ProcessRegistry.unregister(namespace, service)
-    
+
     Logger.info("Unregistered service #{inspect(service)} from namespace #{inspect(namespace)}")
     result
   end
@@ -149,9 +155,9 @@ defmodule ElixirScope.Foundation.ServiceRegistry do
   @spec list_services(namespace()) :: [service_name()]
   def list_services(namespace) do
     Logger.debug("Listing services in namespace #{inspect(namespace)}")
-    
+
     services = ProcessRegistry.list_services(namespace)
-    
+
     Logger.debug("Found #{length(services)} services in namespace #{inspect(namespace)}")
     services
   end
@@ -184,10 +190,15 @@ defmodule ElixirScope.Foundation.ServiceRegistry do
       ...>   health_check: fn pid -> GenServer.call(pid, :health) end)
       {:ok, #PID<0.123.0>}
   """
-  @spec health_check(namespace(), service_name(), keyword()) :: 
-          {:ok, pid()} | 
-          {:error, :health_check_timeout | :process_dead | {:health_check_crashed, term()} | 
-                   {:health_check_error, term()} | {:health_check_failed, term()} | Error.t()}
+  @spec health_check(namespace(), service_name(), keyword()) ::
+          {:ok, pid()}
+          | {:error,
+             :health_check_timeout
+             | :process_dead
+             | {:health_check_crashed, term()}
+             | {:health_check_error, term()}
+             | {:health_check_failed, term()}
+             | Error.t()}
   def health_check(namespace, service, opts \\ []) do
     # Only log debug for health checks if explicitly requested
     if Keyword.get(opts, :debug_health_check, false) do
@@ -203,7 +214,7 @@ defmodule ElixirScope.Foundation.ServiceRegistry do
 
             health_check_fun when is_function(health_check_fun, 1) ->
               timeout = Keyword.get(opts, :timeout, 5000)
-              
+
               try do
                 case :timer.tc(health_check_fun, [pid]) do
                   {time_us, :ok} ->
@@ -220,7 +231,10 @@ defmodule ElixirScope.Foundation.ServiceRegistry do
                 end
               catch
                 :exit, {:timeout, _} ->
-                  Logger.warning("Health check timed out for #{inspect(service)} after #{timeout}ms")
+                  Logger.warning(
+                    "Health check timed out for #{inspect(service)} after #{timeout}ms"
+                  )
+
                   {:error, :health_check_timeout}
 
                 :exit, reason ->
@@ -259,9 +273,12 @@ defmodule ElixirScope.Foundation.ServiceRegistry do
       iex> ServiceRegistry.wait_for_service(:production, :config_server, 1000)
       {:ok, #PID<0.123.0>}
   """
-  @spec wait_for_service(namespace(), service_name(), pos_integer()) :: {:ok, pid()} | {:error, :timeout}
+  @spec wait_for_service(namespace(), service_name(), pos_integer()) ::
+          {:ok, pid()} | {:error, :timeout}
   def wait_for_service(namespace, service, timeout \\ 5000) do
-    Logger.debug("Waiting for service #{inspect(service)} in namespace #{inspect(namespace)} (timeout: #{timeout}ms)")
+    Logger.debug(
+      "Waiting for service #{inspect(service)} in namespace #{inspect(namespace)} (timeout: #{timeout}ms)"
+    )
 
     start_time = System.monotonic_time(:millisecond)
     wait_for_service_loop(namespace, service, timeout, start_time)
@@ -299,13 +316,13 @@ defmodule ElixirScope.Foundation.ServiceRegistry do
     Logger.debug("Getting service info for namespace #{inspect(namespace)}")
 
     services_map = ProcessRegistry.get_all_services(namespace)
-    
-    service_details = 
+
+    service_details =
       Enum.into(services_map, %{}, fn {service, pid} ->
         {service, analyze_service(pid)}
       end)
 
-    healthy_count = 
+    healthy_count =
       service_details
       |> Map.values()
       |> Enum.count(& &1.alive)
@@ -336,13 +353,13 @@ defmodule ElixirScope.Foundation.ServiceRegistry do
   @spec cleanup_test_namespace(reference()) :: :ok
   def cleanup_test_namespace(test_ref) do
     namespace = {:test, test_ref}
-    
+
     Logger.info("Starting cleanup of test namespace #{inspect(namespace)}")
-    
+
     # Get service info before cleanup
     service_info = get_service_info(namespace)
     service_count = service_info.total_services
-    
+
     if service_count > 0 do
       Logger.info("Cleaning up #{service_count} services in test namespace")
       ProcessRegistry.cleanup_test_namespace(test_ref)
@@ -350,7 +367,7 @@ defmodule ElixirScope.Foundation.ServiceRegistry do
     else
       Logger.debug("No services to cleanup in test namespace #{inspect(namespace)}")
     end
-    
+
     :ok
   end
 
@@ -366,14 +383,16 @@ defmodule ElixirScope.Foundation.ServiceRegistry do
   ## Returns
   - Via tuple for GenServer registration
   """
-  @spec via_tuple(namespace(), service_name()) :: {:via, Registry, {ElixirScope.Foundation.ProcessRegistry, {namespace(), service_name()}}}
+  @spec via_tuple(namespace(), service_name()) ::
+          {:via, Registry, {ElixirScope.Foundation.ProcessRegistry, {namespace(), service_name()}}}
   def via_tuple(namespace, service) do
     ProcessRegistry.via_tuple(namespace, service)
   end
 
   ## Private Functions
 
-  @spec wait_for_service_loop(namespace(), service_name(), pos_integer(), integer()) :: {:ok, pid()} | {:error, :timeout}
+  @spec wait_for_service_loop(namespace(), service_name(), pos_integer(), integer()) ::
+          {:ok, pid()} | {:error, :timeout}
   defp wait_for_service_loop(namespace, service, timeout, start_time) do
     case lookup(namespace, service) do
       {:ok, pid} ->
@@ -383,7 +402,7 @@ defmodule ElixirScope.Foundation.ServiceRegistry do
 
       {:error, _reason} ->
         elapsed = System.monotonic_time(:millisecond) - start_time
-        
+
         if elapsed >= timeout do
           Logger.warning("Timeout waiting for service #{inspect(service)} after #{elapsed}ms")
           {:error, :timeout}
@@ -398,19 +417,21 @@ defmodule ElixirScope.Foundation.ServiceRegistry do
   @spec analyze_service(pid()) :: %{pid: pid(), alive: boolean(), uptime_ms: integer()}
   defp analyze_service(pid) do
     alive = Process.alive?(pid)
-    
-    uptime_ms = if alive do
-      case Process.info(pid, :reductions) do
-        {_, _} ->
-          # Process is alive, calculate approximate uptime
-          # This is a rough estimate based on when we checked
-          System.monotonic_time(:millisecond)
-        nil ->
-          0
+
+    uptime_ms =
+      if alive do
+        case Process.info(pid, :reductions) do
+          {_, _} ->
+            # Process is alive, calculate approximate uptime
+            # This is a rough estimate based on when we checked
+            System.monotonic_time(:millisecond)
+
+          nil ->
+            0
+        end
+      else
+        0
       end
-    else
-      0
-    end
 
     %{
       pid: pid,
@@ -434,4 +455,4 @@ defmodule ElixirScope.Foundation.ServiceRegistry do
       }
     )
   end
-end 
+end

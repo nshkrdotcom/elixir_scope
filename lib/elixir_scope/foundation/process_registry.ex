@@ -24,11 +24,11 @@ defmodule ElixirScope.Foundation.ProcessRegistry do
   """
 
   @type namespace :: :production | {:test, reference()}
-  @type service_name :: 
-    :config_server | 
-    :event_store | 
-    :telemetry_service | 
-    :test_supervisor
+  @type service_name ::
+          :config_server
+          | :event_store
+          | :telemetry_service
+          | :test_supervisor
 
   @type registry_key :: {namespace(), service_name()}
 
@@ -66,9 +66,10 @@ defmodule ElixirScope.Foundation.ProcessRegistry do
   @spec register(namespace(), service_name(), pid()) :: :ok | {:error, {:already_registered, pid()}}
   def register(namespace, service, pid) when is_pid(pid) do
     case Registry.register(__MODULE__, {namespace, service}, nil) do
-      {:ok, _owner} -> 
+      {:ok, _owner} ->
         :ok
-      {:error, {:already_registered, existing_pid}} -> 
+
+      {:error, {:already_registered, existing_pid}} ->
         {:error, {:already_registered, existing_pid}}
     end
   end
@@ -262,30 +263,32 @@ defmodule ElixirScope.Foundation.ProcessRegistry do
   @spec cleanup_test_namespace(reference()) :: :ok
   def cleanup_test_namespace(test_ref) do
     namespace = {:test, test_ref}
-    
+
     # Get all PIDs in this namespace
-    pids = Registry.select(__MODULE__, [
-      {{{namespace, :"$1"}, :"$2", :"$3"}, [], [:"$2"]}
-    ])
-    
+    pids =
+      Registry.select(__MODULE__, [
+        {{{namespace, :"$1"}, :"$2", :"$3"}, [], [:"$2"]}
+      ])
+
     # Terminate each process gracefully
     Enum.each(pids, fn pid ->
       if Process.alive?(pid) do
         # Try graceful shutdown first
         Process.exit(pid, :shutdown)
-        
+
         # Wait a brief moment for graceful shutdown
         receive do
-        after 100 -> :ok
+        after
+          100 -> :ok
         end
-        
+
         # Force kill if still alive
         if Process.alive?(pid) do
           Process.exit(pid, :kill)
         end
       end
     end)
-    
+
     :ok
   end
 
@@ -312,14 +315,16 @@ defmodule ElixirScope.Foundation.ProcessRegistry do
           partitions: pos_integer()
         }
   def stats() do
-    all_entries = Registry.select(__MODULE__, [
-      {{{:"$1", :"$2"}, :"$3", :"$4"}, [], [:"$1"]}
-    ])
-    
-    {production_count, test_namespaces} = 
+    all_entries =
+      Registry.select(__MODULE__, [
+        {{{:"$1", :"$2"}, :"$3", :"$4"}, [], [:"$1"]}
+      ])
+
+    {production_count, test_namespaces} =
       Enum.reduce(all_entries, {0, MapSet.new()}, fn
         :production, {prod_count, test_set} ->
           {prod_count + 1, test_set}
+
         {:test, ref}, {prod_count, test_set} ->
           {prod_count, MapSet.put(test_set, ref)}
       end)
@@ -331,4 +336,4 @@ defmodule ElixirScope.Foundation.ProcessRegistry do
       partitions: System.schedulers_online()
     }
   end
-end 
+end

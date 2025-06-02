@@ -160,7 +160,7 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
 
   @doc """
   Reset all internal state for testing purposes.
-  
+
   Clears all metrics, handlers, and resets configuration to defaults.
   This function should only be used in test environments.
   """
@@ -172,14 +172,15 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
         {:ok, pid} -> GenServer.call(pid, :reset_state)
       end
     else
-      {:error, Error.new(
-        code: 7002,
-        error_type: :operation_forbidden,
-        message: "State reset only allowed in test mode",
-        severity: :high,
-        category: :security,
-        subcategory: :authorization
-      )}
+      {:error,
+       Error.new(
+         code: 7002,
+         error_type: :operation_forbidden,
+         message: "State reset only allowed in test mode",
+         severity: :high,
+         category: :security,
+         subcategory: :authorization
+       )}
     end
   end
 
@@ -259,14 +260,14 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
   def handle_call(:reset_state, _from, %{namespace: namespace} = _state) do
     # Reset to initial state (for testing)
     config = Map.merge(@default_config, %{})
-    
+
     new_state = %{
       metrics: %{},
       handlers: %{},
       config: config,
       namespace: namespace
     }
-    
+
     {:reply, :ok, new_state}
   end
 
