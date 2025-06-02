@@ -11,25 +11,6 @@ defmodule ElixirScope.Foundation.ErrorContext do
 
   alias ElixirScope.Foundation.{Error, Utils}
 
-  defstruct [
-    # Unique ID for this operation
-    :operation_id,
-    # Module where operation started
-    :module,
-    # Function where operation started
-    :function,
-    # Cross-system correlation
-    :correlation_id,
-    # When operation began
-    :start_time,
-    # Additional context data
-    :metadata,
-    # Operation trail
-    :breadcrumbs,
-    # Nested context support
-    :parent_context
-  ]
-
   @type t :: %__MODULE__{
           operation_id: pos_integer(),
           module: module(),
@@ -50,8 +31,42 @@ defmodule ElixirScope.Foundation.ErrorContext do
           metadata: map()
         }
 
+  @enforce_keys [:operation_id, :module, :function, :correlation_id, :start_time]
+  defstruct [
+    # Unique ID for this operation
+    :operation_id,
+    # Module where operation started
+    :module,
+    # Function where operation started
+    :function,
+    # Cross-system correlation
+    :correlation_id,
+    # When operation began
+    :start_time,
+    # Additional context data
+    metadata: %{},
+    # Operation trail
+    breadcrumbs: [],
+    # Nested context support
+    parent_context: nil
+  ]
+
   ## Context Creation and Management
 
+  @doc """
+  Create a new error context for an operation.
+
+  ## Parameters
+  - `module`: The module where the operation starts
+  - `function`: The function where the operation starts
+  - `opts`: Options including correlation_id, metadata, parent_context
+
+  ## Examples
+
+      iex> ErrorContext.new(MyModule, :my_function)
+      %ErrorContext{module: MyModule, function: :my_function, ...}
+  """
+  @spec new(module(), atom(), keyword()) :: t()
   def new(module, function, opts \\ []) do
     %__MODULE__{
       operation_id: Utils.generate_id(),
@@ -72,6 +87,21 @@ defmodule ElixirScope.Foundation.ErrorContext do
     }
   end
 
+  @doc """
+  Create a child context inheriting from a parent context.
+
+  ## Parameters
+  - `parent`: The parent context
+  - `module`: The module for the child operation
+  - `function`: The function for the child operation
+  - `metadata`: Additional metadata for the child context
+
+  ## Examples
+
+      iex> child = ErrorContext.child_context(parent, ChildModule, :child_function)
+      %ErrorContext{parent_context: ^parent, ...}
+  """
+  @spec child_context(t(), module(), atom(), map()) :: t()
   def child_context(%__MODULE__{} = parent, module, function, metadata \\ %{}) do
     %__MODULE__{
       operation_id: Utils.generate_id(),
@@ -94,6 +124,16 @@ defmodule ElixirScope.Foundation.ErrorContext do
     }
   end
 
+  @doc """
+  Add a breadcrumb to track operation flow.
+
+  ## Parameters
+  - `context`: The context to add breadcrumb to
+  - `module`: Module name for the breadcrumb
+  - `function`: Function name for the breadcrumb
+  - `metadata`: Additional metadata for this step
+  """
+  @spec add_breadcrumb(t(), module(), atom(), map()) :: t()
   def add_breadcrumb(%__MODULE__{} = context, module, function, metadata \\ %{}) do
     breadcrumb = %{
       module: module,
@@ -105,12 +145,33 @@ defmodule ElixirScope.Foundation.ErrorContext do
     %{context | breadcrumbs: context.breadcrumbs ++ [breadcrumb]}
   end
 
+  @doc """
+  Add metadata to an existing context.
+
+  ## Parameters
+  - `context`: The context to add metadata to
+  - `new_metadata`: Map of metadata to merge
+  """
+  @spec add_metadata(t(), map()) :: t()
   def add_metadata(%__MODULE__{} = context, new_metadata) when is_map(new_metadata) do
     %{context | metadata: Map.merge(context.metadata, new_metadata)}
   end
 
   ## Error Context Integration
 
+  @doc """
+  Execute a function with error context tracking.
+
+  Automatically captures exceptions and enhances them with context information.
+
+  ## Parameters
+  - `context`: The context to use for the operation
+  - `fun`: Zero-arity function to execute
+
+  ## Returns
+  - The result of the function, or {:error, enhanced_error} on exception
+  """
+  @spec with_context(t(), (-> term())) :: term() | {:error, Error.t()}
   def with_context(%__MODULE__{} = context, fun) when is_function(fun, 0) do
     # Store context in process dictionary for emergency access
     Process.put(:error_context, context)
@@ -136,6 +197,14 @@ defmodule ElixirScope.Foundation.ErrorContext do
     end
   end
 
+  @doc """
+  Enhance an Error struct with additional context information.
+
+  ## Parameters
+  - `error`: The error to enhance
+  - `context`: The context to add to the error
+  """
+  @spec enhance_error(Error.t(), t()) :: Error.t()
   def enhance_error(%Error{} = error, %__MODULE__{} = context) do
     # Enhance existing error with additional context
     enhanced_context =
@@ -156,10 +225,12 @@ defmodule ElixirScope.Foundation.ErrorContext do
     }
   end
 
+  @spec enhance_error({:error, Error.t()}, t()) :: {:error, Error.t()}
   def enhance_error({:error, %Error{} = error}, %__MODULE__{} = context) do
     {:error, enhance_error(error, context)}
   end
 
+  @spec enhance_error({:error, term()}, t()) :: {:error, Error.t()}
   def enhance_error({:error, reason}, %__MODULE__{} = context) do
     # Convert raw error to structured error with context
     error =
@@ -179,15 +250,29 @@ defmodule ElixirScope.Foundation.ErrorContext do
     {:error, error}
   end
 
+  @spec enhance_error(term(), t()) :: term()
   def enhance_error(result, _context), do: result
 
   ## Context Recovery and Debugging
 
+  @doc """
+  Get the current error context from the process dictionary.
+
+  This is an emergency recovery mechanism for debugging.
+  """
+  @spec get_current_context() :: t() | nil
   def get_current_context do
     # Emergency context retrieval from process dictionary
     Process.get(:error_context)
   end
 
+  @doc """
+  Format breadcrumbs as a human-readable string.
+
+  ## Parameters
+  - `context`: The context containing breadcrumbs to format
+  """
+  @spec format_breadcrumbs(t()) :: String.t()
   def format_breadcrumbs(%__MODULE__{breadcrumbs: breadcrumbs}) do
     Enum.map_join(breadcrumbs, " -> ", fn %{module: mod, function: func, timestamp: ts} ->
       relative_time = Utils.monotonic_timestamp() - ts
@@ -195,6 +280,13 @@ defmodule ElixirScope.Foundation.ErrorContext do
     end)
   end
 
+  @doc """
+  Get the duration of an operation in nanoseconds.
+
+  ## Parameters
+  - `context`: The context to calculate duration for
+  """
+  @spec get_operation_duration(t()) :: integer()
   def get_operation_duration(%__MODULE__{start_time: start_time}) do
     Utils.monotonic_timestamp() - start_time
   end
@@ -204,24 +296,36 @@ defmodule ElixirScope.Foundation.ErrorContext do
   @doc """
   Add context to an existing error or create a new one.
   Enhanced version with better error chaining and context preservation.
+
+  ## Parameters
+  - `result`: The result to potentially enhance with context
+  - `context`: The context to add
+  - `additional_info`: Additional context information
   """
+  @spec add_context(term(), t() | map(), map()) :: term()
   def add_context(result, context, additional_info \\ %{})
 
+  @spec add_context(:ok, t() | map(), map()) :: :ok
   def add_context(:ok, _context, _additional_info), do: :ok
+
+  @spec add_context({:ok, term()}, t() | map(), map()) :: {:ok, term()}
   def add_context({:ok, _} = success, _context, _additional_info), do: success
 
+  @spec add_context({:error, Error.t()}, t(), map()) :: {:error, Error.t()}
   def add_context({:error, %Error{} = error}, %__MODULE__{} = context, additional_info) do
     enhanced_error = enhance_error(error, context)
     additional_context = Map.merge(enhanced_error.context, additional_info)
     {:error, %{enhanced_error | context: additional_context}}
   end
 
+  @spec add_context({:error, Error.t()}, map(), map()) :: {:error, Error.t()}
   def add_context({:error, %Error{} = error}, context, additional_info) when is_map(context) do
     # Handle legacy map-based context
     updated_context = Map.merge(error.context, Map.merge(context, additional_info))
     {:error, %{error | context: updated_context}}
   end
 
+  @spec add_context({:error, term()}, t(), map()) :: {:error, Error.t()}
   def add_context({:error, reason}, %__MODULE__{} = context, additional_info) do
     full_context =
       Map.merge(additional_info, %{
@@ -238,6 +342,7 @@ defmodule ElixirScope.Foundation.ErrorContext do
     {:error, Error.new(:external_error, "External operation failed", context: full_context)}
   end
 
+  @spec add_context({:error, term()}, map(), map()) :: {:error, Error.t()}
   def add_context({:error, reason}, context, additional_info) when is_map(context) do
     # Handle legacy map-based context
     full_context = Map.merge(context, Map.merge(additional_info, %{original_reason: reason}))

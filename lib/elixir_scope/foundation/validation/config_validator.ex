@@ -90,6 +90,7 @@ defmodule ElixirScope.Foundation.Validation.ConfigValidator do
     :ok
   end
 
+  @spec validate_dev_config(map()) :: {:error, Error.t()}
   def validate_dev_config(_) do
     create_validation_error("Invalid development configuration")
   end
