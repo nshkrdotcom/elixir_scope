@@ -7,31 +7,45 @@ defmodule ElixirScope.Foundation.Error do
   - Enhanced error context and recovery strategies
   - Standardized error propagation patterns
   - Error metrics and analysis capabilities
+
+  All errors must have a code, error_type, message, and severity.
+  Other fields provide additional context and are optional.
+
+  See `@type t` for the complete type specification.
+
+  ## Examples
+
+      iex> error = ElixirScope.Foundation.Error.new(:config_not_found, "Config missing")
+      iex> error.error_type
+      :config_not_found
+
+      iex> error = ElixirScope.Foundation.Error.new(:network_error, nil, context: %{url: "http://example.com"})
+      iex> is_map(error.context)
+      true
   """
 
+  @typedoc "Specific error type identifier"
   @type error_code :: atom()
+
+  @typedoc "Additional context information for the error"
   @type error_context :: map()
+
+  @typedoc "Stack trace information as a list of maps"
   @type stacktrace_info :: [map()]
+
+  @typedoc "High-level error category"
   @type error_category :: :config | :system | :data | :external
+
+  @typedoc "Specific error subcategory within a category"
   @type error_subcategory :: :structure | :validation | :access | :runtime
+
+  @typedoc "Error severity level"
   @type error_severity :: :low | :medium | :high | :critical
+
+  @typedoc "Strategy for retrying failed operations"
   @type retry_strategy :: :no_retry | :immediate | :fixed_delay | :exponential_backoff
 
-  @type t :: %__MODULE__{
-          code: pos_integer(),
-          error_type: error_code(),
-          message: String.t(),
-          severity: error_severity(),
-          context: error_context(),
-          correlation_id: String.t() | nil,
-          timestamp: DateTime.t(),
-          stacktrace: stacktrace_info() | nil,
-          category: error_category(),
-          subcategory: error_subcategory(),
-          retry_strategy: retry_strategy(),
-          recovery_actions: [String.t()]
-        }
-
+  @enforce_keys [:code, :error_type, :message, :severity]
   defstruct [
     :code,
     :error_type,
@@ -47,52 +61,20 @@ defmodule ElixirScope.Foundation.Error do
     :recovery_actions
   ]
 
-  # # Hierarchical Error Code System
-  # @error_categories %{
-  #   # Configuration errors (C000-C999)
-  #   config: %{
-  #     base_code: 1000,
-  #     subcodes: %{
-  #       structure: 100,    # C100-C199: Structure issues
-  #       validation: 200,   # C200-C299: Validation failures
-  #       access: 300,       # C300-C399: Access/permission issues
-  #       runtime: 400       # C400-C499: Runtime update issues
-  #     }
-  #   },
-
-  #   # System errors (S000-S999)
-  #   system: %{
-  #     base_code: 2000,
-  #     subcodes: %{
-  #       initialization: 100,  # S100-S199: Startup failures
-  #       resources: 200,       # S200-S299: Resource exhaustion
-  #       dependencies: 300,    # S300-S399: Dependency failures
-  #       runtime: 400          # S400-S499: Runtime system errors
-  #     }
-  #   },
-
-  #   # Data errors (D000-D999)
-  #   data: %{
-  #     base_code: 3000,
-  #     subcodes: %{
-  #       serialization: 100,   # D100-D199: Serialization issues
-  #       validation: 200,      # D200-D299: Data validation
-  #       corruption: 300,      # D300-D399: Data corruption
-  #       not_found: 400        # D400-D499: Missing data
-  #     }
-  #   },
-
-  #   # External errors (E000-E999)
-  #   external: %{
-  #     base_code: 4000,
-  #     subcodes: %{
-  #       network: 100,         # E100-E199: Network issues
-  #       service: 200,         # E200-E299: External service failures
-  #       timeout: 300,         # E300-E399: Timeout issues
-  #       auth: 400            # E400-E499: Authentication failures
-  #     }
-  #   }
-  # }
+  @type t :: %__MODULE__{
+          code: pos_integer(),
+          error_type: error_code(),
+          message: String.t(),
+          severity: error_severity(),
+          context: error_context() | nil,
+          correlation_id: String.t() | nil,
+          timestamp: DateTime.t() | nil,
+          stacktrace: stacktrace_info() | nil,
+          category: error_category() | nil,
+          subcategory: error_subcategory() | nil,
+          retry_strategy: retry_strategy() | nil,
+          recovery_actions: [String.t()] | nil
+        }
 
   @error_definitions %{
     # Configuration Errors
@@ -138,8 +120,37 @@ defmodule ElixirScope.Foundation.Error do
     {:data, :validation, :invalid_input} => {3204, :low, "Invalid input provided"}
   }
 
-  ## Error Creation API
+  # Additional error definitions needed by tests
+  @additional_error_definitions %{
+    {:system, :initialization, :service_unavailable} =>
+      {2102, :high, "Required service unavailable"}
+  }
 
+  # Combined error definitions
+  @all_error_definitions Map.merge(@error_definitions, @additional_error_definitions)
+
+  @doc """
+  Create a new error with the given error type and optional message.
+
+  ## Parameters
+  - `error_type`: The specific error type atom
+  - `message`: Custom error message (optional, will use default if nil)
+  - `opts`: Additional options including context, correlation_id, stacktrace
+
+  ## Examples
+
+      iex> error = ElixirScope.Foundation.Error.new(:config_not_found)
+      iex> error.error_type
+      :config_not_found
+
+      iex> error = ElixirScope.Foundation.Error.new(:timeout, "Request timed out", context: %{timeout: 5000})
+      iex> error.message
+      "Request timed out"
+
+  ## Raises
+  - `KeyError` if required fields are missing
+  """
+  @spec new(error_code(), String.t() | nil, keyword()) :: t()
   def new(error_type, message \\ nil, opts \\ []) do
     {code, severity, default_message} = get_error_definition(error_type)
     {category, subcategory} = categorize_error(error_type)
@@ -160,12 +171,40 @@ defmodule ElixirScope.Foundation.Error do
     }
   end
 
-  ## Error Result Helpers
+  @doc """
+  Create an error result tuple.
 
+  ## Parameters
+  - `error_type`: The specific error type atom
+  - `message`: Custom error message (optional)
+  - `opts`: Additional options
+
+  ## Examples
+
+      iex> ElixirScope.Foundation.Error.error_result(:data_not_found)
+      {:error, %ElixirScope.Foundation.Error{error_type: :data_not_found, ...}}
+  """
+  @spec error_result(error_code(), String.t() | nil, keyword()) :: {:error, t()}
   def error_result(error_type, message \\ nil, opts \\ []) do
     {:error, new(error_type, message, opts)}
   end
 
+  @doc """
+  Wrap an existing result with additional error context.
+
+  ## Parameters
+  - `result`: The result to potentially wrap
+  - `error_type`: The wrapper error type
+  - `message`: Custom error message (optional)
+  - `opts`: Additional options
+
+  ## Examples
+
+      iex> result = {:error, :timeout}
+      iex> ElixirScope.Foundation.Error.wrap_error(result, :external_service_error)
+      {:error, %ElixirScope.Foundation.Error{...}}
+  """
+  @spec wrap_error(term(), error_code(), String.t() | nil, keyword()) :: term()
   def wrap_error(result, error_type, message \\ nil, opts \\ []) do
     case result do
       {:error, existing_error} when is_struct(existing_error, __MODULE__) ->
@@ -173,7 +212,7 @@ defmodule ElixirScope.Foundation.Error do
         enhanced_error = %{
           existing_error
           | context:
-              Map.merge(existing_error.context, %{
+              Map.merge(existing_error.context || %{}, %{
                 wrapped_by: error_type,
                 wrapper_message: message,
                 wrapper_context: Keyword.get(opts, :context, %{})
@@ -253,41 +292,57 @@ defmodule ElixirScope.Foundation.Error do
 
   ## Private Implementation
 
+  @spec get_error_definition(error_code()) :: {pos_integer(), error_severity(), String.t()}
   defp get_error_definition(error_type) do
-    # Find the error definition by searching the hierarchy
-    Enum.find_value(@error_definitions, {9999, :unknown, "Unknown error"}, fn
-      {{_cat, _subcat, ^error_type}, definition} -> definition
-      _ -> nil
-    end)
+    # Find the error definition by searching for matching error_type
+    case Enum.find(@all_error_definitions, fn {key, _value} ->
+           case key do
+             {_category, _subcategory, ^error_type} -> true
+             _ -> false
+           end
+         end) do
+      {_key, definition} -> definition
+      nil -> {9999, :medium, "Unknown error"}
+    end
   end
 
+  @spec categorize_error(error_code()) :: {error_category(), error_subcategory()}
   defp categorize_error(error_type) do
-    Enum.find_value(@error_definitions, {:unknown, :unknown}, fn
-      {{cat, subcat, ^error_type}, _definition} -> {cat, subcat}
-      _ -> nil
-    end)
+    case Enum.find(@all_error_definitions, fn {key, _value} ->
+           case key do
+             {_category, _subcategory, ^error_type} -> true
+             _ -> false
+           end
+         end) do
+      {{category, subcategory, _error_type}, _definition} -> {category, subcategory}
+      nil -> {:unknown, :unknown}
+    end
   end
 
+  @spec determine_retry_strategy(error_code(), error_severity()) :: retry_strategy()
   defp determine_retry_strategy(error_type, severity) do
     case {error_type, severity} do
-      # Network errors are usually retryable
-      {error_type, _} when error_type in [:network_error, :timeout] -> :exponential_backoff
-      # Service errors might be retryable
-      {:external_service_error, severity} when severity in [:low, :medium] -> :fixed_delay
-      # System resource issues might resolve quickly
-      {:resource_exhausted, _} -> :immediate
-      # Config and data errors usually aren't retryable
-      {error_type, _} when error_type in [:invalid_config_value, :data_corruption] -> :no_retry
-      # High severity errors generally shouldn't be retried
+      {:timeout, _} -> :exponential_backoff
+      {:network_error, _} -> :exponential_backoff
+      {:external_service_error, _} -> :fixed_delay
       {_, :critical} -> :no_retry
-      # Default: allow one retry with delay
+      {_, :high} -> :immediate
+      # Config and data validation errors usually aren't retryable
+      {:invalid_config_value, _} -> :no_retry
+      {:data_corruption, _} -> :no_retry
+      # Resource exhaustion should allow immediate retry
+      {:resource_exhausted, _} -> :immediate
       _ -> :fixed_delay
     end
   end
 
+  @spec suggest_recovery_actions(error_code(), keyword()) :: [String.t()]
   defp suggest_recovery_actions(error_type, opts) do
     base_actions =
       case error_type do
+        :config_not_found ->
+          ["Check configuration file", "Verify configuration path"]
+
         :invalid_config_value ->
           ["Check configuration format", "Validate against schema", "Review documentation"]
 
@@ -297,8 +352,14 @@ defmodule ElixirScope.Foundation.Error do
         :resource_exhausted ->
           ["Check memory usage", "Review resource limits", "Scale resources if needed"]
 
+        :network_error ->
+          ["Check network connectivity", "Retry with exponential backoff"]
+
         :timeout ->
           ["Increase timeout value", "Check network latency", "Review service performance"]
+
+        :data_corruption ->
+          ["Restore from backup", "Contact system administrator"]
 
         _ ->
           ["Check logs for details", "Review error context", "Contact support if needed"]
@@ -314,24 +375,25 @@ defmodule ElixirScope.Foundation.Error do
     base_actions ++ context_actions
   end
 
+  @spec format_stacktrace(list() | nil) :: stacktrace_info() | nil
   defp format_stacktrace(nil), do: nil
 
   defp format_stacktrace(stacktrace) when is_list(stacktrace) do
     stacktrace
-    # Limit stacktrace depth
+    # Limit stacktrace depth to 10 entries
     |> Enum.take(10)
-    |> Enum.map(&format_stacktrace_entry/1)
-  end
+    |> Enum.map(fn
+      {module, function, arity, location} ->
+        %{
+          module: module,
+          function: function,
+          arity: arity,
+          file: Keyword.get(location, :file),
+          line: Keyword.get(location, :line)
+        }
 
-  defp format_stacktrace_entry({module, function, arity, location}) do
-    %{
-      module: module,
-      function: function,
-      arity: arity,
-      file: Keyword.get(location, :file),
-      line: Keyword.get(location, :line)
-    }
+      other ->
+        inspect(other)
+    end)
   end
-
-  defp format_stacktrace_entry(entry), do: inspect(entry)
 end
