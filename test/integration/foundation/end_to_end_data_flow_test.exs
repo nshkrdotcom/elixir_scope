@@ -10,7 +10,7 @@ defmodule ElixirScope.Foundation.Integration.EndToEndDataFlowTest do
 
   alias ElixirScope.Foundation.{Config, Events, Telemetry}
   alias ElixirScope.Foundation.Services.{EventStore, TelemetryService}
-  alias ElixirScope.Foundation.TestHelpers
+  alias ElixirScope.TestHelpers
 
   setup do
     # Ensure all services are available

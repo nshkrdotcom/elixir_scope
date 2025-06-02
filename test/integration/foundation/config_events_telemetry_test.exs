@@ -10,7 +10,7 @@ defmodule ElixirScope.Foundation.Integration.ConfigEventsTelemetryTest do
 
   alias ElixirScope.Foundation.{Config, Telemetry}
   alias ElixirScope.Foundation.Services.{ConfigServer, EventStore, TelemetryService}
-  alias ElixirScope.Foundation.TestHelpers
+  alias ElixirScope.TestHelpers
 
   setup do
     # Ensure all services are available

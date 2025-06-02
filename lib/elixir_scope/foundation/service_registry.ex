@@ -52,65 +52,67 @@ defmodule ElixirScope.Foundation.ServiceRegistry do
   def register(namespace, service, pid) when is_pid(pid) do
     Logger.debug("Registering service #{inspect(service)} in namespace #{inspect(namespace)}")
 
-    case ProcessRegistry.register(namespace, service, pid) do
-      :ok ->
-        Logger.info(
-          "Successfully registered service #{inspect(service)} in namespace #{inspect(namespace)}"
-        )
+    result =
+      case ProcessRegistry.register(namespace, service, pid) do
+        :ok ->
+          Logger.info(
+            "Successfully registered service #{inspect(service)} in namespace #{inspect(namespace)}"
+          )
 
-        :ok
+          :ok
 
-      {:error, {:already_registered, existing_pid}} = error ->
-        Logger.warning(
-          "Failed to register service #{inspect(service)} in namespace #{inspect(namespace)}: " <>
-            "already registered to PID #{inspect(existing_pid)}"
-        )
+        {:error, {:already_registered, existing_pid}} = error ->
+          Logger.warning(
+            "Failed to register service #{inspect(service)} in namespace #{inspect(namespace)}: " <>
+              "already registered to PID #{inspect(existing_pid)}"
+          )
 
-        error
-    end
+          error
+      end
+
+    # Emit telemetry
+    emit_registration_telemetry(namespace, service, result)
+
+    result
   end
 
   @doc """
-  Look up a service in the given namespace with error handling.
+  Lookup a service with optional error handling and telemetry.
+
+  Includes telemetry events for monitoring Registry performance and usage patterns.
 
   ## Parameters
   - `namespace`: The namespace to search in
   - `service`: The service name to lookup
 
   ## Returns
-  - `{:ok, pid}` if service found
-  - `{:error, reason}` if service not found or other error
+  - `{:ok, pid()}` if service is found and healthy
+  - `{:error, Error.t()}` if service not found or unhealthy
+
+  ## Telemetry Events
+  - `[:elixir_scope, :foundation, :registry, :lookup]` - Emitted for all lookup operations
+    - Measurements: `%{duration: integer()}` (in native time units)
+    - Metadata: `%{namespace: term(), service: atom(), result: :ok | :error}`
 
   ## Examples
 
-      iex> ServiceRegistry.lookup(:production, :config_server)
-      {:ok, #PID<0.123.0>}
-
-      iex> ServiceRegistry.lookup(:production, :nonexistent)
-      {:error, :service_not_found}
+      {:ok, pid} = ServiceRegistry.lookup(:production, :config_server)
+      {:error, %Error{}} = ServiceRegistry.lookup(:production, :nonexistent)
   """
   @spec lookup(namespace(), service_name()) :: lookup_result()
   def lookup(namespace, service) do
-    # Only log debug in test mode to reduce noise
-    if match?({:test, _}, namespace) do
-      Logger.debug("Looking up service #{inspect(service)} in namespace #{inspect(namespace)}")
-    end
+    start_time = System.monotonic_time()
 
-    case ProcessRegistry.lookup(namespace, service) do
-      {:ok, pid} ->
-        if match?({:test, _}, namespace) do
-          Logger.debug("Found service #{inspect(service)} at PID #{inspect(pid)}")
-        end
+    result =
+      case ProcessRegistry.lookup(namespace, service) do
+        {:ok, pid} -> {:ok, pid}
+        :error -> {:error, create_service_not_found_error(namespace, service)}
+      end
 
-        {:ok, pid}
+    # Emit telemetry
+    emit_lookup_telemetry(namespace, service, result, start_time)
 
-      :error ->
-        if match?({:test, _}, namespace) do
-          Logger.debug("Service #{inspect(service)} not found in namespace #{inspect(namespace)}")
-        end
-
-        {:error, create_service_not_found_error(namespace, service)}
-    end
+    result
   end
 
   @doc """
@@ -186,7 +188,7 @@ defmodule ElixirScope.Foundation.ServiceRegistry do
       iex> ServiceRegistry.health_check(:production, :config_server)
       {:ok, #PID<0.123.0>}
 
-      iex> ServiceRegistry.health_check(:production, :config_server, 
+      iex> ServiceRegistry.health_check(:production, :config_server,
       ...>   health_check: fn pid -> GenServer.call(pid, :health) end)
       {:ok, #PID<0.123.0>}
   """
@@ -454,5 +456,42 @@ defmodule ElixirScope.Foundation.ServiceRegistry do
         service: service
       }
     )
+  end
+
+  @spec emit_lookup_telemetry(namespace(), service_name(), lookup_result(), integer()) :: :ok
+  defp emit_lookup_telemetry(namespace, service, result, start_time) do
+    duration = System.monotonic_time() - start_time
+
+    result_status =
+      case result do
+        {:ok, _} -> :ok
+        {:error, _} -> :error
+      end
+
+    :telemetry.execute(
+      [:elixir_scope, :foundation, :registry, :lookup],
+      %{duration: duration},
+      %{namespace: namespace, service: service, result: result_status}
+    )
+  rescue
+    # Don't let telemetry failures break Registry operations
+    _ -> :ok
+  end
+
+  @spec emit_registration_telemetry(namespace(), service_name(), registration_result()) :: :ok
+  defp emit_registration_telemetry(namespace, service, result) do
+    result_status =
+      case result do
+        :ok -> :ok
+        {:error, _} -> :error
+      end
+
+    :telemetry.execute(
+      [:elixir_scope, :foundation, :registry, :register],
+      %{count: 1},
+      %{namespace: namespace, service: service, result: result_status}
+    )
+  rescue
+    _ -> :ok
   end
 end

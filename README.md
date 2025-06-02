@@ -62,6 +62,22 @@ ElixirScope is built with a clean 9-layer architecture that ensures modularity, 
 | **Intelligence** | AI/ML integration | LLM, Features, Models, Insights |
 | **Debugger** | Complete debugging interface | Sessions, Breakpoints, Time Travel |
 
+## 📚 Documentation
+
+### Architecture Guides
+
+- **[Registry Architecture Guide](docs/FOUNDATION_OTP_IMPLEMENT_NOW/REGISTRY_ARCHITECTURE_GUIDE.md)** - Comprehensive guide to ElixirScope's advanced Registry patterns, performance characteristics, and monitoring
+- **[Foundation Layer Documentation](lib/elixir_scope/foundation/README.md)** - Core utilities, services, and OTP architecture
+
+### Performance & Benchmarking
+
+- **Registry Performance Validation** - Run `mix run scripts/registry_benchmark.exs` to validate documented performance characteristics
+- **Foundation Benchmarks** - Run `mix run scripts/benchmark.exs` for core component performance metrics
+
+### Examples & Integration
+
+- **[Registry Telemetry Handlers](examples/registry_telemetry_handlers.exs)** - Example telemetry handlers for monitoring Registry operations in production
+
 ## 🚀 Quick Start
 
 ### Installation

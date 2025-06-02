@@ -6,10 +6,11 @@ defmodule ElixirScope.Foundation.ConcurrencyValidationTest do
   and concurrent operation handling according to our systematic approach.
   """
 
-  use ElixirScope.Foundation.ConcurrentTestCase
+  use ElixirScope.TestSupport.ConcurrentTestCase
 
-  alias ElixirScope.Foundation.{ProcessRegistry, ServiceRegistry, TestSupervisor}
-  alias ElixirScope.Foundation.Services.{ConfigServer, EventStore}
+  alias ElixirScope.Foundation.{ProcessRegistry, ServiceRegistry}
+  alias ElixirScope.TestSupport.TestSupervisor
+  # alias ElixirScope.Foundation.Services.{ConfigServer}
 
   describe "Registry Infrastructure" do
     test "ProcessRegistry provides namespace isolation", %{test_ref: test_ref} do

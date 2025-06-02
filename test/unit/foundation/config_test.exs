@@ -5,7 +5,7 @@ defmodule ElixirScope.Foundation.ConfigTest do
 
   alias ElixirScope.Foundation.Config, as: ConfigAPI
   alias ElixirScope.Foundation.Types.{Config, Error}
-  alias ElixirScope.Foundation.TestHelpers
+  alias ElixirScope.TestHelpers
 
   setup do
     # Ensure Config GenServer is available

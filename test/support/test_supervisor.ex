@@ -1,4 +1,4 @@
-defmodule ElixirScope.Foundation.TestSupervisor do
+defmodule ElixirScope.TestSupport.TestSupervisor do
   @moduledoc """
   DynamicSupervisor for test isolation in ElixirScope Foundation layer.
 

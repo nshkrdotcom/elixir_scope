@@ -2,6 +2,7 @@ import Config
 
 # Test environment configuration
 config :elixir_scope,
+  test_mode: true,  # Enable test mode for test supervisor
   ai: [
     provider: :mock,
     analysis: [

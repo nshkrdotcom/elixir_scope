@@ -47,9 +47,6 @@ ExUnit.configure(
   capture_log: true
 )
 
-# Load all support modules
-Code.require_file("support/helpers.ex", __DIR__)
-Code.require_file("support/concurrent_test_case.exs", __DIR__)
 Code.require_file("support/foundation_test_helper.exs", __DIR__)
 
 # Global test setup
@@ -62,7 +59,6 @@ defmodule ElixirScope.TestCase do
 
   using do
     quote do
-      alias ElixirScope.Test.Support.Helpers
       alias ElixirScope.Test.Fixtures
       alias ElixirScope.Test.Mocks
 
@@ -74,7 +70,7 @@ defmodule ElixirScope.TestCase do
 
   setup do
     # Global test setup
-    ElixirScope.Test.Support.Helpers.setup_test_environment()
+    # TODO: Add any global setup needed
 
     on_exit(fn ->
       # Global test cleanup
@@ -86,6 +82,5 @@ defmodule ElixirScope.TestCase do
 end
 
 # Configure test environment
-Application.put_env(:elixir_scope, :test_mode, true)
 Application.put_env(:elixir_scope, :ai_providers, [:mock])
 Application.put_env(:elixir_scope, :capture_mode, :test)

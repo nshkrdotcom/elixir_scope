@@ -53,12 +53,18 @@ defmodule ElixirScope.MixProject do
   def application do
     [
       extra_applications: [:logger, :crypto],
-      mod: {ElixirScope.Foundation.Application, []}
+      mod: {ElixirScope.Application, []}
     ]
   end
 
-  # defp elixirc_paths(:test), do: ["lib", "test/support"]
-  defp elixirc_paths(_) do
+  defp elixirc_paths(:test) do
+    filtered_lib_paths = get_filtered_lib_paths()
+    filtered_lib_paths ++ ["test/support"]
+  end
+
+  defp elixirc_paths(_), do: get_filtered_lib_paths()
+
+  defp get_filtered_lib_paths do
     excluded_dirs = [
       "foundation/distributed/",
       "lib/elixir_scope/foundation/core/",

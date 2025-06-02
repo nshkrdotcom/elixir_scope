@@ -8,7 +8,7 @@ defmodule ElixirScope.Foundation.Property.ConfigValidationPropertiesTest do
 
   alias ElixirScope.Foundation.{Config}
   alias ElixirScope.Foundation.Services.ConfigServer
-  alias ElixirScope.Foundation.TestHelpers
+  alias ElixirScope.TestHelpers
 
   setup do
     :ok = TestHelpers.ensure_config_available()

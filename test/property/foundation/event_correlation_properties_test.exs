@@ -9,7 +9,7 @@ defmodule ElixirScope.Foundation.Property.EventCorrelationPropertiesTest do
   alias ElixirScope.Foundation.{Events}
   alias ElixirScope.Foundation.Services.EventStore
   alias ElixirScope.Foundation.Types.Event
-  alias ElixirScope.Foundation.TestHelpers
+  alias ElixirScope.TestHelpers
 
   setup do
     :ok = TestHelpers.ensure_config_available()

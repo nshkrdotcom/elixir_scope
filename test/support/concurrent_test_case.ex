@@ -1,4 +1,4 @@
-defmodule ElixirScope.Foundation.ConcurrentTestCase do
+defmodule ElixirScope.TestSupport.ConcurrentTestCase do
   @moduledoc """
   Test case template for concurrent testing with service isolation.
 
@@ -24,7 +24,8 @@ defmodule ElixirScope.Foundation.ConcurrentTestCase do
     quote do
       use ExUnit.Case, async: true
 
-      alias ElixirScope.Foundation.{TestSupervisor, ServiceRegistry}
+      alias ElixirScope.Foundation.{ServiceRegistry}
+      alias ElixirScope.TestSupport.TestSupervisor
       alias ElixirScope.Foundation.Services.{ConfigServer, EventStore}
 
       setup do
@@ -59,7 +60,9 @@ defmodule ElixirScope.Foundation.ConcurrentTestCase do
             fun.(pid)
 
           {:error, reason} ->
-            flunk("Service #{service} not found in namespace #{inspect(namespace)}: #{inspect(reason)}")
+            flunk(
+              "Service #{service} not found in namespace #{inspect(namespace)}: #{inspect(reason)}"
+            )
         end
       end
 
@@ -88,7 +91,7 @@ defmodule ElixirScope.Foundation.ConcurrentTestCase do
 
         # Verify services don't conflict with production
         production_services = ServiceRegistry.list_services(:production)
-        
+
         # Services in test namespace should not affect production namespace
         assert MapSet.disjoint?(MapSet.new(services), MapSet.new(production_services)),
                "Test namespace services should not conflict with production"
@@ -118,7 +121,7 @@ defmodule ElixirScope.Foundation.ConcurrentTestCase do
         %{
           duration_ms: duration_ms,
           operations_count: concurrency_level * length(operations),
-          ops_per_second: (concurrency_level * length(operations)) / (duration_ms / 1000),
+          ops_per_second: concurrency_level * length(operations) / (duration_ms / 1000),
           results: List.flatten(results)
         }
       end
@@ -139,8 +142,6 @@ defmodule ElixirScope.Foundation.ConcurrentTestCase do
             flunk("Cannot crash service #{service}: #{inspect(reason)}")
         end
       end
-
-      import ElixirScope.Foundation.ConcurrentTestCase
     end
   end
-end 
+end

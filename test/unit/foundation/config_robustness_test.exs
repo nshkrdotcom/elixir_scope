@@ -3,8 +3,9 @@ defmodule ElixirScope.Foundation.ConfigRobustnessTest do
   use ExUnit.Case, async: false
   @moduletag :foundation
 
-  alias ElixirScope.Foundation.{Config, Error, TestHelpers}
+  alias ElixirScope.Foundation.{Config, Error}
   alias ElixirScope.Foundation.{ErrorContext, ServiceRegistry}
+  alias ElixirScope.TestHelpers
   alias ElixirScope.Foundation.Config.GracefulDegradation
   alias ElixirScope.Foundation.Types.{Config, Error}
   alias ElixirScope.Foundation.Config, as: ConfigAPI

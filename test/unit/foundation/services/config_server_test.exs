@@ -2,7 +2,8 @@ defmodule ElixirScope.Foundation.Services.ConfigServerTest do
   use ExUnit.Case, async: false
 
   alias ElixirScope.Foundation.Services.ConfigServer
-  alias ElixirScope.Foundation.Types.{Config, Error}
+  # , Error}
+  alias ElixirScope.Foundation.Types.{Config}
   alias ElixirScope.Foundation.FoundationTestHelper
 
   setup do

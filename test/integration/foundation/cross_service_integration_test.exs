@@ -11,7 +11,7 @@ defmodule ElixirScope.Foundation.Integration.CrossServiceIntegrationTest do
   # , ErrorContext, GracefulDegradation}
   alias ElixirScope.Foundation.{Config, Events, Telemetry}
   alias ElixirScope.Foundation.Services.{ConfigServer, EventStore, TelemetryService}
-  alias ElixirScope.Foundation.TestHelpers
+  alias ElixirScope.TestHelpers
 
   setup do
     # Ensure all services are available
@@ -202,7 +202,6 @@ defmodule ElixirScope.Foundation.Integration.CrossServiceIntegrationTest do
   end
 
   describe "edge case handling" do
-    @tag :skip
     test "rapid service restart maintains data consistency" do
       # Trap exits to prevent test crashes
       Process.flag(:trap_exit, true)

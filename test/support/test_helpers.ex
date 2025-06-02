@@ -1,4 +1,4 @@
-defmodule ElixirScope.Foundation.TestHelpers do
+defmodule ElixirScope.TestHelpers do
   @moduledoc """
   Test helpers for Foundation layer testing.
   """
