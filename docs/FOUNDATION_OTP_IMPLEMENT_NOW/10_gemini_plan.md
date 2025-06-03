@@ -1,9 +1,3 @@
-Okay, great! With `poolboy`, `hammer`, and `fuse` confirmed as your chosen libraries, we can now lay out a comprehensive foundational document. This document will serve as the architectural blueprint and detailed guide for developing the "Infrastructure Layer" within `ElixirScope.Foundation`.
-
-This isn't just a plan; it's the detailed design document that would precede actual coding of this layer, ensuring clarity, consistency, and alignment with OTP best practices and your project's goals.
-
----
-
 ## ElixirScope Foundation: Infrastructure Layer Design Document
 
 **Document Version:** 1.0
@@ -15,17 +9,17 @@ This isn't just a plan; it's the detailed design document that would precede act
 1.  Introduction & Goals
 2.  Core Principles
 3.  Architectural Overview
-    3.1. Component Diagram
-    3.2. Relationship with Existing Registries
+    - 3.1. Component Diagram
+    - 3.2. Relationship with Existing Registries
 4.  Detailed Component Design
-    4.1. Circuit Breaker Framework (using `Fuse`)
-    4.2. Rate Limiting Framework (using `Hammer`)
-    4.3. Connection Pooling Framework (using `Poolboy`)
-    4.4. Unified Infrastructure Facade (`Infrastructure.ex`)
-    4.5. Custom Infrastructure Services (Future Scope Preview)
-        4.5.1. PerformanceMonitor Service
-        4.5.2. MemoryManager Service
-        4.5.3. HealthAggregator Service
+    - 4.1. Circuit Breaker Framework (using `Fuse`)
+    - 4.2. Rate Limiting Framework (using `Hammer`)
+    - 4.3. Connection Pooling Framework (using `Poolboy`)
+    - 4.4. Unified Infrastructure Facade (`Infrastructure.ex`)
+    - 4.5. Custom Infrastructure Services (Future Scope Preview)
+        - 4.5.1. PerformanceMonitor Service
+        - 4.5.2. MemoryManager Service
+        - 4.5.3. HealthAggregator Service
 5.  Configuration Strategy
 6.  Telemetry and Observability
 7.  Error Handling Strategy
