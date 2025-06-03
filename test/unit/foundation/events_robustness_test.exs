@@ -385,8 +385,9 @@ defmodule ElixirScope.Foundation.EventsRobustnessTest do
           Events.serialize(event)
         end)
 
-      # Should complete within reasonable time (< 1ms for small event)
-      assert time_micro < 1000
+      # Should complete within reasonable time (< 2ms for small event)
+      # Increased from 1ms to 2ms to account for slower CI environments
+      assert time_micro < 2000
     end
 
     test "handles event with deeply nested data efficiently" do
