@@ -3,7 +3,7 @@ import Config
 # Test environment configuration
 config :elixir_scope,
   test_mode: true,  # Enable test mode for test supervisor
-  debug_registry: true,
+  debug_registry: false,
   ecto_repos: [],
   ai: [
     provider: :mock,

@@ -33,27 +33,17 @@ defmodule ElixirScope.Foundation.Config.GracefulDegradation do
   """
   def cleanup_fallback_system do
     try do
-      :ets.delete(@fallback_table)
+      case :ets.info(@fallback_table) do
+        :undefined ->
+          :ok
 
-      # Only log if not in test mode or if debug is enabled
-      test_mode = Application.get_env(:elixir_scope, :test_mode, false)
-      debug_enabled = Application.get_env(:elixir_scope, :debug_registry, false)
-
-      if not test_mode or debug_enabled do
-        Logger.debug("Fallback system cleaned up")
+        _ ->
+          :ets.delete(@fallback_table)
+          :ok
       end
-
-      :ok
-    catch
-      :error, :badarg ->
-        # Only log if not in test mode or if debug is enabled
-        test_mode = Application.get_env(:elixir_scope, :test_mode, false)
-        debug_enabled = Application.get_env(:elixir_scope, :debug_registry, false)
-
-        if not test_mode or debug_enabled do
-          Logger.debug("Fallback table already cleaned up")
-        end
-
+    rescue
+      ArgumentError ->
+        # Table doesn't exist or already deleted
         :ok
     end
   end

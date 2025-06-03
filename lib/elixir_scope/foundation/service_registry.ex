@@ -349,9 +349,8 @@ defmodule ElixirScope.Foundation.ServiceRegistry do
           healthy_services: non_neg_integer()
         }
   def get_service_info(namespace) do
-    # Only log debug info if not in test mode or if debug_registry is enabled
-    if not Application.get_env(:elixir_scope, :test_mode, false) or
-         Application.get_env(:elixir_scope, :debug_registry, false) do
+    # Only log debug info if debug_registry is explicitly enabled
+    if Application.get_env(:elixir_scope, :debug_registry, false) do
       Logger.debug("Getting service info for namespace #{inspect(namespace)}")
     end
 
@@ -412,11 +411,6 @@ defmodule ElixirScope.Foundation.ServiceRegistry do
 
       unless test_mode do
         Logger.info("Cleanup completed for test namespace #{inspect(namespace)}")
-      end
-    else
-      # Only log in debug mode or if not in test mode
-      if not test_mode or Application.get_env(:elixir_scope, :debug_registry, false) do
-        Logger.debug("No services to cleanup in test namespace #{inspect(namespace)}")
       end
     end
 

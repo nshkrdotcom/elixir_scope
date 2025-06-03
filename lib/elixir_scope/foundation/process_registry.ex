@@ -503,8 +503,8 @@ defmodule ElixirScope.Foundation.ProcessRegistry do
     # Log cleanup summary
     require Logger
 
-    # Only log if there were actually services to clean up or if not in test mode
-    if cleanup_count > 0 or not Application.get_env(:elixir_scope, :test_mode, false) do
+    # Only log if there were actually services to clean up
+    if cleanup_count > 0 do
       Logger.debug("Cleaned up #{cleanup_count} services from test namespace #{inspect(test_ref)}")
     end
 
