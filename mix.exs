@@ -108,11 +108,9 @@ defmodule ElixirScope.MixProject do
       # Core dependencies
       {:jason, "~> 1.4"},
       {:telemetry, "~> 1.2"},
-
       {:poolboy, "~>1.5.2"},
       {:hammer, "~>7.0.1"},
       {:fuse, "~>2.5.0"},
-
 
       # Development and testing
       {:mox, "~> 1.2", only: [:dev, :test]},
