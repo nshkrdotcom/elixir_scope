@@ -10,13 +10,55 @@ defmodule ElixirScope.TestHelpers do
   """
   @spec ensure_config_available() :: :ok
   def ensure_config_available do
-    case GenServer.whereis(Config) do
-      nil ->
-        Config.initialize()
-
-      _pid ->
+    # First check if the production service is available
+    case ElixirScope.Foundation.ServiceRegistry.lookup(:production, :config_server) do
+      {:ok, _pid} ->
         :ok
+
+      {:error, _} ->
+        # Wait for the application supervisor to start the service
+        case wait_for_service_availability(ElixirScope.Foundation.Services.ConfigServer, 5000) do
+          :ok ->
+            :ok
+
+          :timeout ->
+            # If still not available, something is wrong with the application startup
+            raise "ConfigServer not available after 5 seconds - check application supervisor"
+        end
     end
+  end
+
+  @doc """
+  Ensures TelemetryService is available for testing.
+  """
+  @spec ensure_telemetry_available() :: :ok
+  def ensure_telemetry_available do
+    # First check if the production service is available
+    case ElixirScope.Foundation.ServiceRegistry.lookup(:production, :telemetry_service) do
+      {:ok, _pid} ->
+        :ok
+
+      {:error, _} ->
+        # Wait for the application supervisor to start the service
+        case wait_for_service_availability(ElixirScope.Foundation.Services.TelemetryService, 5000) do
+          :ok ->
+            :ok
+
+          :timeout ->
+            # If still not available, something is wrong with the application startup
+            raise "TelemetryService not available after 5 seconds - check application supervisor"
+        end
+    end
+  end
+
+  @doc """
+  Ensures all Foundation services are available for testing.
+  """
+  @spec ensure_foundation_services_available() :: :ok
+  def ensure_foundation_services_available do
+    ensure_config_available()
+    ensure_telemetry_available()
+    :ok
   end
 
   def debug_config_state do

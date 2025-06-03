@@ -8,6 +8,7 @@ defmodule ElixirScope.Foundation.Logic.ConfigLogic do
 
   alias ElixirScope.Foundation.Types.{Config, Error}
   alias ElixirScope.Foundation.Validation.ConfigValidator
+  require Logger
 
   @type config_path :: [atom()]
   @type config_value :: term()
@@ -68,22 +69,72 @@ defmodule ElixirScope.Foundation.Logic.ConfigLogic do
   Get a configuration value by path.
   """
   @spec get_config_value(Config.t(), config_path()) :: {:ok, config_value()} | {:error, Error.t()}
-  def get_config_value(%Config{} = config, []) do
-    {:ok, config}
-  end
+  def get_config_value(config, path) when is_list(path) do
+    try do
+      # We need to check if the path exists, not just if the value is nil
+      case get_nested_value(config, path) do
+        {:ok, value} ->
+          {:ok, value}
 
-  def get_config_value(%Config{} = config, path) when is_list(path) do
-    case get_in(config, path) do
-      nil ->
-        create_error(
-          :config_path_not_found,
-          "Configuration path not found",
-          %{path: path}
+        {:error, :path_not_found} ->
+          {:error,
+           Error.new(
+             error_type: :config_path_not_found,
+             message: "Configuration path not found: #{inspect(path)}",
+             context: %{path: path},
+             category: :config,
+             subcategory: :access,
+             severity: :medium
+           )}
+      end
+    rescue
+      error ->
+        Logger.warning(
+          "Failed to get config value for path #{inspect(path)}: #{Exception.message(error)}"
         )
 
-      value ->
-        {:ok, value}
+        {:error,
+         Error.new(
+           error_type: :config_path_invalid,
+           message: "Invalid configuration path: #{Exception.message(error)}",
+           context: %{path: path, error: Exception.message(error)},
+           category: :config,
+           subcategory: :access,
+           severity: :medium
+         )}
     end
+  end
+
+  def get_config_value(_config, path) do
+    Logger.warning("Invalid path provided to get_config_value: #{inspect(path)}")
+
+    {:error,
+     Error.new(
+       error_type: :invalid_path,
+       message: "Invalid path type: #{inspect(path)}",
+       context: %{path: path},
+       category: :config,
+       subcategory: :validation,
+       severity: :medium
+     )}
+  end
+
+  # Helper function to traverse the path and distinguish between nil values and non-existent paths
+  defp get_nested_value(data, []) do
+    {:ok, data}
+  end
+
+  defp get_nested_value(data, [key | rest]) when is_map(data) do
+    if Map.has_key?(data, key) do
+      get_nested_value(Map.get(data, key), rest)
+    else
+      {:error, :path_not_found}
+    end
+  end
+
+  defp get_nested_value(_data, _path) do
+    # We hit a non-map value before exhausting the path
+    {:error, :path_not_found}
   end
 
   @doc """

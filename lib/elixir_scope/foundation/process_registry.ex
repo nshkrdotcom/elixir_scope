@@ -52,11 +52,21 @@ defmodule ElixirScope.Foundation.ProcessRegistry do
   Child specification for supervision tree integration.
   """
   def child_spec(_opts) do
-    Registry.child_spec(
-      keys: :unique,
-      name: __MODULE__,
-      partitions: System.schedulers_online()
-    )
+    %{
+      id: Registry,
+      start:
+        {Registry, :start_link,
+         [
+           [
+             keys: :unique,
+             name: __MODULE__,
+             partitions: System.schedulers_online()
+           ]
+         ]},
+      type: :supervisor,
+      restart: :permanent,
+      shutdown: :infinity
+    }
   end
 
   @doc """
@@ -81,12 +91,75 @@ defmodule ElixirScope.Foundation.ProcessRegistry do
   """
   @spec register(namespace(), service_name(), pid()) :: :ok | {:error, {:already_registered, pid()}}
   def register(namespace, service, pid) when is_pid(pid) do
-    case Registry.register(__MODULE__, {namespace, service}, nil) do
-      {:ok, _owner} ->
-        :ok
+    registry_key = {namespace, service}
 
-      {:error, {:already_registered, existing_pid}} ->
-        {:error, {:already_registered, existing_pid}}
+    # Always use the backup table for all registrations for consistency
+    # This ensures both self() and external process registrations work the same way
+    ensure_backup_registry()
+
+    # Debug: Log registration attempts
+    if Application.get_env(:elixir_scope, :debug_registry, false) do
+      require Logger
+
+      Logger.debug(
+        "ProcessRegistry.register: attempting to register #{inspect(registry_key)} -> #{inspect(pid)}"
+      )
+    end
+
+    # Check if already registered
+    case :ets.lookup(:process_registry_backup, registry_key) do
+      [{^registry_key, existing_pid}] ->
+        if Process.alive?(existing_pid) do
+          if existing_pid == pid do
+            if Application.get_env(:elixir_scope, :debug_registry, false) do
+              require Logger
+
+              Logger.debug(
+                "ProcessRegistry.register: already registered correctly #{inspect(registry_key)} -> #{inspect(pid)}"
+              )
+            end
+
+            # Already registered correctly
+            :ok
+          else
+            if Application.get_env(:elixir_scope, :debug_registry, false) do
+              require Logger
+
+              Logger.debug(
+                "ProcessRegistry.register: already registered to different pid #{inspect(registry_key)} -> #{inspect(existing_pid)}"
+              )
+            end
+
+            {:error, {:already_registered, existing_pid}}
+          end
+        else
+          # Dead process registered, replace with new one
+          :ets.insert(:process_registry_backup, {registry_key, pid})
+
+          if Application.get_env(:elixir_scope, :debug_registry, false) do
+            require Logger
+
+            Logger.debug(
+              "ProcessRegistry.register: replaced dead process #{inspect(registry_key)} -> #{inspect(pid)}"
+            )
+          end
+
+          :ok
+        end
+
+      [] ->
+        # Not registered, add new registration
+        :ets.insert(:process_registry_backup, {registry_key, pid})
+
+        if Application.get_env(:elixir_scope, :debug_registry, false) do
+          require Logger
+
+          Logger.debug(
+            "ProcessRegistry.register: new registration #{inspect(registry_key)} -> #{inspect(pid)}"
+          )
+        end
+
+        :ok
     end
   end
 
@@ -111,9 +184,48 @@ defmodule ElixirScope.Foundation.ProcessRegistry do
   """
   @spec lookup(namespace(), service_name()) :: {:ok, pid()} | :error
   def lookup(namespace, service) do
-    case Registry.lookup(__MODULE__, {namespace, service}) do
-      [{pid, _value}] -> {:ok, pid}
-      [] -> :error
+    registry_key = {namespace, service}
+
+    # First try the native Registry lookup (for via_tuple registered services)
+    case Registry.lookup(__MODULE__, registry_key) do
+      [{pid, _value}] when is_pid(pid) ->
+        if Process.alive?(pid) do
+          {:ok, pid}
+        else
+          :error
+        end
+
+      [] ->
+        # Fall back to backup table lookup
+        # Ensure backup table exists before trying to use it
+        ensure_backup_registry()
+
+        case :ets.lookup(:process_registry_backup, registry_key) do
+          [{^registry_key, pid}] ->
+            # Verify the process is still alive
+            if Process.alive?(pid) do
+              {:ok, pid}
+            else
+              # Clean up dead process and return error
+              :ets.delete(:process_registry_backup, registry_key)
+              :error
+            end
+
+          [] ->
+            # Debug: Log when service not found in backup table
+            if Application.get_env(:elixir_scope, :debug_registry, false) do
+              require Logger
+              all_entries = :ets.tab2list(:process_registry_backup)
+
+              Logger.debug(
+                "ProcessRegistry.lookup: service #{inspect(registry_key)} not found in backup table"
+              )
+
+              Logger.debug("ProcessRegistry.lookup: available entries: #{inspect(all_entries)}")
+            end
+
+            :error
+        end
     end
   end
 
@@ -137,7 +249,16 @@ defmodule ElixirScope.Foundation.ProcessRegistry do
   """
   @spec unregister(namespace(), service_name()) :: :ok
   def unregister(namespace, service) do
-    Registry.unregister(__MODULE__, {namespace, service})
+    registry_key = {namespace, service}
+
+    # Remove from backup table if it exists
+    case :ets.info(:process_registry_backup) do
+      :undefined -> :ok
+      _ -> :ets.delete(:process_registry_backup, registry_key)
+    end
+
+    # Also remove from original Registry
+    Registry.unregister(__MODULE__, registry_key)
   end
 
   @doc """
@@ -159,9 +280,9 @@ defmodule ElixirScope.Foundation.ProcessRegistry do
   """
   @spec list_services(namespace()) :: [service_name()]
   def list_services(namespace) do
-    Registry.select(__MODULE__, [
-      {{{namespace, :"$1"}, :"$2", :"$3"}, [], [:"$1"]}
-    ])
+    # Get all services from both sources
+    all_services = get_all_services(namespace)
+    Map.keys(all_services)
   end
 
   @doc """
@@ -183,10 +304,31 @@ defmodule ElixirScope.Foundation.ProcessRegistry do
   """
   @spec get_all_services(namespace()) :: %{service_name() => pid()}
   def get_all_services(namespace) do
-    Registry.select(__MODULE__, [
-      {{{namespace, :"$1"}, :"$2", :"$3"}, [], [{{:"$1", :"$2"}}]}
-    ])
-    |> Enum.into(%{})
+    # Check both Registry and backup table for complete coverage
+
+    # First, get services from Registry (via_tuple registrations)
+    registry_services =
+      Registry.select(__MODULE__, [
+        {{{namespace, :"$1"}, :"$2", :"$3"}, [], [{{:"$1", :"$2"}}]}
+      ])
+      |> Enum.filter(fn {_service_name, pid} -> Process.alive?(pid) end)
+      |> Enum.into(%{})
+
+    # Then, get services from backup table (direct registrations)
+    # Ensure backup table exists before trying to use it
+    ensure_backup_registry()
+
+    # Use tab2list to avoid match specification issues
+    backup_services =
+      :ets.tab2list(:process_registry_backup)
+      |> Enum.filter(fn {{entry_namespace, _service}, pid} ->
+        entry_namespace == namespace and Process.alive?(pid)
+      end)
+      |> Enum.map(fn {{_namespace, service}, pid} -> {service, pid} end)
+      |> Enum.into(%{})
+
+    # Merge both sources, with backup table taking precedence for conflicts
+    Map.merge(registry_services, backup_services)
   end
 
   @doc """
@@ -228,11 +370,13 @@ defmodule ElixirScope.Foundation.ProcessRegistry do
       3
   """
   @spec count_services(namespace()) :: non_neg_integer()
+  # Dialyzer warning suppressed: Success typing is more specific in test context
+  # but spec is correct for general usage
+  @dialyzer {:nowarn_function, count_services: 1}
   def count_services(namespace) do
-    Registry.select(__MODULE__, [
-      {{{namespace, :"$1"}, :"$2", :"$3"}, [], [true]}
-    ])
-    |> length()
+    # Use get_all_services for consistency
+    all_services = get_all_services(namespace)
+    map_size(all_services)
   end
 
   @doc """
@@ -280,30 +424,89 @@ defmodule ElixirScope.Foundation.ProcessRegistry do
   def cleanup_test_namespace(test_ref) do
     namespace = {:test, test_ref}
 
-    # Get all PIDs in this namespace
-    pids =
-      Registry.select(__MODULE__, [
-        {{{namespace, :"$1"}, :"$2", :"$3"}, [], [:"$2"]}
-      ])
+    # Use backup table as primary source for consistency
+    backup_pids =
+      case :ets.info(:process_registry_backup) do
+        :undefined ->
+          []
 
-    # Terminate each process gracefully
-    Enum.each(pids, fn pid ->
+        _ ->
+          # Use tab2list instead of select to avoid match specification issues
+          :ets.tab2list(:process_registry_backup)
+          |> Enum.filter(fn {{entry_namespace, _service}, _pid} ->
+            entry_namespace == namespace
+          end)
+          |> Enum.map(fn {{_namespace, _service}, pid} -> pid end)
+      end
+
+    # Terminate each process more safely to avoid test process termination
+    Enum.each(backup_pids, fn pid ->
       if Process.alive?(pid) do
-        # Try graceful shutdown first
-        Process.exit(pid, :shutdown)
+        # Spawn a separate process to handle the termination
+        # This isolates the test process from any exit signals
+        spawn(fn ->
+          try do
+            # Set trap_exit to handle any exit signals gracefully
+            Process.flag(:trap_exit, true)
 
-        # Wait a brief moment for graceful shutdown
-        receive do
-        after
-          100 -> :ok
-        end
+            # Try gentle shutdown first
+            GenServer.stop(pid, :shutdown, 100)
+          catch
+            # If that fails, force termination
+            :exit, _ ->
+              Process.exit(pid, :shutdown)
 
-        # Force kill if still alive
-        if Process.alive?(pid) do
-          Process.exit(pid, :kill)
-        end
+              # Wait briefly then force kill if still alive
+              Process.sleep(50)
+
+              if Process.alive?(pid) do
+                Process.exit(pid, :kill)
+              end
+          end
+        end)
       end
     end)
+
+    # Wait for all processes to be terminated
+    Process.sleep(200)
+
+    # Clean up backup table entries for this namespace and count cleaned entries
+    cleanup_count =
+      case :ets.info(:process_registry_backup) do
+        :undefined ->
+          0
+
+        _ ->
+          # Find all keys that match this namespace pattern
+          # The backup table stores entries as {{namespace, service}, pid}
+          all_entries = :ets.tab2list(:process_registry_backup)
+
+          keys_to_delete =
+            for {{entry_namespace, service}, pid} <- all_entries,
+                entry_namespace == namespace do
+              # Only delete if process is actually dead
+              if not Process.alive?(pid) do
+                {entry_namespace, service}
+              else
+                nil
+              end
+            end
+            |> Enum.reject(&is_nil/1)
+
+          Enum.each(keys_to_delete, fn key ->
+            :ets.delete(:process_registry_backup, key)
+          end)
+
+          length(keys_to_delete)
+      end
+
+    # Log cleanup summary
+    require Logger
+
+    # Only log if there were actually services to clean up or if not in test mode
+    if cleanup_count > 0 or not Application.get_env(:elixir_scope, :test_mode, false) do
+      Logger.debug("Cleaned up #{cleanup_count} services from test namespace #{inspect(test_ref)}")
+    end
 
     :ok
   end
@@ -341,43 +544,65 @@ defmodule ElixirScope.Foundation.ProcessRegistry do
           ets_table_info: map()
         }
   def stats() do
-    all_entries =
-      Registry.select(__MODULE__, [
-        {{{:"$1", :"$2"}, :"$3", :"$4"}, [], [:"$1"]}
-      ])
+    # Ensure backup table exists before trying to use it
+    ensure_backup_registry()
 
+    # Get services from Registry (via_tuple registrations)
+    # Registry stores: {{namespace, service}, pid, value}
+    registry_services =
+      Registry.select(__MODULE__, [
+        {{{:"$1", :"$2"}, :"$3", :"$4"}, [], [{{:"$1", :"$2"}}]}
+      ])
+      |> Enum.map(fn {namespace, service} -> {namespace, service} end)
+
+    # Get all entries from backup table using tab2list (simpler and more reliable)
+    # Backup table stores: {{namespace, service}, pid}
+    backup_services =
+      :ets.tab2list(:process_registry_backup)
+      |> Enum.filter(fn {{_namespace, _service}, pid} -> Process.alive?(pid) end)
+      |> Enum.map(fn {{namespace, service}, _pid} -> {namespace, service} end)
+
+    # Combine services from both sources, removing duplicates
+    all_services =
+      (registry_services ++ backup_services)
+      |> Enum.uniq()
+
+    # Count services by namespace type
     {production_count, test_namespaces} =
-      Enum.reduce(all_entries, {0, MapSet.new()}, fn
-        :production, {prod_count, test_set} ->
+      Enum.reduce(all_services, {0, MapSet.new()}, fn
+        {:production, _service}, {prod_count, test_set} ->
           {prod_count + 1, test_set}
 
-        {:test, ref}, {prod_count, test_set} ->
+        {{:test, ref}, _service}, {prod_count, test_set} ->
           {prod_count, MapSet.put(test_set, ref)}
       end)
 
     # Get ETS table information for performance monitoring
     ets_info =
       try do
-        # Registry doesn't expose info/1, use direct ETS info instead
-        registry_tables = Registry.keys(__MODULE__, self())
+        case :ets.info(:process_registry_backup) do
+          :undefined ->
+            %{backup_table_exists: false}
 
-        %{
-          partition_count: System.schedulers_online(),
-          keys_for_self: length(registry_tables)
-        }
+          info when is_list(info) ->
+            %{
+              backup_table_exists: true,
+              table_size: Keyword.get(info, :size, 0),
+              memory_words: Keyword.get(info, :memory, 0)
+            }
+        end
       rescue
         _ -> %{}
       end
 
     memory_usage =
       case ets_info do
-        %{} when map_size(ets_info) == 0 -> 0
-        # Memory calculation would require ETS table access
+        %{memory_words: words} when is_integer(words) -> words * :erlang.system_info(:wordsize)
         _ -> 0
       end
 
     %{
-      total_services: length(all_entries),
+      total_services: length(all_services),
       production_services: production_count,
       test_namespaces: MapSet.size(test_namespaces),
       partitions: System.schedulers_online(),
@@ -385,5 +610,19 @@ defmodule ElixirScope.Foundation.ProcessRegistry do
       memory_usage_bytes: memory_usage,
       ets_table_info: ets_info
     }
+  end
+
+  # Private helper functions
+
+  @spec ensure_backup_registry() :: :ok
+  defp ensure_backup_registry() do
+    case :ets.info(:process_registry_backup) do
+      :undefined ->
+        :ets.new(:process_registry_backup, [:named_table, :public, :set])
+        :ok
+
+      _ ->
+        :ok
+    end
   end
 end

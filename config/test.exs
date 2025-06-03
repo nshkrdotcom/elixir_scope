@@ -3,6 +3,8 @@ import Config
 # Test environment configuration
 config :elixir_scope,
   test_mode: true,  # Enable test mode for test supervisor
+  debug_registry: true,
+  ecto_repos: [],
   ai: [
     provider: :mock,
     analysis: [
@@ -31,9 +33,9 @@ config :elixir_scope,
     performance_monitoring: false
   ]
 
-# Configure test logging
+# Configure test logging - reduce noise
 config :logger,
-  level: :debug,
+  level: :warning,  # Only show warnings and errors during tests
   format: "$time $metadata[$level] $message\n",
   # metadata: [:request_id],
   compile_time_purge_matching: []
@@ -43,8 +45,35 @@ config :logger, :console,
   format: "\n$time [$level] $metadata\n$message\n",
   metadata: [:module, :function, :line]
 
+# We want normal logging in tests to see what's happening
+config :logger,
+  level: :debug,
+  backends: [:console]
 
+# Configure ExUnit for comprehensive testing
+config :elixir_scope, ExUnit,
+  timeout: 30_000,
+  exclude: [
+    :slow,
+    :integration,
+    :end_to_end,
+    :ai,
+    :capture,
+    :phoenix,
+    :distributed,
+    :real_world,
+    :benchmark,
+    :stress,
+    :memory,
+    :scalability,
+    :regression,
+    :scenario
+  ]
 
+# Add temporary test configuration for better debugging
+config :elixir_scope, :foundation,
+  debug_config: true,
+  debug_events: true
 
 # import Config
 

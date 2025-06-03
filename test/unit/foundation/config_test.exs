@@ -177,7 +177,6 @@ defmodule ElixirScope.Foundation.ConfigTest do
     # Should get cached value, default value, or error
     case fallback_result do
       {:ok, :mock} -> assert true
-      :mock -> assert true
       # Also acceptable if no cache exists
       {:error, _} -> assert true
       other -> flunk("Unexpected fallback result: #{inspect(other)}")

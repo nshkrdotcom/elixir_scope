@@ -423,23 +423,33 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
 
   @spec initialize(keyword()) :: :ok | {:error, Error.t()}
   def initialize(opts) do
-    case start_link(opts) do
+    namespace = Keyword.get(opts, :namespace, :production)
+
+    case ElixirScope.Foundation.ServiceRegistry.lookup(namespace, :telemetry_service) do
       {:ok, _pid} ->
+        # Service already running
         :ok
 
-      {:error, {:already_started, _pid}} ->
-        :ok
+      {:error, _} ->
+        # Service not running, try to start it
+        case start_link(opts) do
+          {:ok, _pid} ->
+            :ok
 
-      {:error, reason} ->
-        {:error,
-         Error.new(
-           error_type: :service_initialization_failed,
-           message: "Failed to initialize telemetry service",
-           context: %{reason: reason},
-           category: :system,
-           subcategory: :startup,
-           severity: :high
-         )}
+          {:error, {:already_started, _pid}} ->
+            :ok
+
+          {:error, reason} ->
+            {:error,
+             Error.new(
+               error_type: :service_initialization_failed,
+               message: "Failed to initialize telemetry service",
+               context: %{reason: reason},
+               category: :system,
+               subcategory: :startup,
+               severity: :high
+             )}
+        end
     end
   end
 

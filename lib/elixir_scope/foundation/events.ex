@@ -42,6 +42,22 @@ defmodule ElixirScope.Foundation.Events do
   end
 
   @doc """
+  Check if the Events service is available.
+
+  ## Examples
+
+      iex> ElixirScope.Foundation.Events.available?()
+      true
+  """
+  @spec available?() :: boolean()
+  def available?() do
+    case GenServer.whereis(EventStore) do
+      pid when is_pid(pid) -> true
+      nil -> false
+    end
+  end
+
+  @doc """
   Create a new event with the given type and data.
 
   ## Examples
@@ -273,17 +289,6 @@ defmodule ElixirScope.Foundation.Events do
   """
   @spec stats() :: {:ok, map()} | {:error, Error.t()}
   defdelegate stats(), to: EventStore
-
-  @doc """
-  Check if the event store is available.
-
-  ## Examples
-
-      iex> ElixirScope.Foundation.Events.available?()
-      true
-  """
-  @spec available?() :: boolean()
-  defdelegate available?(), to: EventStore
 
   @doc """
   Extract correlation chain from stored events.

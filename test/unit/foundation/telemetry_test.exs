@@ -3,6 +3,12 @@ defmodule ElixirScope.Foundation.TelemetryTest do
 
   alias ElixirScope.Foundation.Telemetry
 
+  setup do
+    # Ensure TelemetryService is available for all tests
+    ElixirScope.TestHelpers.ensure_telemetry_available()
+    :ok
+  end
+
   describe "telemetry measurement" do
     test "measures event execution time" do
       result =

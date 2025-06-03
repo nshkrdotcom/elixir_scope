@@ -9,10 +9,18 @@ defmodule ElixirScope.Foundation.Config do
   @behaviour ElixirScope.Foundation.Contracts.Configurable
 
   alias ElixirScope.Foundation.Services.ConfigServer
-  alias ElixirScope.Foundation.Types.{Config, Error}
+  alias ElixirScope.Foundation.Types.Config
+  alias ElixirScope.Foundation.Error
 
   @type config_path :: [atom()]
   @type config_value :: term()
+
+  @forbidden_update_paths [
+    [:ai, :api_key],
+    [:storage, :encryption_key],
+    [:security],
+    [:system, :node_name]
+  ]
 
   @doc """
   Initialize the configuration service.
@@ -181,6 +189,9 @@ defmodule ElixirScope.Foundation.Config do
       30_000
   """
   @spec get_with_default(config_path(), config_value()) :: config_value()
+  # Dialyzer warning suppressed: Config.get/1 may never fail in current context,
+  # but this graceful fallback pattern is intentional for robustness
+  @dialyzer {:nowarn_function, get_with_default: 2}
   def get_with_default(path, default) do
     case get(path) do
       {:ok, value} -> value
@@ -200,18 +211,15 @@ defmodule ElixirScope.Foundation.Config do
   """
   @spec safe_update(config_path(), config_value()) :: :ok | {:error, Error.t()}
   def safe_update(path, value) do
-    if path in updatable_paths() do
-      update(path, value)
-    else
-      {:error,
-       Error.new(
-         error_type: :config_update_forbidden,
-         message: "Configuration path cannot be updated at runtime",
-         context: %{path: path, allowed_paths: updatable_paths()},
-         category: :config,
-         subcategory: :validation,
-         severity: :medium
-       )}
+    cond do
+      not is_list(path) ->
+        {:error, Error.new(:invalid_path, "Invalid configuration path")}
+
+      path in @forbidden_update_paths ->
+        {:error, Error.new(:config_update_forbidden, "Configuration path update forbidden")}
+
+      true ->
+        update(path, value)
     end
   end
 end

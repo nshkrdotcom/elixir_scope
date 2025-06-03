@@ -209,9 +209,25 @@ defmodule ElixirScope.Foundation.Services.ConfigServer do
   """
   @spec initialize(keyword()) :: :ok | {:error, Error.t()}
   def initialize(opts) when is_list(opts) do
-    # For now, initialization is handled by the supervision tree
-    # This function exists for API compatibility
-    :ok
+    # Check if service is already running in production namespace
+    case ServiceRegistry.lookup(:production, :config_server) do
+      {:ok, _pid} ->
+        # Already running
+        :ok
+
+      {:error, _} ->
+        # Service not running, try to start it
+        case start_link(Keyword.put(opts, :namespace, :production)) do
+          {:ok, _pid} ->
+            :ok
+
+          {:error, {:already_started, _pid}} ->
+            :ok
+
+          {:error, reason} ->
+            create_service_error("Failed to start ConfigServer: #{inspect(reason)}")
+        end
+    end
   end
 
   @doc """

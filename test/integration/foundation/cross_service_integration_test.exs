@@ -183,8 +183,14 @@ defmodule ElixirScope.Foundation.Integration.CrossServiceIntegrationTest do
 
       # Verify final state consistency
       {:ok, final_config} = Config.get([:ai, :planning, :sampling_rate])
-      # One of the values set
-      assert final_config in [0.2, 0.3, 0.4, 0.5, 0.6]
+      # One of the values set - use tolerance for floating point comparison
+      expected_values = [0.2, 0.3, 0.4, 0.5, 0.6]
+      tolerance = 0.000001
+
+      assert Enum.any?(expected_values, fn expected ->
+               abs(final_config - expected) < tolerance
+             end),
+             "Expected final_config #{final_config} to be close to one of #{inspect(expected_values)}"
 
       # Verify all events were stored
       {:ok, load_events} = EventStore.query(%{event_type: :load_test_operation})

@@ -217,8 +217,19 @@ defmodule ElixirScope.Foundation.ServiceRegistry do
             health_check_fun when is_function(health_check_fun, 1) ->
               timeout = Keyword.get(opts, :timeout, 5000)
 
+              # Trap exits to handle health check crashes gracefully
+              original_trap_exit = Process.flag(:trap_exit, true)
+
               try do
-                case :timer.tc(health_check_fun, [pid]) do
+                task =
+                  Task.async(fn ->
+                    start_time = System.monotonic_time(:microsecond)
+                    result = health_check_fun.(pid)
+                    end_time = System.monotonic_time(:microsecond)
+                    {end_time - start_time, result}
+                  end)
+
+                case Task.await(task, timeout) do
                   {time_us, :ok} ->
                     Logger.debug("Health check passed for #{inspect(service)} in #{time_us}μs")
                     {:ok, pid}
@@ -226,6 +237,14 @@ defmodule ElixirScope.Foundation.ServiceRegistry do
                   {time_us, {:ok, _result}} ->
                     Logger.debug("Health check passed for #{inspect(service)} in #{time_us}μs")
                     {:ok, pid}
+
+                  {time_us, true} ->
+                    Logger.debug("Health check passed for #{inspect(service)} in #{time_us}μs")
+                    {:ok, pid}
+
+                  {_time_us, false} ->
+                    Logger.warning("Health check failed for #{inspect(service)}: returned false")
+                    {:error, {:health_check_failed, false}}
 
                   {_time_us, error} ->
                     Logger.warning("Health check failed for #{inspect(service)}: #{inspect(error)}")
@@ -239,6 +258,18 @@ defmodule ElixirScope.Foundation.ServiceRegistry do
 
                   {:error, :health_check_timeout}
 
+                :exit, {{%RuntimeError{} = error, _stacktrace}, {Task, :await, _}} ->
+                  Logger.warning("Health check errored for #{inspect(service)}: #{inspect(error)}")
+                  {:error, {:health_check_error, error}}
+
+                :exit, {{error, _stacktrace}, {Task, :await, _}} ->
+                  Logger.warning("Health check crashed for #{inspect(service)}: #{inspect(error)}")
+                  {:error, {:health_check_crashed, error}}
+
+                :exit, {reason, {Task, :await, _}} ->
+                  Logger.warning("Health check crashed for #{inspect(service)}: #{inspect(reason)}")
+                  {:error, {:health_check_crashed, reason}}
+
                 :exit, reason ->
                   Logger.warning("Health check crashed for #{inspect(service)}: #{inspect(reason)}")
                   {:error, {:health_check_crashed, reason}}
@@ -246,6 +277,9 @@ defmodule ElixirScope.Foundation.ServiceRegistry do
                 :error, reason ->
                   Logger.warning("Health check errored for #{inspect(service)}: #{inspect(reason)}")
                   {:error, {:health_check_error, reason}}
+              after
+                # Restore original trap_exit setting
+                Process.flag(:trap_exit, original_trap_exit)
               end
           end
         else
@@ -315,7 +349,11 @@ defmodule ElixirScope.Foundation.ServiceRegistry do
           healthy_services: non_neg_integer()
         }
   def get_service_info(namespace) do
-    Logger.debug("Getting service info for namespace #{inspect(namespace)}")
+    # Only log debug info if not in test mode or if debug_registry is enabled
+    if not Application.get_env(:elixir_scope, :test_mode, false) or
+         Application.get_env(:elixir_scope, :debug_registry, false) do
+      Logger.debug("Getting service info for namespace #{inspect(namespace)}")
+    end
 
     services_map = ProcessRegistry.get_all_services(namespace)
 
@@ -356,18 +394,30 @@ defmodule ElixirScope.Foundation.ServiceRegistry do
   def cleanup_test_namespace(test_ref) do
     namespace = {:test, test_ref}
 
-    Logger.info("Starting cleanup of test namespace #{inspect(namespace)}")
+    # Only log if not in test mode
+    test_mode = Application.get_env(:elixir_scope, :test_mode, false)
+
+    unless test_mode do
+      Logger.info("Starting cleanup of test namespace #{inspect(namespace)}")
+    end
 
     # Get service info before cleanup
     service_info = get_service_info(namespace)
     service_count = service_info.total_services
 
     if service_count > 0 do
+      # Always log when there's actual work to do
       Logger.info("Cleaning up #{service_count} services in test namespace")
       ProcessRegistry.cleanup_test_namespace(test_ref)
-      Logger.info("Cleanup completed for test namespace #{inspect(namespace)}")
+
+      unless test_mode do
+        Logger.info("Cleanup completed for test namespace #{inspect(namespace)}")
+      end
     else
-      Logger.debug("No services to cleanup in test namespace #{inspect(namespace)}")
+      # Only log in debug mode or if not in test mode
+      if not test_mode or Application.get_env(:elixir_scope, :debug_registry, false) do
+        Logger.debug("No services to cleanup in test namespace #{inspect(namespace)}")
+      end
     end
 
     :ok
