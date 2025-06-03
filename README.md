@@ -42,7 +42,7 @@ ElixirScope is built with a clean 9-layer architecture that ensures modularity, 
 ├─────────────────────────────────────┤
 │              AST                    │ ← AST parsing & repository
 ├─────────────────────────────────────┤
-│           Foundation                │ ← Core utilitiesv
+│           Foundation                │ ← Core utilities
 └─────────────────────────────────────┘
 ```
 
