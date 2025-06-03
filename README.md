@@ -2,12 +2,10 @@
 
 **Revolutionary AST-based debugging and code intelligence platform for Elixir applications**
 
-<!--
-[![Elixir CI](https://github.com/nshkrdotcom/ElixirScope/workflows/Elixir%20CI/badge.svg)](https://github.com/nshkrdotcom/ElixirScope/actions)
-[![Coverage Status](https://coveralls.io/repos/github/nshkrdotcom/ElixirScope/badge.svg?branch=main)](https://coveralls.io/github/nshkrdotcom/ElixirScope?branch=main)
-[![Hex.pm](https://img.shields.io/hexpm/v/elixir_scope.svg)](https://hex.pm/packages/elixir_scope)
-[![Documentation](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/elixir_scope)
---->
+[![CI](https://github.com/nshkrdotcom/elixir_scope/actions/workflows/elixir.yaml/badge.svg)](https://github.com/nshkrdotcom/elixir_scope/actions/workflows/elixir.yaml)
+[![Elixir](https://img.shields.io/badge/elixir-1.18.3-purple.svg)](https://elixir-lang.org)
+[![OTP](https://img.shields.io/badge/otp-27.3.3-blue.svg)](https://www.erlang.org)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 ## 🚀 Overview
 
@@ -44,7 +42,7 @@ ElixirScope is built with a clean 9-layer architecture that ensures modularity, 
 ├─────────────────────────────────────┤
 │              AST                    │ ← AST parsing & repository
 ├─────────────────────────────────────┤
-│           Foundation                │ ← Core utilities
+│           Foundation                │ ← Core utilitiesv
 └─────────────────────────────────────┘
 ```
 
