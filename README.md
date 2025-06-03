@@ -65,7 +65,7 @@ ElixirScope is built with a clean 9-layer architecture that ensures modularity, 
 ### Architecture Guides
 
 - **[Registry Architecture Guide](docs/FOUNDATION_OTP_IMPLEMENT_NOW/REGISTRY_ARCHITECTURE_GUIDE.md)** - Comprehensive guide to ElixirScope's advanced Registry patterns, performance characteristics, and monitoring
-- **[Foundation Layer Documentation](lib/elixir_scope/foundation/README.md)** - Core utilities, services, and OTP architecture
+- **[Foundation Layer Documentation](lib/docs/foundation/README.md)** - Core utilities, services, and OTP architecture
 
 ### Performance & Benchmarking
 
