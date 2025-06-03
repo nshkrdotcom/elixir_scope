@@ -34,7 +34,7 @@ defmodule ElixirScope.Foundation.Services.EventStoreTest do
 
     test "rejects invalid event" do
       # Missing required fields
-      invalid_event = Event.new()
+      invalid_event = Event.empty()
 
       assert {:error, error} = EventStore.store(invalid_event)
       assert error.error_type == :validation_failed
@@ -56,7 +56,7 @@ defmodule ElixirScope.Foundation.Services.EventStoreTest do
       events = [
         create_test_event(1, :test1, %{data: 1}),
         # Invalid event
-        Event.new(),
+        Event.empty(),
         create_test_event(3, :test3, %{data: 3})
       ]
 

@@ -21,7 +21,7 @@ defmodule ElixirScope.Foundation.Validation.EventValidatorTest do
     end
 
     test "rejects event without required fields" do
-      event = Event.new(event_type: :test)
+      event = Event.empty()
 
       assert {:error, error} = EventValidator.validate(event)
       assert error.error_type == :validation_failed

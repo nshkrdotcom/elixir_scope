@@ -31,6 +31,7 @@ defmodule ElixirScope.Foundation.Types.Event do
   @typedoc "Correlation identifier for tracking related events"
   @type correlation_id :: String.t()
 
+  @enforce_keys [:event_type, :event_id, :timestamp]
   defstruct [
     :event_type,
     :event_id,
@@ -56,18 +57,71 @@ defmodule ElixirScope.Foundation.Types.Event do
         }
 
   @doc """
-  Create a new empty event structure.
+  Create a new event structure with required fields.
 
-  Creates an event with all fields set to nil for backward compatibility.
-  Useful for testing and validation scenarios.
+  Creates an event with minimal required fields for enforcement.
+  Additional fields can be provided via keyword list.
 
   ## Examples
 
       iex> event = ElixirScope.Foundation.Types.Event.new()
+      iex> event.event_type
+      :default
+
+      iex> event = ElixirScope.Foundation.Types.Event.new(event_type: :custom)
+      iex> event.event_type
+      :custom
+  """
+  @spec new() :: t()
+  def new() do
+    new([])
+  end
+
+  @spec new(keyword()) :: t()
+  def new(fields) when is_list(fields) do
+    defaults = [
+      event_type: :default,
+      event_id: System.unique_integer([:positive]),
+      timestamp: System.monotonic_time()
+    ]
+
+    final_fields = Keyword.merge(defaults, fields)
+    struct(__MODULE__, final_fields)
+  end
+
+  @doc """
+  Create a new event structure with a specific event type.
+
+  Accepts an atom for the event_type and creates an event with 
+  default values for required fields.
+
+  ## Parameters
+  - `event_type`: An atom representing the event type
+
+  ## Examples
+
+      iex> event = ElixirScope.Foundation.Types.Event.new(:process_started)
+      iex> event.event_type
+      :process_started
+  """
+  @spec new(atom()) :: t()
+  def new(event_type) when is_atom(event_type) do
+    new(event_type: event_type)
+  end
+
+  @doc """
+  Create an empty event structure without enforcement (for testing).
+
+  This function bypasses the @enforce_keys constraint to allow creation
+  of events with nil values for testing purposes.
+
+  ## Examples
+
+      iex> event = ElixirScope.Foundation.Types.Event.empty()
       iex> is_nil(event.event_type)
       true
   """
-  @spec new() :: %__MODULE__{
+  @spec empty() :: %__MODULE__{
           event_type: nil,
           event_id: nil,
           timestamp: nil,
@@ -78,41 +132,17 @@ defmodule ElixirScope.Foundation.Types.Event do
           parent_id: nil,
           data: nil
         }
-  def new do
-    %__MODULE__{}
-  end
-
-  @doc """
-  Create a new event structure.
-
-  Accepts either a single atom for the event_type, or a keyword list with 
-  event_type and other fields.
-
-  ## Parameters
-  - `event_type_or_fields`: Either an atom (event_type) or keyword list of fields
-
-  ## Examples
-
-      iex> event = ElixirScope.Foundation.Types.Event.new(:process_started)
-      iex> event.event_type
-      :process_started
-
-      iex> event = ElixirScope.Foundation.Types.Event.new([
-      ...>   event_type: :process_started,
-      ...>   event_id: 456,
-      ...>   timestamp: System.monotonic_time(),
-      ...>   pid: self()
-      ...> ])
-      iex> event.event_type
-      :process_started
-  """
-  @spec new(atom()) :: t()
-  @spec new(keyword()) :: t()
-  def new(event_type) when is_atom(event_type) do
-    %__MODULE__{event_type: event_type}
-  end
-
-  def new(fields) when is_list(fields) do
-    struct(__MODULE__, fields)
+  def empty() do
+    %__MODULE__{
+      event_type: nil,
+      event_id: nil,
+      timestamp: nil,
+      wall_time: nil,
+      node: nil,
+      pid: nil,
+      correlation_id: nil,
+      parent_id: nil,
+      data: nil
+    }
   end
 end

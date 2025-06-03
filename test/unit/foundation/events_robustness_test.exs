@@ -133,10 +133,8 @@ defmodule ElixirScope.Foundation.EventsRobustnessTest do
   describe "event validation robustness" do
     test "validates required event fields" do
       # Event with missing required fields should fail validation
-      incomplete_event = %Event{
-        event_type: :test
-        # Missing event_id, timestamp, etc.
-      }
+      incomplete_event = Event.empty()
+      incomplete_event = %{incomplete_event | event_type: :test}
 
       # Validation should catch this - handle different error module types
       alias ElixirScope.Foundation.Validation.EventValidator

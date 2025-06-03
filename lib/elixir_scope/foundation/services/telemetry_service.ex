@@ -17,7 +17,8 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
   @type server_state :: %{
           metrics: %{atom() => map()},
           handlers: %{[atom()] => function()},
-          config: map()
+          config: map(),
+          namespace: atom()
         }
 
   @default_config %{
@@ -198,6 +199,7 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
   ## GenServer Callbacks
 
   @impl GenServer
+  @spec init(keyword()) :: {:ok, server_state()}
   def init(opts) do
     config = Map.merge(@default_config, Map.new(opts))
     namespace = Keyword.get(opts, :namespace, :production)
@@ -222,6 +224,7 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
   end
 
   @impl GenServer
+  @spec handle_cast(term(), server_state()) :: {:noreply, server_state()}
   def handle_cast({:execute_event, event_name, measurements, metadata}, state) do
     new_state = record_metric(event_name, measurements, metadata, state)
 
@@ -239,6 +242,8 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
   end
 
   @impl GenServer
+  @spec handle_call(term(), GenServer.from(), server_state()) ::
+          {:reply, term(), server_state()}
   def handle_call(:get_metrics, _from, %{metrics: metrics} = state) do
     # Transform flat event names into nested structure for API compatibility
     nested_metrics = transform_to_nested_structure(metrics)
@@ -295,6 +300,7 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
   end
 
   @impl GenServer
+  @spec handle_info(term(), server_state()) :: {:noreply, server_state()}
   def handle_info(:cleanup_old_metrics, %{config: config} = state) do
     new_state = cleanup_old_metrics(state, config.metric_retention_ms)
     schedule_cleanup(config.cleanup_interval)

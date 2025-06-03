@@ -166,7 +166,14 @@ defmodule ElixirScope.Foundation.Validation.EventValidator do
       :system_event,
       :custom_event,
       :config_updated,
-      :config_reset
+      :config_reset,
+      :test,
+      :test1,
+      :test2,
+      :test3,
+      :default,
+      :type_a,
+      :type_b
     ]
 
     if event_type in allowed_types do
