@@ -44,40 +44,40 @@ The current ESF core services (`ConfigServer`, `EventStore`, `TelemetryService`)
 
 **3. Areas of Investigation**
 
-    **3.1. `EventStore` Scalability:**
-        *   **Sharding/Partitioning:**
-            *   Investigate strategies for sharding the `EventStore` data and/or GenServer processes.
-            *   Options: Consistent hashing based on `correlation_id` or `event_type`, time-based partitioning.
-            *   Consider OTP's `:global` or libraries like `Swarm` for distributed process group management if moving beyond single-node sharding.
-        *   **Write-Ahead Logging (WAL) with Asynchronous Persistence:**
-            *   Can the `EventStore` GenServer act as a high-speed in-memory buffer using WAL to a fast local store (e.g., RocksDB, LevelDB) and then asynchronously persist to the "Persistence Layer" (PostgreSQL, etc. as per C4 diagram)?
-            *   This would decouple write latency from backend persistence latency.
-        *   **Read Replicas / Caching Layers:**
-            *   For query-heavy workloads, explore patterns for read replicas or dedicated query services that consume events from the primary `EventStore`.
-        *   **Distributed Event Bus Integration:**
-            *   Instead of (or in addition to) a central `EventStore` GenServer, consider publishing events to a distributed message bus (Kafka, RabbitMQ - mentioned as future in C4). Services could then consume and process/store events independently. This fundamentally changes the `EventStore` to be more of a "set of consumers and producers."
+*   **3.1. `EventStore` Scalability:**
+    *   **Sharding/Partitioning:**
+        *   Investigate strategies for sharding the `EventStore` data and/or GenServer processes.
+        *   Options: Consistent hashing based on `correlation_id` or `event_type`, time-based partitioning.
+        *   Consider OTP's `:global` or libraries like `Swarm` for distributed process group management if moving beyond single-node sharding.
+    *   **Write-Ahead Logging (WAL) with Asynchronous Persistence:**
+        *   Can the `EventStore` GenServer act as a high-speed in-memory buffer using WAL to a fast local store (e.g., RocksDB, LevelDB) and then asynchronously persist to the "Persistence Layer" (PostgreSQL, etc. as per C4 diagram)?
+        *   This would decouple write latency from backend persistence latency.
+    *   **Read Replicas / Caching Layers:**
+        *   For query-heavy workloads, explore patterns for read replicas or dedicated query services that consume events from the primary `EventStore`.
+    *   **Distributed Event Bus Integration:**
+        *   Instead of (or in addition to) a central `EventStore` GenServer, consider publishing events to a distributed message bus (Kafka, RabbitMQ - mentioned as future in C4). Services could then consume and process/store events independently. This fundamentally changes the `EventStore` to be more of a "set of consumers and producers."
 
-    **3.2. `ConfigServer` Scalability & Distribution:**
-        *   **Read Optimization:**
-            *   If reads are far more frequent than writes, the current model might suffice for longer. ETS caching by clients (consumers of config) can further alleviate read load.
-            *   The existing `GracefulDegradation` module with ETS caching is a good start here.
-        *   **Distributed Consistency for Configuration:**
-            *   How should configuration be kept consistent if ESF runs in a cluster?
-            *   Options:
-                *   Rely on a distributed PubSub (like `Phoenix.PubSub` with a suitable adapter) to broadcast config changes to `ConfigServer` instances on all nodes. Each node maintains its own ETS cache.
-                *   Use a distributed consensus algorithm (Raft via `Ra`, Paxos) for strong consistency if required (likely overkill for most config).
-                *   Integrate with a dedicated distributed configuration store (etcd, Consul, Zookeeper).
-        *   **Subscription Scalability:**
-            *   If the number of subscribers becomes very large, a single GenServer broadcasting messages can be a bottleneck.
-            *   Consider using `Phoenix.PubSub` or a similar mechanism for broadcasting config update notifications instead of direct `send/2` from the `ConfigServer`.
+*   **3.2. `ConfigServer` Scalability & Distribution:**
+    *   **Read Optimization:**
+        *   If reads are far more frequent than writes, the current model might suffice for longer. ETS caching by clients (consumers of config) can further alleviate read load.
+        *   The existing `GracefulDegradation` module with ETS caching is a good start here.
+    *   **Distributed Consistency for Configuration:**
+        *   How should configuration be kept consistent if ESF runs in a cluster?
+        *   Options:
+            *   Rely on a distributed PubSub (like `Phoenix.PubSub` with a suitable adapter) to broadcast config changes to `ConfigServer` instances on all nodes. Each node maintains its own ETS cache.
+            *   Use a distributed consensus algorithm (Raft via `Ra`, Paxos) for strong consistency if required (likely overkill for most config).
+            *   Integrate with a dedicated distributed configuration store (etcd, Consul, Zookeeper).
+    *   **Subscription Scalability:**
+        *   If the number of subscribers becomes very large, a single GenServer broadcasting messages can be a bottleneck.
+        *   Consider using `Phoenix.PubSub` or a similar mechanism for broadcasting config update notifications instead of direct `send/2` from the `ConfigServer`.
 
-    **3.3. `TelemetryService` Scalability & Distribution:**
-        *   **Distributed Aggregation:**
-            *   For clustered deployments, how are metrics aggregated across nodes?
-            *   Options: Node-local `TelemetryService` instances forwarding to a central aggregator node, or direct reporting to an external distributed metrics backend (Prometheus, etc.).
-        *   **High-Frequency Event Handling:**
-            *   If raw telemetry event volume is extremely high, the `execute/3` `GenServer.cast` could overload the `TelemetryService`.
-            *   Consider batching events from emitters or using a more direct path to `telemetry` handlers for very high-frequency, low-latency metrics, with `TelemetryService` focusing on management and less frequent/aggregated metrics. Libraries like `telemetry_metrics` already do much of this. ESF's `TelemetryService` should clarify its role in relation to standard `:telemetry` practices.
+*   **3.3. `TelemetryService` Scalability & Distribution:**
+    *   **Distributed Aggregation:**
+        *   For clustered deployments, how are metrics aggregated across nodes?
+        *   Options: Node-local `TelemetryService` instances forwarding to a central aggregator node, or direct reporting to an external distributed metrics backend (Prometheus, etc.).
+    *   **High-Frequency Event Handling:**
+        *   If raw telemetry event volume is extremely high, the `execute/3` `GenServer.cast` could overload the `TelemetryService`.
+        *   Consider batching events from emitters or using a more direct path to `telemetry` handlers for very high-frequency, low-latency metrics, with `TelemetryService` focusing on management and less frequent/aggregated metrics. Libraries like `telemetry_metrics` already do much of this. ESF's `TelemetryService` should clarify its role in relation to standard `:telemetry` practices.
 
 **4. Design Considerations for Distribution**
 
@@ -115,45 +115,45 @@ The current ESF `EventStore` provides basic in-memory event storage and querying
 
 **3. Areas of Investigation & Design**
 
-    **3.1. Persistence Strategy:**
-        *   **Decision Point:** Is the `EventStore` intended to be the primary durable store, or an in-memory cache/buffer in front of an external "Persistence Layer" (as per C4)?
-            *   **Scenario A (Primary Durable Store):**
-                *   **Backend Options:**
-                    *   Dedicated Event Store databases (e.g., EventStoreDB, AxonServer). Requires integration via client libraries.
-                    *   Relational Databases (PostgreSQL): Store events in a structured table. Consider indexing strategies for common query patterns. JSONB can be used for flexible `data` field.
-                    *   NoSQL Databases (Cassandra, Riak): Potentially better for high write throughput and scalability, but querying can be more complex.
-                    *   File-based (append-only logs): Simple, but querying and management become challenging.
-                *   **`EventStore` GenServer Role:** Becomes a process managing writes to the chosen backend, potentially with batching, WAL, and snapshotting for performance and recovery.
-            *   **Scenario B (In-Memory Cache/Buffer + External Persistence):**
-                *   The current ETS-backed `EventStore` acts as a fast write buffer and hot query cache.
-                *   An asynchronous process (or a set of workers) tails the ETS store (or a WAL) and persists events to the external "Persistence Layer."
-                *   Queries to `EventStore` could first check ETS, then fall back to the external store for historical data (data tiering).
-        *   **Schema Design (if relational/NoSQL):**
-            *   Fields: `event_id` (primary key), `event_type`, `timestamp` (indexed), `wall_time`, `node`, `pid`, `correlation_id` (indexed), `parent_id`, `data` (e.g., JSONB).
-        *   **Data Integrity:** Mechanisms for ensuring data isn't corrupted during persistence.
+*   **3.1. Persistence Strategy:**
+    *   **Decision Point:** Is the `EventStore` intended to be the primary durable store, or an in-memory cache/buffer in front of an external "Persistence Layer" (as per C4)?
+        *   **Scenario A (Primary Durable Store):**
+            *   **Backend Options:**
+                *   Dedicated Event Store databases (e.g., EventStoreDB, AxonServer). Requires integration via client libraries.
+                *   Relational Databases (PostgreSQL): Store events in a structured table. Consider indexing strategies for common query patterns. JSONB can be used for flexible `data` field.
+                *   NoSQL Databases (Cassandra, Riak): Potentially better for high write throughput and scalability, but querying can be more complex.
+                *   File-based (append-only logs): Simple, but querying and management become challenging.
+            *   **`EventStore` GenServer Role:** Becomes a process managing writes to the chosen backend, potentially with batching, WAL, and snapshotting for performance and recovery.
+        *   **Scenario B (In-Memory Cache/Buffer + External Persistence):**
+            *   The current ETS-backed `EventStore` acts as a fast write buffer and hot query cache.
+            *   An asynchronous process (or a set of workers) tails the ETS store (or a WAL) and persists events to the external "Persistence Layer."
+            *   Queries to `EventStore` could first check ETS, then fall back to the external store for historical data (data tiering).
+    *   **Schema Design (if relational/NoSQL):**
+        *   Fields: `event_id` (primary key), `event_type`, `timestamp` (indexed), `wall_time`, `node`, `pid`, `correlation_id` (indexed), `parent_id`, `data` (e.g., JSONB).
+    *   **Data Integrity:** Mechanisms for ensuring data isn't corrupted during persistence.
 
-    **3.2. Advanced Querying:**
-        *   **Query Language/API:**
-            *   Define a more expressive query API beyond the current map-based filters.
-            *   Consider a simple DSL or struct-based query representation.
-            *   Example desired queries:
-                *   Events with specific data fields matching certain values (e.g., `data.user_id == 123`).
-                *   Aggregations (e.g., count of `:login_failed` events per user).
-                *   Sequences of events (e.g., find `:order_created` followed by `:payment_failed` for the same `correlation_id`).
-        *   **Indexing:**
-            *   If using a persistent backend, define necessary database indexes on `timestamp`, `event_type`, `correlation_id`, and potentially indexed fields within the `data` payload (if supported by the DB, e.g., GIN indexes on JSONB in PostgreSQL).
-        *   **Performance:** Optimize for common query patterns. Consider read replicas or materialized views for complex aggregations if performance becomes an issue.
+*   **3.2. Advanced Querying:**
+    *   **Query Language/API:**
+        *   Define a more expressive query API beyond the current map-based filters.
+        *   Consider a simple DSL or struct-based query representation.
+        *   Example desired queries:
+            *   Events with specific data fields matching certain values (e.g., `data.user_id == 123`).
+            *   Aggregations (e.g., count of `:login_failed` events per user).
+            *   Sequences of events (e.g., find `:order_created` followed by `:payment_failed` for the same `correlation_id`).
+    *   **Indexing:**
+        *   If using a persistent backend, define necessary database indexes on `timestamp`, `event_type`, `correlation_id`, and potentially indexed fields within the `data` payload (if supported by the DB, e.g., GIN indexes on JSONB in PostgreSQL).
+    *   **Performance:** Optimize for common query patterns. Consider read replicas or materialized views for complex aggregations if performance becomes an issue.
 
-    **3.3. Real-Time Event Streaming/Subscription:**
-        *   **Mechanism:**
-            *   Integrate with a PubSub system (e.g., `Phoenix.PubSub` if local, or a distributed bus like Kafka/RabbitMQ if ESF is distributed).
-            *   `EventStore` publishes events to specific topics (e.g., based on `event_type` or a general "all_events" topic) upon successful storage.
-        *   **API:**
-            *   `Events.subscribe(event_filter_pattern)`: Allows services to subscribe to specific types of events.
-            *   `Events.unsubscribe(subscription_id)`.
-        *   **Filtering:** Allow subscribers to specify filters for events they are interested in (server-side filtering is more efficient).
-        *   **Delivery Guarantees:** Define the desired delivery guarantees (at-least-once, at-most-once). For critical events, at-least-once is usually preferred, which implies subscribers need to be idempotent or handle duplicates.
-        *   **Backpressure:** How to handle slow subscribers if using a push-based model.
+*   **3.3. Real-Time Event Streaming/Subscription:**
+    *   **Mechanism:**
+        *   Integrate with a PubSub system (e.g., `Phoenix.PubSub` if local, or a distributed bus like Kafka/RabbitMQ if ESF is distributed).
+        *   `EventStore` publishes events to specific topics (e.g., based on `event_type` or a general "all_events" topic) upon successful storage.
+    *   **API:**
+        *   `Events.subscribe(event_filter_pattern)`: Allows services to subscribe to specific types of events.
+        *   `Events.unsubscribe(subscription_id)`.
+    *   **Filtering:** Allow subscribers to specify filters for events they are interested in (server-side filtering is more efficient).
+    *   **Delivery Guarantees:** Define the desired delivery guarantees (at-least-once, at-most-once). For critical events, at-least-once is usually preferred, which implies subscribers need to be idempotent or handle duplicates.
+    *   **Backpressure:** How to handle slow subscribers if using a push-based model.
 
 **4. Proposed Next Steps for Investigation**
 
@@ -183,42 +183,42 @@ The ESF `ConfigServer` provides runtime configuration updates. This document exp
 
 **3. Areas of Investigation & Design**
 
-    **3.1. Atomic Batch Updates:**
-        *   **API:**
-            *   Introduce `Config.update_batch(changeset)` where `changeset` is a list of `{path, value}` tuples or a map of `%{path => value}`.
-            *   The `ConfigServer` should validate all changes in the batch before applying any. If any part of the batch is invalid, the entire update is rejected.
-        *   **Implementation:**
-            *   `ConfigLogic.update_config_batch(current_config, changeset)`: Validates and applies the batch immutably.
-            *   `ConfigServer` applies the validated batch to its state atomically.
-        *   **Notifications:**
-            *   Subscribers could receive a single `{:config_batch_updated, applied_changeset}` notification or individual notifications per change within the batch. A single notification is likely more efficient.
+*   **3.1. Atomic Batch Updates:**
+    *   **API:**
+        *   Introduce `Config.update_batch(changeset)` where `changeset` is a list of `{path, value}` tuples or a map of `%{path => value}`.
+        *   The `ConfigServer` should validate all changes in the batch before applying any. If any part of the batch is invalid, the entire update is rejected.
+    *   **Implementation:**
+        *   `ConfigLogic.update_config_batch(current_config, changeset)`: Validates and applies the batch immutably.
+        *   `ConfigServer` applies the validated batch to its state atomically.
+    *   **Notifications:**
+        *   Subscribers could receive a single `{:config_batch_updated, applied_changeset}` notification or individual notifications per change within the batch. A single notification is likely more efficient.
 
-    **3.2. Distributed Configuration Consistency (if ESF is to be clustered):**
-        *   **Strategy 1: Leader-Based with Distributed Pub/Sub (High Availability, Eventual Consistency):**
-            *   Designate a leader `ConfigServer` (e.g., using `Raft` or a simpler leader election mechanism if full consensus isn't needed for config).
-            *   All writes go to the leader.
-            *   Leader validates and applies changes, then broadcasts the *applied changes* (or the full new config version) via a distributed `Phoenix.PubSub` (e.g., using PG2 or Redis adapter) to `ConfigServer` instances on other nodes.
-            *   Follower nodes update their local ETS cache and notify local subscribers.
-            *   **Pros:** Simpler to implement than strong consistency. Reads are fast (local).
-            *   **Cons:** Eventual consistency. Brief periods of inconsistency during propagation. Order of updates across nodes relies on PubSub ordering (if any).
-        *   **Strategy 2: Distributed Consensus (Strong Consistency):**
-            *   Use a library like `Ra` (Raft implementation) to manage the configuration state as a replicated state machine.
-            *   `ConfigServer` instances on all nodes participate in the Raft cluster.
-            *   Writes are proposed to the Raft leader and committed via consensus.
-            *   **Pros:** Strong consistency. All nodes see the same config state at (logically) the same time.
-            *   **Cons:** More complex to implement and manage. Higher write latency.
-        *   **Strategy 3: External Distributed Key-Value Store (e.g., etcd, Consul):**
-            *   ESF `ConfigServer` instances on each node become clients to an external distributed KV store.
-            *   The KV store handles consistency and replication.
-            *   `ConfigServer` instances can watch for changes in the KV store and update their local ETS caches and notify subscribers.
-            *   **Pros:** Leverages mature external systems.
-            *   **Cons:** Adds an external dependency.
+*   **3.2. Distributed Configuration Consistency (if ESF is to be clustered):**
+    *   **Strategy 1: Leader-Based with Distributed Pub/Sub (High Availability, Eventual Consistency):**
+        *   Designate a leader `ConfigServer` (e.g., using `Raft` or a simpler leader election mechanism if full consensus isn't needed for config).
+        *   All writes go to the leader.
+        *   Leader validates and applies changes, then broadcasts the *applied changes* (or the full new config version) via a distributed `Phoenix.PubSub` (e.g., using PG2 or Redis adapter) to `ConfigServer` instances on other nodes.
+        *   Follower nodes update their local ETS cache and notify local subscribers.
+        *   **Pros:** Simpler to implement than strong consistency. Reads are fast (local).
+        *   **Cons:** Eventual consistency. Brief periods of inconsistency during propagation. Order of updates across nodes relies on PubSub ordering (if any).
+    *   **Strategy 2: Distributed Consensus (Strong Consistency):**
+        *   Use a library like `Ra` (Raft implementation) to manage the configuration state as a replicated state machine.
+        *   `ConfigServer` instances on all nodes participate in the Raft cluster.
+        *   Writes are proposed to the Raft leader and committed via consensus.
+        *   **Pros:** Strong consistency. All nodes see the same config state at (logically) the same time.
+        *   **Cons:** More complex to implement and manage. Higher write latency.
+    *   **Strategy 3: External Distributed Key-Value Store (e.g., etcd, Consul):**
+        *   ESF `ConfigServer` instances on each node become clients to an external distributed KV store.
+        *   The KV store handles consistency and replication.
+        *   `ConfigServer` instances can watch for changes in the KV store and update their local ETS caches and notify subscribers.
+        *   **Pros:** Leverages mature external systems.
+        *   **Cons:** Adds an external dependency.
 
-    **3.3. Configuration Versioning and Rollback:**
-        *   Maintain a version number for the configuration state in `ConfigServer`.
-        *   Optionally, store a limited history of previous configuration versions (e.g., in ETS or the `EventStore`).
-        *   Provide an API `Config.rollback_to_version(version_number)` (admin/debug only).
-        *   **Concern:** Rollback in a distributed system is complex if updates have side effects that are hard to revert.
+*   **3.3. Configuration Versioning and Rollback:**
+    *   Maintain a version number for the configuration state in `ConfigServer`.
+    *   Optionally, store a limited history of previous configuration versions (e.g., in ETS or the `EventStore`).
+    *   Provide an API `Config.rollback_to_version(version_number)` (admin/debug only).
+    *   **Concern:** Rollback in a distributed system is complex if updates have side effects that are hard to revert.
 
 **4. Proposed Next Steps for Investigation**
 
@@ -249,36 +249,36 @@ The ESF `TelemetryService` currently provides a basic mechanism for recording me
 
 **3. Areas of Investigation & Design**
 
-    **3.1. Advanced Metric Aggregation:**
-        *   **Leverage `telemetry_metrics`:**
-            *   Instead of custom aggregation logic in `TelemetryService`, heavily rely on `telemetry_metrics` library for defining and computing standard metric types (counters, gauges, summaries, histograms).
-            *   `TelemetryService`'s role could shift to:
-                *   Dynamically attaching/detaching `telemetry_metrics` reporters based on ESF configuration.
-                *   Providing an API to define `telemetry_metrics` definitions at runtime (if needed).
-                *   Querying/exposing metrics collected by `telemetry_metrics` reporters.
-        *   **Configurable Aggregation Strategies:**
-            *   Allow configuration (via `ConfigServer`) of aggregation windows, percentile calculations for summaries/histograms, etc., per metric prefix.
-        *   **Sliding Windows and Time-Series Data:**
-            *   For certain metrics, maintaining time-series data within configurable windows (e.g., requests per second over the last 5 minutes) would be valuable.
+*   **3.1. Advanced Metric Aggregation:**
+    *   **Leverage `telemetry_metrics`:**
+        *   Instead of custom aggregation logic in `TelemetryService`, heavily rely on `telemetry_metrics` library for defining and computing standard metric types (counters, gauges, summaries, histograms).
+        *   `TelemetryService`'s role could shift to:
+            *   Dynamically attaching/detaching `telemetry_metrics` reporters based on ESF configuration.
+            *   Providing an API to define `telemetry_metrics` definitions at runtime (if needed).
+            *   Querying/exposing metrics collected by `telemetry_metrics` reporters.
+    *   **Configurable Aggregation Strategies:**
+        *   Allow configuration (via `ConfigServer`) of aggregation windows, percentile calculations for summaries/histograms, etc., per metric prefix.
+    *   **Sliding Windows and Time-Series Data:**
+        *   For certain metrics, maintaining time-series data within configurable windows (e.g., requests per second over the last 5 minutes) would be valuable.
 
-    **3.2. Pluggable Telemetry Export Framework:**
-        *   **Exporter Contract/Behaviour:**
-            *   Define an `ElixirScope.Foundation.Contracts.TelemetryExporter` behaviour.
-            *   Callbacks: `init(config)`, `handle_metrics_batch(metrics_batch)`, `shutdown()`.
-        *   **Configuration:**
-            *   `ConfigServer` manages a list of active exporter configurations: `%{exporter_module: MyApp.PrometheusExporter, config: %{endpoint: "..."}}`.
-            *   `TelemetryService` starts and supervises instances of these exporter modules.
-        *   **Data Flow:**
-            *   `TelemetryService` (or `telemetry_metrics` reporters managed by it) periodically (or on buffer limits) pushes batches of aggregated metrics to all configured and active exporters.
-        *   **Built-in Exporters (Examples):**
-            *   `LoggerExporter`: Simple exporter that logs metrics.
-            *   `PrometheusExporter`: Exposes metrics in Prometheus format via an HTTP endpoint (could use `prom_ex` library).
-            *   `StatsDExporter`: Pushes metrics to a StatsD daemon.
-        *   **Resilience:** Exporters should handle their own connection issues and retries without blocking `TelemetryService`.
+*   **3.2. Pluggable Telemetry Export Framework:**
+    *   **Exporter Contract/Behaviour:**
+        *   Define an `ElixirScope.Foundation.Contracts.TelemetryExporter` behaviour.
+        *   Callbacks: `init(config)`, `handle_metrics_batch(metrics_batch)`, `shutdown()`.
+    *   **Configuration:**
+        *   `ConfigServer` manages a list of active exporter configurations: `%{exporter_module: MyApp.PrometheusExporter, config: %{endpoint: "..."}}`.
+        *   `TelemetryService` starts and supervises instances of these exporter modules.
+    *   **Data Flow:**
+        *   `TelemetryService` (or `telemetry_metrics` reporters managed by it) periodically (or on buffer limits) pushes batches of aggregated metrics to all configured and active exporters.
+    *   **Built-in Exporters (Examples):**
+        *   `LoggerExporter`: Simple exporter that logs metrics.
+        *   `PrometheusExporter`: Exposes metrics in Prometheus format via an HTTP endpoint (could use `prom_ex` library).
+        *   `StatsDExporter`: Pushes metrics to a StatsD daemon.
+    *   **Resilience:** Exporters should handle their own connection issues and retries without blocking `TelemetryService`.
 
-    **3.3. Querying Aggregated Metrics:**
-        *   The `Telemetry.get_metrics/0` API should return the latest aggregated values (as computed by `telemetry_metrics` or custom aggregators).
-        *   For historical metric querying, this is typically the domain of external monitoring systems (Prometheus, Grafana, Datadog) fed by the exporters. ESF itself might not need to store long-term historical aggregated metrics if robust export is in place.
+*   **3.3. Querying Aggregated Metrics:**
+    *   The `Telemetry.get_metrics/0` API should return the latest aggregated values (as computed by `telemetry_metrics` or custom aggregators).
+    *   For historical metric querying, this is typically the domain of external monitoring systems (Prometheus, Grafana, Datadog) fed by the exporters. ESF itself might not need to store long-term historical aggregated metrics if robust export is in place.
 
 **4. Proposed Next Steps for Investigation**
 
@@ -308,26 +308,26 @@ The ESF services (`ConfigServer`, `EventStore`, `TelemetryService`) have inter-d
 
 **3. Areas of Investigation & Design**
 
-    **3.1. Decoupling Startup Initialization:**
-        *   **Minimize `init/1` Dependencies:** Services should perform minimal work in `init/1`, primarily setting up their own state.
-        *   **Asynchronous Post-Initialization:** For tasks that depend on other services (e.g., `ConfigServer` registering itself or loading initial data that might involve `EventStore`), use `Process.send_after(self(), :post_init, 0)` or a `Task` started from `init/1`. The `:post_init` handler can then safely perform actions that might depend on other services being available.
-        *   **Service Availability Checks:** Before making a call to another ESF service in `:post_init` or runtime, use `ServiceRegistry.lookup/2`. If the dependent service is not yet available, the calling service can retry, queue the action, or enter a degraded state.
+*   **3.1. Decoupling Startup Initialization:**
+    *   **Minimize `init/1` Dependencies:** Services should perform minimal work in `init/1`, primarily setting up their own state.
+    *   **Asynchronous Post-Initialization:** For tasks that depend on other services (e.g., `ConfigServer` registering itself or loading initial data that might involve `EventStore`), use `Process.send_after(self(), :post_init, 0)` or a `Task` started from `init/1`. The `:post_init` handler can then safely perform actions that might depend on other services being available.
+    *   **Service Availability Checks:** Before making a call to another ESF service in `:post_init` or runtime, use `ServiceRegistry.lookup/2`. If the dependent service is not yet available, the calling service can retry, queue the action, or enter a degraded state.
 
-    **3.2. Resilient Inter-Service Communication:**
-        *   **Asynchronous Operations for Non-Critical Side-Effects:**
-            *   When `ConfigServer` needs to log an audit event to `EventStore`, this should likely be an asynchronous cast (`GenServer.cast`) or a message sent to a dedicated async worker pool that handles writes to `EventStore`. This prevents `ConfigServer` operations from blocking or failing if `EventStore` is temporarily down.
-            *   A small, bounded in-memory queue (or ETS-backed for more durability) within the calling service can hold messages if the target service is down, with periodic retries.
-        *   **Circuit Breakers for Synchronous Calls:**
-            *   For critical synchronous calls between ESF services (if any), wrap them with an internal circuit breaker (using the planned `Infrastructure.CircuitBreakerWrapper`).
-        *   **Timeouts:** All synchronous `GenServer.call` operations between ESF services should use explicit timeouts.
-        *   **Graceful Degradation Module (`ElixirScope.Foundation.GracefulDegradation`):**
-            *   This module (already present in `DIAGS.md`) needs to be systematically applied. For example, `ConfigServer` trying to write to `EventStore` could have a fallback like "log to local file" or "store in temporary ETS queue" if `EventStore` is down.
-            *   The `Config.GracefulDegradation` for config reads and `Events.GracefulDegradation` for event operations are good examples that need to be generalized for all inter-service calls.
+*   **3.2. Resilient Inter-Service Communication:**
+    *   **Asynchronous Operations for Non-Critical Side-Effects:**
+        *   When `ConfigServer` needs to log an audit event to `EventStore`, this should likely be an asynchronous cast (`GenServer.cast`) or a message sent to a dedicated async worker pool that handles writes to `EventStore`. This prevents `ConfigServer` operations from blocking or failing if `EventStore` is temporarily down.
+        *   A small, bounded in-memory queue (or ETS-backed for more durability) within the calling service can hold messages if the target service is down, with periodic retries.
+    *   **Circuit Breakers for Synchronous Calls:**
+        *   For critical synchronous calls between ESF services (if any), wrap them with an internal circuit breaker (using the planned `Infrastructure.CircuitBreakerWrapper`).
+    *   **Timeouts:** All synchronous `GenServer.call` operations between ESF services should use explicit timeouts.
+    *   **Graceful Degradation Module (`ElixirScope.Foundation.GracefulDegradation`):**
+        *   This module (already present in `DIAGS.md`) needs to be systematically applied. For example, `ConfigServer` trying to write to `EventStore` could have a fallback like "log to local file" or "store in temporary ETS queue" if `EventStore` is down.
+        *   The `Config.GracefulDegradation` for config reads and `Events.GracefulDegradation` for event operations are good examples that need to be generalized for all inter-service calls.
 
-    **3.3. Supervision Strategy Review:**
-        *   The current `ElixirScope.Application` uses `:one_for_one`.
-        *   **Consideration:** For tightly coupled core services, is `:rest_for_one` or `:one_for_all` more appropriate if the failure of one core service implies others cannot function correctly? `:one_for_one` is generally good for independence, but if, for example, `ConfigServer` is critical for `EventStore`'s operation, its failure might warrant restarting dependent services.
-        *   However, the goal should be loose coupling so `:one_for_one` remains viable.
+*   **3.3. Supervision Strategy Review:**
+    *   The current `ElixirScope.Application` uses `:one_for_one`.
+    *   **Consideration:** For tightly coupled core services, is `:rest_for_one` or `:one_for_all` more appropriate if the failure of one core service implies others cannot function correctly? `:one_for_one` is generally good for independence, but if, for example, `ConfigServer` is critical for `EventStore`'s operation, its failure might warrant restarting dependent services.
+    *   However, the goal should be loose coupling so `:one_for_one` remains viable.
 
 **4. Proposed Next Steps for Investigation**
 
@@ -352,49 +352,49 @@ While ESF provides a solid core, several features common to application foundati
 
 **2. Potential New Features (for Investigation)**
 
-    **2.1. Managed Job Queueing & Scheduling Service:**
-        *   **Problem:** Many applications need reliable background job processing and scheduled tasks.
-        *   **Scope:**
-            *   API for enqueuing jobs (with persistence options).
-            *   Worker pool management.
-            *   Retry mechanisms, dead-letter queues.
-            *   Scheduled/cron-like job registration.
-            *   Telemetry for job throughput, failures, latency.
-        *   **BEAM Alignment:** Could leverage OTP for workers and supervision.
-        *   **Existing Libraries:** `Oban`, `Exq`, `Quantum`. ESF could provide a managed wrapper or a simpler built-in solution if full external library features are not needed.
-        *   **CMM Rec:** "Competing Consumers" could be implemented by job workers.
+*   **2.1. Managed Job Queueing & Scheduling Service:**
+    *   **Problem:** Many applications need reliable background job processing and scheduled tasks.
+    *   **Scope:**
+        *   API for enqueuing jobs (with persistence options).
+        *   Worker pool management.
+        *   Retry mechanisms, dead-letter queues.
+        *   Scheduled/cron-like job registration.
+        *   Telemetry for job throughput, failures, latency.
+    *   **BEAM Alignment:** Could leverage OTP for workers and supervision.
+    *   **Existing Libraries:** `Oban`, `Exq`, `Quantum`. ESF could provide a managed wrapper or a simpler built-in solution if full external library features are not needed.
+    *   **CMM Rec:** "Competing Consumers" could be implemented by job workers.
 
-    **2.2. Generic Caching Service:**
-        *   **Problem:** Applications often need a general-purpose caching layer for frequently accessed or computationally expensive data.
-        *   **Scope:**
-            *   API: `Cache.get(key)`, `Cache.put(key, value, ttl)`, `Cache.delete(key)`, `Cache.fetch(key, fun_to_populate)`.
-            *   Backends: ETS (default), Memcached, Redis (pluggable).
-            *   Features: TTL, LRU/LFU eviction, cache invalidation strategies.
-            *   Telemetry: Hit/miss rates, cache size, latency.
-        *   **BEAM Alignment:** ETS is a natural fit for a default backend.
-        *   **Existing Libraries:** `Cachex`, `Nebulex`.
+*   **2.2. Generic Caching Service:**
+    *   **Problem:** Applications often need a general-purpose caching layer for frequently accessed or computationally expensive data.
+    *   **Scope:**
+        *   API: `Cache.get(key)`, `Cache.put(key, value, ttl)`, `Cache.delete(key)`, `Cache.fetch(key, fun_to_populate)`.
+        *   Backends: ETS (default), Memcached, Redis (pluggable).
+        *   Features: TTL, LRU/LFU eviction, cache invalidation strategies.
+        *   Telemetry: Hit/miss rates, cache size, latency.
+    *   **BEAM Alignment:** ETS is a natural fit for a default backend.
+    *   **Existing Libraries:** `Cachex`, `Nebulex`.
 
-    **2.3. Feature Flag Service:**
-        *   **Problem:** Controlled rollout of new features.
-        *   **Scope:**
-            *   API: `FeatureFlags.enabled?(:my_feature, user_context)`
-            *   Integration with `ConfigServer` for flag definitions.
-            *   Advanced features: Percentage rollouts, user/group segmentation, A/B testing support.
-            *   Telemetry on flag evaluation.
-        *   **BEAM Alignment:** Can leverage existing `ConfigServer` for storage and updates.
+*   **2.3. Feature Flag Service:**
+    *   **Problem:** Controlled rollout of new features.
+    *   **Scope:**
+        *   API: `FeatureFlags.enabled?(:my_feature, user_context)`
+        *   Integration with `ConfigServer` for flag definitions.
+        *   Advanced features: Percentage rollouts, user/group segmentation, A/B testing support.
+        *   Telemetry on flag evaluation.
+    *   **BEAM Alignment:** Can leverage existing `ConfigServer` for storage and updates.
 
-    **2.4. Secrets Management Integration Service:**
-        *   **Problem:** Securely managing and accessing application secrets.
-        *   **Scope:**
-            *   Abstract interface for fetching secrets.
-            *   Pluggable backends for various secret managers (HashiCorp Vault, AWS Secrets Manager, ENV vars for dev).
-            *   Integration with `ConfigServer` to inject secrets into the application config (or provide them on-demand).
-            *   Automatic rotation/refresh capabilities.
+*   **2.4. Secrets Management Integration Service:**
+    *   **Problem:** Securely managing and accessing application secrets.
+    *   **Scope:**
+        *   Abstract interface for fetching secrets.
+        *   Pluggable backends for various secret managers (HashiCorp Vault, AWS Secrets Manager, ENV vars for dev).
+        *   Integration with `ConfigServer` to inject secrets into the application config (or provide them on-demand).
+        *   Automatic rotation/refresh capabilities.
 
-    **2.5. Advanced EventStore Features (from TID-002, but expanding):**
-        *   **Message Store Pattern (CMM Rec):** Formalize event sourcing capabilities. Snapshots, replaying events to rebuild state.
-        *   **Aggregator Pattern (CMM Rec):** Service to consume event streams and build/maintain aggregated views or projections.
-        *   **Scatter-Gather (CMM Rec):** While more of an application pattern, foundational support for orchestrating scatter-gather operations based on events could be considered (e.g., a saga coordinator that reacts to events).
+*   **2.5. Advanced EventStore Features (from TID-002, but expanding):**
+    *   **Message Store Pattern (CMM Rec):** Formalize event sourcing capabilities. Snapshots, replaying events to rebuild state.
+    *   **Aggregator Pattern (CMM Rec):** Service to consume event streams and build/maintain aggregated views or projections.
+    *   **Scatter-Gather (CMM Rec):** While more of an application pattern, foundational support for orchestrating scatter-gather operations based on events could be considered (e.g., a saga coordinator that reacts to events).
 
 **3. Prioritization Criteria**
 
@@ -428,34 +428,34 @@ The current ESF contracts (`Configurable`, `EventStore`, `Telemetry`) provide a 
 
 **3. Proposed Refinements**
 
-    **3.1. More Specific Error Types in Contracts:**
-        *   **Example (`Configurable.get/1`):**
-            *   Current: `{:ok, config_value()} | {:error, Error.t()}`
-            *   Proposed: `{:ok, config_value()} | {:error, :not_found | :service_unavailable | :validation_error | Error.t()}`
-            *   The `Error.t()` would still be available for detailed context, but common, distinguishable failure modes get their own atoms.
-        *   **Example (`EventStore.store/1`):**
-            *   Current: `{:ok, event_id()} | {:error, Error.t()}`
-            *   Proposed: `{:ok, event_id()} | {:error, :validation_failed | :storage_unavailable | :duplicate_event_id | Error.t()}`
-        *   **Action:** Review all contract callbacks and identify common, distinct failure modes to elevate into the return type signature.
+*   **3.1. More Specific Error Types in Contracts:**
+    *   **Example (`Configurable.get/1`):**
+        *   Current: `{:ok, config_value()} | {:error, Error.t()}`
+        *   Proposed: `{:ok, config_value()} | {:error, :not_found | :service_unavailable | :validation_error | Error.t()}`
+        *   The `Error.t()` would still be available for detailed context, but common, distinguishable failure modes get their own atoms.
+    *   **Example (`EventStore.store/1`):**
+        *   Current: `{:ok, event_id()} | {:error, Error.t()}`
+        *   Proposed: `{:ok, event_id()} | {:error, :validation_failed | :storage_unavailable | :duplicate_event_id | Error.t()}`
+    *   **Action:** Review all contract callbacks and identify common, distinct failure modes to elevate into the return type signature.
 
-    **3.2. Documentation on Data Semantics:**
-        *   For `Config.get/0` and `Config.get/1`: Clearly document that the returned `Config.t()` or value is an immutable snapshot at the time of the call. Subsequent changes via `Config.update/2` will not affect previously fetched copies.
-        *   For `EventStore.get/1`: Document that the returned `Event.t()` is an immutable record.
+*   **3.2. Documentation on Data Semantics:**
+    *   For `Config.get/0` and `Config.get/1`: Clearly document that the returned `Config.t()` or value is an immutable snapshot at the time of the call. Subsequent changes via `Config.update/2` will not affect previously fetched copies.
+    *   For `EventStore.get/1`: Document that the returned `Event.t()` is an immutable record.
 
-    **3.3. Idempotency in Contracts:**
-        *   For write operations like `EventStore.store/1` or `Config.update/2`:
-            *   Specify if the operation is idempotent.
-            *   If `EventStore.store/1` is called multiple times with an event that already has an `event_id` (from client, or retry), should it return `{:ok, existing_id}` or `{:error, :duplicate_event_id}`? This needs to be defined. Currently, it seems to overwrite/assign if `event.event_id` is present, or assign a new one. If it assigns a new one when `event.event_id` is nil, it's not idempotent. If it can take a client-supplied ID, then it *can* be idempotent if designed so.
-            *   `Config.update/2` is naturally idempotent if the value is the same.
+*   **3.3. Idempotency in Contracts:**
+    *   For write operations like `EventStore.store/1` or `Config.update/2`:
+        *   Specify if the operation is idempotent.
+        *   If `EventStore.store/1` is called multiple times with an event that already has an `event_id` (from client, or retry), should it return `{:ok, existing_id}` or `{:error, :duplicate_event_id}`? This needs to be defined. Currently, it seems to overwrite/assign if `event.event_id` is present, or assign a new one. If it assigns a new one when `event.event_id` is nil, it's not idempotent. If it can take a client-supplied ID, then it *can* be idempotent if designed so.
+        *   `Config.update/2` is naturally idempotent if the value is the same.
 
-    **3.4. Clarity on Asynchronous Operations (if introduced via TID-001/TID-005):**
-        *   If services start performing more operations asynchronously (e.g., `EventStore` writing to a backend), contracts must reflect this.
-        *   Instead of `{:ok, result}`, it might be `{:async_ok, task_ref | operation_id}`.
-        *   A corresponding `SomeService.await_result(task_ref | operation_id, timeout)` would be needed.
-        *   Alternatively, results could be delivered via messages or a subscription mechanism.
+*   **3.4. Clarity on Asynchronous Operations (if introduced via TID-001/TID-005):**
+    *   If services start performing more operations asynchronously (e.g., `EventStore` writing to a backend), contracts must reflect this.
+    *   Instead of `{:ok, result}`, it might be `{:async_ok, task_ref | operation_id}`.
+    *   A corresponding `SomeService.await_result(task_ref | operation_id, timeout)` would be needed.
+    *   Alternatively, results could be delivered via messages or a subscription mechanism.
 
-    **3.5. Contract for `GracefulDegradation`:**
-        *   The `GracefulDegradation` modules are crucial. Consider if there should be a formal contract or set of conventions for how services implement and expose their degradation strategies or report their degraded state.
+*   **3.5. Contract for `GracefulDegradation`:**
+    *   The `GracefulDegradation` modules are crucial. Consider if there should be a formal contract or set of conventions for how services implement and expose their degradation strategies or report their degraded state.
 
 **4. Proposed Next Steps**
 
