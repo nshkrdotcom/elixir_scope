@@ -584,7 +584,7 @@ graph TD
 ## 12. Configuration Schema & Validation
 
 ```mermaid
-graph TB
+graph LR
     subgraph "Configuration Schema"
         Root[Config Root]
         AI[AI Config]
