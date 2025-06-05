@@ -192,7 +192,27 @@ defmodule ElixirScope.Foundation.Infrastructure.PoolWorkers.HttpWorker do
   @spec do_http_request(atom(), String.t(), term(), keyword(), state()) ::
           {:ok, map(), state()} | {:error, term(), state()}
   defp do_http_request(method, path, body, options, state) do
-    url = build_url(state.base_url, path)
+    base_url = build_url(state.base_url, path)
+
+    # Handle query parameters
+    url =
+      case Keyword.get(options, :params) do
+        nil ->
+          base_url
+
+        params when is_list(params) ->
+          query_string = URI.encode_query(params)
+
+          if String.contains?(base_url, "?") do
+            "#{base_url}&#{query_string}"
+          else
+            "#{base_url}?#{query_string}"
+          end
+
+        _ ->
+          base_url
+      end
+
     headers = merge_headers(state.headers, Keyword.get(options, :headers, []))
 
     request_options = [
@@ -248,27 +268,120 @@ defmodule ElixirScope.Foundation.Infrastructure.PoolWorkers.HttpWorker do
 
   @spec perform_request(atom(), String.t(), term(), [{String.t(), String.t()}], keyword()) ::
           {:ok, map()} | {:error, term()}
-  defp perform_request(method, url, body, headers, _options) do
+  defp perform_request(method, url, body, headers, options) do
     # This is a mock implementation - in real usage, you'd use HTTPoison, Finch, etc.
     # For demonstration purposes, we'll simulate HTTP requests with deterministic behavior
 
-    # Simulate network latency
-    Process.sleep(Enum.random(10..100))
+    # Check for timeout scenarios first
+    timeout = Keyword.get(options, :timeout, 30_000)
 
-    # Deterministic responses based on URL patterns for testing
     cond do
+      String.contains?(url, "/delay/") ->
+        # Extract delay seconds from URL pattern like /delay/5
+        delay_match = Regex.run(~r"/delay/(\d+)", url)
+
+        delay_seconds =
+          case delay_match do
+            [_, seconds_str] -> String.to_integer(seconds_str)
+            _ -> 0
+          end
+
+        # Convert to milliseconds and check against timeout
+        delay_ms = delay_seconds * 1000
+
+        if delay_ms > timeout do
+          {:error, :timeout}
+        else
+          Process.sleep(delay_ms)
+          response_body = create_mock_response_body(method, url, headers, body)
+          json_body = Jason.encode!(response_body)
+
+          response = %{
+            status_code: 200,
+            headers: [{"content-type", "application/json"}],
+            body: json_body
+          }
+
+          {:ok, response}
+        end
+
+      String.contains?(url, "/status/") ->
+        # Extract status code from URL pattern like /status/404
+        status_match = Regex.run(~r"/status/(\d+)", url)
+
+        status_code =
+          case status_match do
+            [_, code_str] -> String.to_integer(code_str)
+            _ -> 200
+          end
+
+        # Simulate network latency
+        Process.sleep(Enum.random(10..100))
+
+        response_body = create_mock_response_body(method, url, headers, body)
+        json_body = Jason.encode!(response_body)
+
+        response = %{
+          status_code: status_code,
+          headers: [{"content-type", "application/json"}],
+          body: json_body
+        }
+
+        {:ok, response}
+
+      String.contains?(url, "/bytes/") ->
+        # Extract byte count from URL pattern like /bytes/10000
+        bytes_match = Regex.run(~r"/bytes/(\d+)", url)
+
+        byte_count =
+          case bytes_match do
+            [_, count_str] -> String.to_integer(count_str)
+            _ -> 1024
+          end
+
+        # Simulate network latency
+        Process.sleep(Enum.random(10..100))
+
+        # Return raw bytes (not JSON)
+        response = %{
+          status_code: 200,
+          headers: [{"content-type", "application/octet-stream"}],
+          body: :crypto.strong_rand_bytes(byte_count)
+        }
+
+        {:ok, response}
+
+      String.contains?(url, "/xml") ->
+        # Simulate network latency
+        Process.sleep(Enum.random(10..100))
+
+        xml_response = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <response>
+          <method>#{method}</method>
+          <url>#{url}</url>
+        </response>
+        """
+
+        response = %{
+          status_code: 200,
+          headers: [{"content-type", "application/xml"}],
+          body: xml_response
+        }
+
+        {:ok, response}
+
       String.contains?(url, "/nonexistent") ->
-        # Return successful response with 404 status code
+        # Simulate network latency
+        Process.sleep(Enum.random(10..100))
+
+        response_body = create_mock_response_body(method, url, headers, body)
+        json_body = Jason.encode!(response_body)
+
         response = %{
           status_code: 404,
           headers: [{"content-type", "application/json"}],
-          body: %{
-            method: method,
-            url: url,
-            timestamp: DateTime.utc_now(),
-            headers: headers,
-            body: body
-          }
+          body: json_body
         }
 
         {:ok, response}
@@ -283,21 +396,89 @@ defmodule ElixirScope.Foundation.Infrastructure.PoolWorkers.HttpWorker do
         {:error, :timeout}
 
       true ->
-        # Default success response
+        # Simulate network latency
+        Process.sleep(Enum.random(10..100))
+
+        # Default success response - simulate httpbin.org behavior
+        response_body = create_httpbin_response(method, url, headers, body)
+        json_body = Jason.encode!(response_body)
+
         response = %{
           status_code: 200,
           headers: [{"content-type", "application/json"}],
-          body: %{
-            method: method,
-            url: url,
-            timestamp: DateTime.utc_now(),
-            headers: headers,
-            body: body
-          }
+          body: json_body
         }
 
         {:ok, response}
     end
+  end
+
+  # Helper function to create httpbin.org-style response
+  defp create_httpbin_response(method, url, headers, body) do
+    # Parse URL to extract query parameters
+    uri = URI.parse(url)
+
+    query_params =
+      case uri.query do
+        nil -> %{}
+        query_string -> URI.decode_query(query_string)
+      end
+
+    # Convert headers list to map, ensuring proper key-value format
+    headers_map =
+      headers
+      |> Enum.into(%{}, fn
+        {key, value} when is_binary(key) and is_binary(value) -> {key, value}
+        other -> {"unknown", inspect(other)}
+      end)
+
+    case method do
+      :get ->
+        %{
+          "args" => query_params,
+          "headers" => headers_map,
+          "origin" => "127.0.0.1",
+          "url" => url
+        }
+
+      :post ->
+        # Handle string vs map body encoding
+        data_string =
+          case body do
+            body when is_binary(body) -> body
+            body -> Jason.encode!(body)
+          end
+
+        %{
+          "args" => query_params,
+          "data" => data_string,
+          "files" => %{},
+          "form" => %{},
+          "headers" => headers_map,
+          "json" => if(is_binary(body), do: nil, else: body),
+          "origin" => "127.0.0.1",
+          "url" => url
+        }
+    end
+  end
+
+  # Helper function to create basic mock response body
+  defp create_mock_response_body(method, url, headers, body) do
+    # Convert headers to a safe format for JSON encoding
+    headers_map =
+      headers
+      |> Enum.into(%{}, fn
+        {key, value} when is_binary(key) and is_binary(value) -> {key, value}
+        other -> {"unknown", inspect(other)}
+      end)
+
+    %{
+      method: method,
+      url: url,
+      timestamp: DateTime.utc_now(),
+      headers: headers_map,
+      body: body
+    }
   end
 
   @spec update_stats(state(), :success | :error, integer()) :: state()
