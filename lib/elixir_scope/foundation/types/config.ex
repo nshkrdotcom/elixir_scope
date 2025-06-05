@@ -93,6 +93,39 @@ defmodule ElixirScope.Foundation.Types.Config do
       debug_mode: false,
       verbose_logging: false,
       performance_monitoring: true
+    },
+
+    # Infrastructure Configuration
+    infrastructure: %{
+      rate_limiting: %{
+        default_rules: %{
+          # 100 requests per minute
+          api_calls: %{scale: 60_000, limit: 100},
+          # 500 queries per minute
+          db_queries: %{scale: 60_000, limit: 500},
+          # 10 operations per second
+          file_operations: %{scale: 1_000, limit: 10}
+        },
+        enabled: true,
+        # 5 minutes
+        cleanup_interval: 300_000
+      },
+      circuit_breaker: %{
+        default_config: %{
+          failure_threshold: 5,
+          recovery_time: 30_000,
+          call_timeout: 5_000
+        },
+        enabled: true
+      },
+      connection_pool: %{
+        default_config: %{
+          size: 10,
+          max_overflow: 5,
+          strategy: :lifo
+        },
+        enabled: true
+      }
     }
   ]
 
@@ -166,12 +199,38 @@ defmodule ElixirScope.Foundation.Types.Config do
           performance_monitoring: boolean()
         }
 
+  @typedoc "Infrastructure configuration section"
+  @type infrastructure_config :: %{
+          rate_limiting: %{
+            default_rules: %{atom() => %{scale: pos_integer(), limit: pos_integer()}},
+            enabled: boolean(),
+            cleanup_interval: pos_integer()
+          },
+          circuit_breaker: %{
+            default_config: %{
+              failure_threshold: pos_integer(),
+              recovery_time: pos_integer(),
+              call_timeout: pos_integer()
+            },
+            enabled: boolean()
+          },
+          connection_pool: %{
+            default_config: %{
+              size: pos_integer(),
+              max_overflow: pos_integer(),
+              strategy: :lifo | :fifo
+            },
+            enabled: boolean()
+          }
+        }
+
   @type t :: %__MODULE__{
           ai: ai_config(),
           capture: capture_config(),
           storage: storage_config(),
           interface: interface_config(),
-          dev: dev_config()
+          dev: dev_config(),
+          infrastructure: infrastructure_config()
         }
 
   ## Access Behavior Implementation

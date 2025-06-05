@@ -23,7 +23,11 @@ defmodule ElixirScope.Foundation.Logic.ConfigLogic do
     [:interface, :max_results],
     [:dev, :debug_mode],
     [:dev, :verbose_logging],
-    [:dev, :performance_monitoring]
+    [:dev, :performance_monitoring],
+    [:infrastructure, :rate_limiting, :enabled],
+    [:infrastructure, :circuit_breaker, :enabled],
+    [:infrastructure, :connection_pool, :enabled],
+    [:infrastructure, :rate_limiting, :cleanup_interval]
   ]
 
   @doc """

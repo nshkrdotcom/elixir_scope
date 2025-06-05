@@ -22,6 +22,11 @@ defmodule ElixirScope.Application do
       {ElixirScope.Foundation.Services.EventStore, [namespace: :production]},
       {ElixirScope.Foundation.Services.TelemetryService, [namespace: :production]},
 
+      # Infrastructure protection components
+      {ElixirScope.Foundation.Infrastructure.ConnectionManager, []},
+      {ElixirScope.Foundation.Infrastructure.RateLimiter.HammerBackend,
+       [clean_period: :timer.minutes(1)]},
+
       # Task supervisor for dynamic tasks
       {Task.Supervisor, name: ElixirScope.Foundation.TaskSupervisor}
 

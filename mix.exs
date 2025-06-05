@@ -54,7 +54,7 @@ defmodule ElixirScope.MixProject do
 
   def application do
     [
-      extra_applications: [:logger, :crypto],
+      extra_applications: [:logger, :crypto, :fuse],
       mod: {ElixirScope.Application, []}
     ]
   end

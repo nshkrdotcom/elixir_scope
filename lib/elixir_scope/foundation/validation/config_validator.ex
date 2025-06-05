@@ -17,7 +17,8 @@ defmodule ElixirScope.Foundation.Validation.ConfigValidator do
          :ok <- validate_capture_config(config.capture),
          :ok <- validate_storage_config(config.storage),
          :ok <- validate_interface_config(config.interface),
-         :ok <- validate_dev_config(config.dev) do
+         :ok <- validate_dev_config(config.dev),
+         :ok <- validate_infrastructure_config(config.infrastructure) do
       :ok
     end
   end
@@ -93,6 +94,26 @@ defmodule ElixirScope.Foundation.Validation.ConfigValidator do
   @spec validate_dev_config(map()) :: {:error, Error.t()}
   def validate_dev_config(_) do
     create_validation_error("Invalid development configuration")
+  end
+
+  @doc """
+  Validate infrastructure configuration section.
+  """
+  @spec validate_infrastructure_config(map()) :: :ok | {:error, Error.t()}
+  def validate_infrastructure_config(%{
+        rate_limiting: rate_limiting,
+        circuit_breaker: circuit_breaker,
+        connection_pool: connection_pool
+      }) do
+    with :ok <- validate_rate_limiting_config(rate_limiting),
+         :ok <- validate_circuit_breaker_config(circuit_breaker),
+         :ok <- validate_connection_pool_config(connection_pool) do
+      :ok
+    end
+  end
+
+  def validate_infrastructure_config(_) do
+    create_validation_error("Invalid infrastructure configuration")
   end
 
   ## Private Validation Functions
@@ -229,6 +250,93 @@ defmodule ElixirScope.Foundation.Validation.ConfigValidator do
   @spec create_validation_error(String.t()) :: {:error, Error.t()}
   defp create_validation_error(message) do
     create_error(:validation_failed, message)
+  end
+
+  # Infrastructure validation helpers
+  defp validate_rate_limiting_config(%{
+         default_rules: rules,
+         enabled: enabled,
+         cleanup_interval: interval
+       })
+       when is_map(rules) and is_boolean(enabled) and is_integer(interval) and interval > 0 do
+    validate_rate_limiting_rules(rules)
+  end
+
+  defp validate_rate_limiting_config(_) do
+    create_validation_error("Invalid rate limiting configuration")
+  end
+
+  defp validate_rate_limiting_rules(rules) when is_map(rules) do
+    Enum.reduce_while(rules, :ok, fn {rule_name, rule_config}, _acc ->
+      case validate_rate_limiting_rule(rule_name, rule_config) do
+        :ok -> {:cont, :ok}
+        error -> {:halt, error}
+      end
+    end)
+  end
+
+  defp validate_rate_limiting_rule(rule_name, %{scale: scale, limit: limit})
+       when is_atom(rule_name) and is_integer(scale) and scale > 0 and
+              is_integer(limit) and limit > 0 do
+    :ok
+  end
+
+  defp validate_rate_limiting_rule(rule_name, _) do
+    create_validation_error("Invalid rate limiting rule: #{inspect(rule_name)}")
+  end
+
+  defp validate_circuit_breaker_config(%{
+         default_config: config,
+         enabled: enabled
+       })
+       when is_map(config) and is_boolean(enabled) do
+    validate_circuit_breaker_default_config(config)
+  end
+
+  defp validate_circuit_breaker_config(_) do
+    create_validation_error("Invalid circuit breaker configuration")
+  end
+
+  defp validate_circuit_breaker_default_config(%{
+         failure_threshold: threshold,
+         recovery_time: recovery,
+         call_timeout: timeout
+       })
+       when is_integer(threshold) and threshold > 0 and
+              is_integer(recovery) and recovery > 0 and
+              is_integer(timeout) and timeout > 0 do
+    :ok
+  end
+
+  defp validate_circuit_breaker_default_config(_) do
+    create_validation_error("Invalid circuit breaker default configuration")
+  end
+
+  defp validate_connection_pool_config(%{
+         default_config: config,
+         enabled: enabled
+       })
+       when is_map(config) and is_boolean(enabled) do
+    validate_connection_pool_default_config(config)
+  end
+
+  defp validate_connection_pool_config(_) do
+    create_validation_error("Invalid connection pool configuration")
+  end
+
+  defp validate_connection_pool_default_config(%{
+         size: size,
+         max_overflow: overflow,
+         strategy: strategy
+       })
+       when is_integer(size) and size > 0 and
+              is_integer(overflow) and overflow >= 0 and
+              strategy in [:lifo, :fifo] do
+    :ok
+  end
+
+  defp validate_connection_pool_default_config(_) do
+    create_validation_error("Invalid connection pool default configuration")
   end
 
   @spec create_error(atom(), String.t(), map()) :: {:error, Error.t()}
