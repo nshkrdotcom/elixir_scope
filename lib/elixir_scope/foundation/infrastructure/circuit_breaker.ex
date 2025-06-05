@@ -380,7 +380,7 @@ defmodule ElixirScope.Foundation.Infrastructure.CircuitBreaker do
         {:error, :not_found} ->
           error =
             Error.new(
-              code: 5009,
+              code: 5013,
               error_type: :circuit_breaker_not_found,
               message: "Cannot reset circuit breaker #{name}: not found",
               severity: :medium,
@@ -393,7 +393,7 @@ defmodule ElixirScope.Foundation.Infrastructure.CircuitBreaker do
       exception ->
         error =
           Error.new(
-            code: 5010,
+            code: 5014,
             error_type: :circuit_breaker_exception,
             message: "Exception resetting circuit breaker: #{inspect(exception)}",
             severity: :medium,
