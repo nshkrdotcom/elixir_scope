@@ -1,13 +1,13 @@
 # ElixirScope AST Layer Product Requirements Document (PRD)
 
-**Version:** 1.0  
-**Date:** December 2024  
+**Version:** 1.1  
+**Date:** December 2024 (Updated May 2025)  
 **Layer:** AST Layer (Layer 2)  
 **Status:** Implementation Ready
 
 ## Executive Summary
 
-The AST Layer represents the core intelligence engine of ElixirScope, providing deep static code analysis capabilities through Abstract Syntax Tree manipulation, pattern matching, and intelligent code understanding. This layer builds upon the Foundation Layer to deliver comprehensive code analysis, pattern detection, and query capabilities for Elixir applications.
+The AST Layer represents the core intelligence engine of ElixirScope, providing deep static code analysis capabilities through Abstract Syntax Tree manipulation, pattern matching, and intelligent code understanding. This layer builds upon the enhanced Foundation Layer (including its new Infrastructure sub-layer) to deliver comprehensive code analysis, pattern detection, and query capabilities for Elixir applications with improved reliability and performance.
 
 ## 1. Product Overview
 
@@ -28,7 +28,7 @@ Transform Elixir source code into structured, queryable data representations tha
 - **Intelligence:** Deep understanding of Elixir code patterns and behaviors
 - **Performance:** Efficient analysis of large codebases with minimal memory overhead
 - **Flexibility:** Extensible pattern matching and query capabilities
-- **Reliability:** Fault-tolerant architecture with graceful degradation
+- **Reliability:** Fault-tolerant architecture with graceful degradation, leveraging enhanced Foundation Layer resilience
 
 ## 2. Core Components & Requirements
 
@@ -84,6 +84,8 @@ Transform Elixir source code into structured, queryable data representations tha
 - **REQ-MEM-003:** Implement configurable memory pressure thresholds
 - **REQ-MEM-004:** Generate alerts before critical memory conditions
 - **REQ-MEM-005:** Provide detailed memory usage metrics and reporting
+- **REQ-MEM-006:** Coordinate with Foundation Infrastructure MemoryManager for global memory pressure signals
+- **REQ-MEM-007:** Report AST-specific memory usage to Foundation Infrastructure services
 
 #### 2.3.2 Pressure Response System
 - **REQ-PRESS-001:** Implement 4-level graduated pressure response
@@ -95,6 +97,8 @@ Transform Elixir source code into structured, queryable data representations tha
 - **REQ-PRESS-003:** Preserve critical data during cleanup operations
 - **REQ-PRESS-004:** Restore cleaned data on-demand when needed
 - **REQ-PRESS-005:** Log all pressure response actions for analysis
+- **REQ-PRESS-006:** Respond to global memory pressure signals from Foundation Infrastructure MemoryManager
+- **REQ-PRESS-007:** Trigger aggressive cleanup when Foundation Layer signals critical pressure
 
 **Acceptance Criteria:**
 - Maintain memory usage below configured limits (default: 2GB)
@@ -137,6 +141,7 @@ Transform Elixir source code into structured, queryable data representations tha
 - **REQ-QUERY-003:** Implement query optimization with index usage
 - **REQ-QUERY-004:** Enable query result caching with TTL
 - **REQ-QUERY-005:** Support streaming results for large datasets
+- **REQ-QUERY-006:** Apply rate limiting for complex queries using Foundation Infrastructure components when necessary
 
 #### 2.5.2 Query Types
 - **REQ-QT-001:** Function queries (name, arity, complexity, patterns)
@@ -150,6 +155,7 @@ Transform Elixir source code into structured, queryable data representations tha
 - Support complex queries with results in <2 seconds
 - Handle 20+ concurrent query operations
 - Achieve >70% cache hit rate for repeated queries
+- Gracefully handle rate-limited scenarios for resource-intensive queries
 
 ### 2.6 Performance Optimization System
 
@@ -229,8 +235,19 @@ Transform Elixir source code into structured, queryable data representations tha
 - **REQ-INT-003:** Emit events for analysis completion and errors
 - **REQ-INT-004:** Support Foundation telemetry and metrics collection
 - **REQ-INT-005:** Integrate with Foundation graceful degradation patterns
+- **REQ-INT-006:** Handle enhanced Foundation error types from Infrastructure components (circuit breaker open, rate limited, etc.)
+- **REQ-INT-007:** Emit standardized telemetry events for Foundation Infrastructure PerformanceMonitor consumption
+- **REQ-INT-008:** Implement health check interfaces compatible with Foundation Infrastructure HealthAggregator
+- **REQ-INT-009:** Coordinate with Foundation Infrastructure services without duplicating functionality
 
-### 4.2 Runtime Correlation
+### 4.2 Foundation Infrastructure Coordination
+- **REQ-INFRA-001:** Report detailed health status to Foundation Infrastructure HealthAggregator
+- **REQ-INFRA-002:** Contribute performance metrics to Foundation Infrastructure PerformanceMonitor
+- **REQ-INFRA-003:** Subscribe to global memory pressure signals from Foundation Infrastructure MemoryManager
+- **REQ-INFRA-004:** Report AST-specific memory usage to Foundation global memory management
+- **REQ-INFRA-005:** Use Foundation Infrastructure protection patterns for high-risk operations when appropriate
+
+### 4.3 Runtime Correlation
 - **REQ-CORR-001:** Generate correlation IDs for AST elements
 - **REQ-CORR-002:** Map AST nodes to instrumentation points
 - **REQ-CORR-003:** Provide bidirectional AST ↔ runtime event lookup
@@ -261,6 +278,8 @@ Transform Elixir source code into structured, queryable data representations tha
 - **REL-003:** Handle partial file system failures transparently
 - **REL-004:** Recover from process crashes without data loss
 - **REL-005:** Support hot-reloading of pattern definitions
+- **REL-006:** Handle Foundation Infrastructure error types (circuit breaker open, rate limited, pool timeout)
+- **REL-007:** Gracefully degrade when Foundation services are protected by infrastructure components
 
 ### 6.2 Data Consistency
 - **CONS-001:** Maintain consistency during concurrent updates
@@ -277,6 +296,8 @@ Transform Elixir source code into structured, queryable data representations tha
 - **MON-003:** Measure query execution times and cache hit rates
 - **MON-004:** Record pattern matching accuracy and performance
 - **MON-005:** Collect file synchronization metrics and errors
+- **MON-006:** Emit standardized telemetry events for Foundation Infrastructure consumption
+- **MON-007:** Track coordination effectiveness with Foundation Infrastructure services
 
 ### 7.2 Health Checks
 - **HEALTH-001:** Provide component-level health status
@@ -284,6 +305,8 @@ Transform Elixir source code into structured, queryable data representations tha
 - **HEALTH-003:** Validate correlation data consistency
 - **HEALTH-004:** Check memory pressure levels
 - **HEALTH-005:** Monitor file system connectivity
+- **HEALTH-006:** Implement standardized health check format for Foundation Infrastructure HealthAggregator
+- **HEALTH-007:** Report health status with sufficient detail for global system monitoring
 
 ## 8. Configuration & Customization
 
@@ -415,9 +438,12 @@ The AST Layer will be considered complete and ready for production when:
 4. Security requirements (SEC-*) pass penetration testing
 5. Documentation requirements (DOC-*) are completed and reviewed
 6. Success metrics show consistent achievement over 1 week of testing
+7. Foundation Infrastructure integration requirements (REQ-INFRA-*) are validated
+8. Global memory coordination functions correctly under pressure scenarios
+9. Health reporting and telemetry integration with Foundation Infrastructure services operates as expected
 
 ---
 
 **Document Prepared By:** ElixirScope Development Team  
-**Review Status:** Pending Technical Review  
+**Review Status:** Updated for Foundation Infrastructure Integration  
 **Implementation Start:** Upon PRD Approval 

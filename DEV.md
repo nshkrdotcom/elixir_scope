@@ -64,6 +64,13 @@ lib/elixir_scope/
 │   ├── events.ex                  # Event system
 │   ├── utils.ex                   # Core utilities
 │   ├── telemetry.ex               # Metrics and monitoring
+│   ├── infrastructure/            # Infrastructure protection patterns
+│   │   ├── circuit_breaker_wrapper.ex  # Circuit breaker (Fuse wrapper)
+│   │   ├── rate_limiter.ex        # Rate limiting (Hammer wrapper)
+│   │   ├── connection_manager.ex  # Connection pooling (Poolboy wrapper)
+│   │   ├── infrastructure.ex      # Unified infrastructure facade
+│   │   └── pool_workers/          # Poolboy worker implementations
+│   │       └── http_worker.ex     # Sample HTTP connection worker
 │   ├── core/                      # Core management
 │   └── distributed/               # Distributed coordination
 │

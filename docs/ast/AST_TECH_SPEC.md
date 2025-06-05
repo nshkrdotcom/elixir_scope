@@ -1,7 +1,7 @@
 # ElixirScope AST Layer Technical Specification
 
-**Version:** 1.0  
-**Date:** December 2024  
+**Version:** 1.1  
+**Date:** December 2024 (Updated May 2025)  
 **Layer:** AST Layer (Layer 2)  
 **Status:** Implementation Ready
 
@@ -25,13 +25,15 @@ The AST Layer operates as a high-performance static analysis engine that:
 - Provides sophisticated pattern matching and query capabilities
 - Maintains runtime correlation between static analysis and dynamic events
 - Supports real-time file watching and incremental updates
+- Integrates with Foundation Layer Infrastructure components for enhanced reliability and global resource coordination
 
 ### Core Design Principles
 1. **Performance-First**: O(1) lookups, O(log n) complex queries
-2. **Memory Efficiency**: Hierarchical caching with LRU eviction
+2. **Memory Efficiency**: Hierarchical caching with LRU eviction, coordinated with global memory management
 3. **Runtime Correlation**: Bidirectional mapping between static and dynamic data
 4. **Incremental Processing**: File-change driven updates
 5. **Type Safety**: Comprehensive Dialyzer specifications
+6. **Foundation Integration**: Leverages Foundation Infrastructure for resilience and monitoring
 
 ## Core Components
 
@@ -72,15 +74,21 @@ Extended repository with advanced analytics capabilities:
 - Historical analysis data retention
 
 #### Memory Manager (`memory_manager/`)
-Sophisticated memory management subsystem:
+Sophisticated memory management subsystem with Foundation Infrastructure coordination:
 
 ```elixir
 # cache_manager.ex - LRU cache with configurable size limits
-# monitor.ex - Memory pressure detection and alerting  
+# monitor.ex - Memory pressure detection, alerting, and Foundation coordination  
 # cleaner.ex - Garbage collection and cleanup strategies
 # compressor.ex - Data compression for cold storage
-# pressure_handler.ex - Dynamic memory pressure response
+# pressure_handler.ex - Dynamic memory pressure response with global signals
 ```
+
+**Foundation Infrastructure Integration:**
+- Reports AST-specific memory usage to `Foundation.Infrastructure.MemoryManager`
+- Subscribes to global memory pressure signals
+- Coordinates cleanup actions with system-wide memory management
+- Triggers aggressive cleanup when Foundation signals critical pressure
 
 #### Project Population (`project_population/`)
 Batch processing system for analyzing entire projects:
@@ -168,7 +176,7 @@ High-performance pattern analysis system with 9 specialized modules:
 
 ### 4. Query System (`lib/elixir_scope/ast/querying/`)
 
-SQL-like query interface for AST data:
+SQL-like query interface for AST data with Foundation Infrastructure protection:
 
 #### Query Executor (`executor.ex`)
 ```elixir
@@ -180,6 +188,7 @@ SQL-like query interface for AST data:
 # - ORDER BY with multiple fields
 # - LIMIT/OFFSET for pagination
 # - SELECT for field projection
+# - Rate limiting for resource-intensive queries via Foundation Infrastructure
 ```
 
 #### Query Components
@@ -191,6 +200,11 @@ SQL-like query interface for AST data:
 # types.ex - Query type definitions
 # supervisor.ex - Query process supervision
 ```
+
+**Foundation Infrastructure Protection:**
+- Complex queries may be protected by rate limiting via `Foundation.Infrastructure.RateLimiter`
+- Query timeout and circuit breaking for expensive operations
+- Performance metrics contributed to `Foundation.Infrastructure.PerformanceMonitor`
 
 ### 5. Data Models (`lib/elixir_scope/ast/data/`)
 
@@ -367,7 +381,30 @@ pattern_spec = %{
 alias ElixirScope.Storage.DataAccess          # ETS storage patterns
 alias ElixirScope.Utils                       # Utility functions
 alias ElixirScope.Foundation.Config           # Configuration management
+alias ElixirScope.Foundation.Events           # Event management
+alias ElixirScope.Foundation.Telemetry        # Telemetry services
 ```
+
+**Enhanced Foundation Layer Benefits:**
+- Foundation services (Config, Events, Telemetry) are now internally more robust due to Infrastructure components
+- Higher expected reliability for AST Layer interactions with Foundation services
+- Foundation services provide enhanced error types and resilience patterns
+
+### Foundation Infrastructure Integration
+
+```elixir
+# AST Layer coordinates with Foundation Infrastructure services:
+# - ElixirScope.Foundation.Infrastructure.MemoryManager (global memory coordination)
+# - ElixirScope.Foundation.Infrastructure.PerformanceMonitor (metrics contribution)
+# - ElixirScope.Foundation.Infrastructure.HealthAggregator (health reporting)
+# - ElixirScope.Foundation.Infrastructure.* (selective use for specific protection needs)
+```
+
+**Integration Patterns:**
+- **Health Reporting**: AST components implement standardized health checks consumed by `HealthAggregator`
+- **Memory Coordination**: AST Memory Manager reports usage and responds to global pressure signals
+- **Performance Telemetry**: Detailed metrics emitted for Foundation Infrastructure consumption
+- **Error Handling**: Enhanced to handle Foundation Infrastructure error types (circuit breaker open, rate limited, etc.)
 
 ### Runtime Layer Integration
 
@@ -396,6 +433,22 @@ alias ElixirScope.Foundation.Config           # Configuration management
 # Internal functions may raise for programming errors
 # Graceful degradation for memory pressure
 # Comprehensive logging for debugging
+# Enhanced error handling for Foundation Infrastructure error types:
+# - :circuit_breaker_open, :rate_limited, :pool_checkout_timeout
+# - Graceful degradation when Foundation services are protected
+```
+
+### Foundation Infrastructure Coordination
+```elixir
+# Health Check Implementation (for all major AST GenServers):
+@spec health_check() :: {:ok, %{status: :healthy | :degraded, details: map()}} | {:error, term()}
+
+# Memory Usage Reporting:
+@spec report_memory_usage() :: {:ok, %{ast_tables: non_neg_integer(), caches: non_neg_integer()}}
+
+# Performance Telemetry:
+# Emit events like [:elixir_scope, :ast, :parser, :parse_file_duration]
+# Include relevant metadata (file size, complexity, etc.)
 ```
 
 ### Testing Strategy
@@ -404,6 +457,8 @@ alias ElixirScope.Foundation.Config           # Configuration management
 # Property-based testing for pattern matching
 # Performance benchmarks for critical paths
 # Integration tests with Foundation Layer
+# Foundation Infrastructure coordination testing
+# Memory pressure response validation with global signals
 ```
 
 ### Configuration
@@ -412,14 +467,16 @@ alias ElixirScope.Foundation.Config           # Configuration management
 # Pattern matching timeout controls
 # Cache TTL and size limits
 # File watching debounce settings
+# Foundation Infrastructure coordination parameters
 ```
 
 ### Monitoring
 ```elixir
 # Repository statistics via get_statistics/1
 # Performance metrics collection
-# Memory pressure monitoring
+# Memory pressure monitoring (local and global)
 # Query performance tracking
+# Foundation Infrastructure coordination metrics
 ```
 
 ## File Structure
