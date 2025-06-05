@@ -1904,4 +1904,3 @@ end
 - **Issue Tracker**: [https://github.com/elixir-scope/elixir_scope/issues](https://github.com/elixir-scope/elixir_scope/issues)
 - **Documentation**: [https://hexdocs.pm/elixir_scope](https://hexdocs.pm/elixir_scope)
 - **Elixir Forum**: [https://elixirforum.com/c/elixir-scope](https://elixirforum.com/c/elixir-scope)
-- **Discord Channel**: Join the `#elixir-scope` channel on the Elixir Discord server.
