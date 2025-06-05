@@ -52,7 +52,7 @@ defmodule ElixirScope.Foundation.Infrastructure do
   require Logger
 
   alias ElixirScope.Foundation.Infrastructure.{CircuitBreaker, RateLimiter, ConnectionManager}
-  alias ElixirScope.Foundation.Services.{ConfigServer, TelemetryService}
+  alias ElixirScope.Foundation.Services.{TelemetryService}
   alias ElixirScope.Foundation.Types.Error
 
   @type protection_key :: atom()
@@ -70,6 +70,7 @@ defmodule ElixirScope.Foundation.Infrastructure do
   @type execution_result :: {:ok, term()} | {:error, term()}
 
   @default_timeout 5_000
+  @agent_name __MODULE__.ConfigAgent
 
   ## Public API
 
@@ -188,7 +189,7 @@ defmodule ElixirScope.Foundation.Infrastructure do
   @doc """
   Configures protection rules for a specific key.
 
-  Stores configuration in ConfigServer for runtime access and validation.
+  Stores configuration in internal state for runtime access and validation.
 
   ## Parameters
   - `protection_key` - Identifier for protection configuration
@@ -202,7 +203,13 @@ defmodule ElixirScope.Foundation.Infrastructure do
   def configure_protection(protection_key, config) do
     case validate_protection_config(config) do
       :ok ->
-        ConfigServer.update([:infrastructure_protection, protection_key], config)
+        # Ensure Agent is started
+        ensure_config_agent_started()
+
+        # Store in Agent instead of ConfigServer
+        Agent.update(@agent_name, fn state ->
+          Map.put(state, protection_key, config)
+        end)
 
         Logger.info("Configured protection for #{protection_key}")
         :ok
@@ -225,7 +232,16 @@ defmodule ElixirScope.Foundation.Infrastructure do
   """
   @spec get_protection_config(protection_key()) :: {:ok, any()} | {:error, any()}
   def get_protection_config(protection_key) do
-    ConfigServer.get([:infrastructure_protection, protection_key])
+    case ensure_config_agent_started() do
+      :ok ->
+        case Agent.get(@agent_name, fn state -> Map.get(state, protection_key) end) do
+          nil -> {:error, :not_found}
+          config -> {:ok, config}
+        end
+
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 
   @doc """
@@ -254,33 +270,36 @@ defmodule ElixirScope.Foundation.Infrastructure do
   @doc """
   Lists all configured protection keys.
 
-  Note: This is a simplified implementation that returns an empty list
-  until a more sophisticated configuration listing mechanism is implemented.
-
   ## Returns
   - `[protection_key]` - List of configured protection keys
   """
   @spec list_protection_keys() :: [protection_key()]
   def list_protection_keys do
-    try do
-      # Query ConfigServer for all infrastructure protection configurations
-      case ConfigServer.get([:infrastructure_protection]) do
-        {:ok, configs} when is_map(configs) ->
-          Map.keys(configs)
+    case ensure_config_agent_started() do
+      :ok ->
+        Agent.get(@agent_name, fn state -> Map.keys(state) end)
 
-        {:ok, _} ->
-          []
-
-        {:error, _} ->
-          []
-      end
-    rescue
-      _ ->
+      {:error, _} ->
         []
     end
   end
 
   ## Private Functions
+
+  @spec ensure_config_agent_started() :: :ok | {:error, term()}
+  defp ensure_config_agent_started do
+    case Process.whereis(@agent_name) do
+      nil ->
+        case Agent.start_link(fn -> %{} end, name: @agent_name) do
+          {:ok, _pid} -> :ok
+          {:error, {:already_started, _pid}} -> :ok
+          {:error, reason} -> {:error, reason}
+        end
+
+      _pid ->
+        :ok
+    end
+  end
 
   @spec check_rate_limit(protection_options()) :: {:ok, :allowed} | {:error, term()}
   defp check_rate_limit(options) do

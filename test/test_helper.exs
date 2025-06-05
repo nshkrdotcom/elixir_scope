@@ -10,8 +10,6 @@ ExUnit.configure(
   exclude: [
     # Exclude slow tests by default
     :slow,
-    # Exclude integration tests in unit test runs
-    :integration,
     # Exclude end-to-end tests in unit test runs
     :end_to_end,
     # Exclude AI tests (may require API keys)
