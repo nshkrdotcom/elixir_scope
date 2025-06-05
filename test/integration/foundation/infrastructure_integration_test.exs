@@ -99,6 +99,7 @@ defmodule ElixirScope.Foundation.Infrastructure.IntegrationTest do
                    CircuitBreaker.execute(breaker_name, fn ->
                      :should_not_execute
                    end)
+
         :ok ->
           # Circuit hasn't blown yet, that's also valid behavior
           :ok
@@ -135,8 +136,10 @@ defmodule ElixirScope.Foundation.Infrastructure.IntegrationTest do
       case response do
         {:ok, http_response} ->
           assert is_map(http_response)
+
         %{} = http_response ->
           assert is_map(http_response)
+
         _ ->
           # If response format is different, just check it's not nil
           assert response != nil
