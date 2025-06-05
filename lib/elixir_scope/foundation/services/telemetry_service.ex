@@ -231,6 +231,9 @@ defmodule ElixirScope.Foundation.Services.TelemetryService do
     # Execute any attached handlers
     execute_handlers(event_name, measurements, metadata, state.handlers)
 
+    # Also emit to standard telemetry system for external listeners
+    :telemetry.execute(event_name, measurements, metadata)
+
     {:noreply, new_state}
   end
 

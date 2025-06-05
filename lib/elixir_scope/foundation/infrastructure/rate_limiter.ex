@@ -53,78 +53,82 @@ defmodule ElixirScope.Foundation.Infrastructure.RateLimiter do
   @spec check_rate(entity_id(), operation(), rate_limit(), time_window(), map()) ::
           rate_check_result()
   def check_rate(entity_id, operation, limit, time_window_ms, metadata \\ %{}) do
-    key = build_rate_key(entity_id, operation)
+    case build_rate_key(entity_id, operation) do
+      {:error, error} ->
+        {:error, error}
 
-    try do
-      # Use Hammer with ETS backend for rate limiting
-      case HammerBackend.hit(key, time_window_ms, limit, 1) do
-        {:allow, count} ->
-          emit_telemetry(
-            :request_allowed,
-            Map.merge(metadata, %{
-              entity_id: entity_id,
-              operation: operation,
-              count: count,
-              limit: limit,
-              time_window_ms: time_window_ms
-            })
-          )
+      key ->
+        try do
+          # Use Hammer with ETS backend for rate limiting
+          case HammerBackend.hit(key, time_window_ms, limit, 1) do
+            {:allow, count} ->
+              emit_telemetry(
+                :request_allowed,
+                Map.merge(metadata, %{
+                  entity_id: entity_id,
+                  operation: operation,
+                  count: count,
+                  limit: limit,
+                  time_window_ms: time_window_ms
+                })
+              )
 
-          :ok
+              :ok
 
-        {:deny, _limit} ->
-          error =
-            Error.new(
-              code: 6001,
-              error_type: :rate_limit_exceeded,
-              message: "Rate limit exceeded for #{entity_id}:#{operation}",
-              severity: :medium,
-              context: %{
+            {:deny, _limit} ->
+              error =
+                Error.new(
+                  code: 6001,
+                  error_type: :rate_limit_exceeded,
+                  message: "Rate limit exceeded for #{entity_id}:#{operation}",
+                  severity: :medium,
+                  context: %{
+                    entity_id: entity_id,
+                    operation: operation,
+                    limit: limit,
+                    time_window_ms: time_window_ms
+                  },
+                  retry_strategy: :fixed_delay
+                )
+
+              emit_telemetry(
+                :request_denied,
+                Map.merge(metadata, %{
+                  entity_id: entity_id,
+                  operation: operation,
+                  limit: limit,
+                  time_window_ms: time_window_ms
+                })
+              )
+
+              {:error, error}
+          end
+        rescue
+          exception ->
+            error =
+              Error.new(
+                code: 6003,
+                error_type: :rate_limiter_exception,
+                message: "Exception in rate limiter: #{inspect(exception)}",
+                severity: :critical,
+                context: %{
+                  entity_id: entity_id,
+                  operation: operation,
+                  exception: exception
+                }
+              )
+
+            emit_telemetry(
+              :rate_limiter_exception,
+              Map.merge(metadata, %{
                 entity_id: entity_id,
                 operation: operation,
-                limit: limit,
-                time_window_ms: time_window_ms
-              },
-              retry_strategy: :fixed_delay
+                exception: exception
+              })
             )
 
-          emit_telemetry(
-            :request_denied,
-            Map.merge(metadata, %{
-              entity_id: entity_id,
-              operation: operation,
-              limit: limit,
-              time_window_ms: time_window_ms
-            })
-          )
-
-          {:error, error}
-      end
-    rescue
-      exception ->
-        error =
-          Error.new(
-            code: 6003,
-            error_type: :rate_limiter_exception,
-            message: "Exception in rate limiter: #{inspect(exception)}",
-            severity: :critical,
-            context: %{
-              entity_id: entity_id,
-              operation: operation,
-              exception: exception
-            }
-          )
-
-        emit_telemetry(
-          :rate_limiter_exception,
-          Map.merge(metadata, %{
-            entity_id: entity_id,
-            operation: operation,
-            exception: exception
-          })
-        )
-
-        {:error, error}
+            {:error, error}
+        end
     end
   end
 
@@ -267,9 +271,24 @@ defmodule ElixirScope.Foundation.Infrastructure.RateLimiter do
 
   # Private helper functions
 
-  @spec build_rate_key(entity_id(), operation()) :: String.t()
+  @spec build_rate_key(entity_id(), operation()) :: String.t() | {:error, Error.t()}
   defp build_rate_key(entity_id, operation) do
-    "elixir_scope:#{entity_id}:#{operation}"
+    try do
+      "elixir_scope:#{entity_id}:#{operation}"
+    rescue
+      Protocol.UndefinedError ->
+        {:error,
+         Error.new(
+           code: 6008,
+           error_type: :validation_failed,
+           message: "Invalid entity_id or operation type",
+           severity: :medium,
+           context: %{
+             entity_id: entity_id,
+             operation: operation
+           }
+         )}
+    end
   end
 
   @spec emit_telemetry(atom(), map()) :: :ok

@@ -123,20 +123,33 @@ defmodule ElixirScope.Foundation.Infrastructure.PoolWorkers.HttpWorker do
   def init(config) do
     merged_config = Keyword.merge(@default_config, config)
 
-    state = %{
-      base_url: Keyword.fetch!(merged_config, :base_url),
-      timeout: Keyword.get(merged_config, :timeout),
-      headers: Keyword.get(merged_config, :headers),
-      max_redirects: Keyword.get(merged_config, :max_redirects),
-      stats: %{
-        requests_made: 0,
-        last_request_at: nil,
-        errors: 0
-      }
-    }
+    case Keyword.get(merged_config, :base_url) do
+      nil ->
+        {:stop, {:invalid_config, :missing_base_url}}
 
-    Logger.debug("HTTP worker started for #{state.base_url}")
-    {:ok, state}
+      base_url ->
+        # Basic URL validation
+        case validate_base_url(base_url) do
+          :ok ->
+            state = %{
+              base_url: base_url,
+              timeout: Keyword.get(merged_config, :timeout),
+              headers: Keyword.get(merged_config, :headers),
+              max_redirects: Keyword.get(merged_config, :max_redirects),
+              stats: %{
+                requests_made: 0,
+                last_request_at: nil,
+                errors: 0
+              }
+            }
+
+            Logger.debug("HTTP worker started for #{state.base_url}")
+            {:ok, state}
+
+          {:error, reason} ->
+            {:stop, {:invalid_config, reason}}
+        end
+    end
   end
 
   @impl GenServer
@@ -166,6 +179,7 @@ defmodule ElixirScope.Foundation.Infrastructure.PoolWorkers.HttpWorker do
     status = %{
       base_url: state.base_url,
       timeout: state.timeout,
+      headers: state.headers,
       stats: state.stats,
       uptime: get_uptime()
     }
@@ -236,14 +250,40 @@ defmodule ElixirScope.Foundation.Infrastructure.PoolWorkers.HttpWorker do
           {:ok, map()} | {:error, term()}
   defp perform_request(method, url, body, headers, _options) do
     # This is a mock implementation - in real usage, you'd use HTTPoison, Finch, etc.
-    # For demonstration purposes, we'll simulate HTTP requests
+    # For demonstration purposes, we'll simulate HTTP requests with deterministic behavior
 
     # Simulate network latency
     Process.sleep(Enum.random(10..100))
 
-    case Enum.random(1..10) do
-      n when n <= 8 ->
-        # 80% success rate
+    # Deterministic responses based on URL patterns for testing
+    cond do
+      String.contains?(url, "/nonexistent") ->
+        # Return successful response with 404 status code
+        response = %{
+          status_code: 404,
+          headers: [{"content-type", "application/json"}],
+          body: %{
+            method: method,
+            url: url,
+            timestamp: DateTime.utc_now(),
+            headers: headers,
+            body: body
+          }
+        }
+
+        {:ok, response}
+
+      String.contains?(url, "invalid://") ->
+        {:error, :invalid_url}
+
+      String.contains?(url, "definitely-will-cause-error") ->
+        {:error, {:http_error, 404, "Not Found"}}
+
+      String.contains?(url, "invalid-network-request") ->
+        {:error, :timeout}
+
+      true ->
+        # Default success response
         response = %{
           status_code: 200,
           headers: [{"content-type", "application/json"}],
@@ -257,14 +297,6 @@ defmodule ElixirScope.Foundation.Infrastructure.PoolWorkers.HttpWorker do
         }
 
         {:ok, response}
-
-      9 ->
-        # 10% client errors
-        {:error, {:http_error, 404, "Not Found"}}
-
-      10 ->
-        # 10% network errors
-        {:error, :timeout}
     end
   end
 
@@ -282,6 +314,23 @@ defmodule ElixirScope.Foundation.Infrastructure.PoolWorkers.HttpWorker do
     }
 
     %{state | stats: new_stats}
+  end
+
+  @spec validate_base_url(String.t()) :: :ok | {:error, term()}
+  defp validate_base_url(base_url) do
+    cond do
+      is_nil(base_url) or base_url == "" ->
+        {:error, :empty_base_url}
+
+      not is_binary(base_url) ->
+        {:error, :invalid_base_url_type}
+
+      not String.starts_with?(base_url, ["http://", "https://"]) ->
+        {:error, :invalid_scheme}
+
+      true ->
+        :ok
+    end
   end
 
   @spec get_uptime() :: integer()

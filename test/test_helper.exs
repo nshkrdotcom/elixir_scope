@@ -33,7 +33,9 @@ ExUnit.configure(
     # Exclude regression tests
     :regression,
     # Exclude scenario tests
-    :scenario
+    :scenario,
+    # Exclude external HTTP tests (use mock implementation)
+    :external_http
   ],
   # 30 seconds timeout
   timeout: 30_000,

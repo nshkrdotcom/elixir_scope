@@ -129,7 +129,11 @@ defmodule ElixirScope.Foundation.Infrastructure.ConnectionManager do
   @spec with_connection(pool_name(), (pid() -> term()), timeout()) ::
           {:ok, term()} | {:error, term()}
   def with_connection(pool_name, fun, timeout \\ @default_checkout_timeout) do
-    GenServer.call(__MODULE__, {:with_connection, pool_name, fun, timeout})
+    # Add buffer to GenServer timeout to account for processing overhead
+    # But ensure it's reasonable - minimum 500ms buffer, maximum 2000ms buffer
+    buffer = min(max(trunc(timeout * 0.2), 500), 2000)
+    genserver_timeout = timeout + buffer
+    GenServer.call(__MODULE__, {:with_connection, pool_name, fun, timeout}, genserver_timeout)
   end
 
   @doc """
@@ -187,7 +191,7 @@ defmodule ElixirScope.Foundation.Infrastructure.ConnectionManager do
             }
 
             Logger.info("Started connection pool: #{pool_name}")
-            emit_telemetry(:pool_started, %{pool_name: pool_name}, %{config: config})
+            emit_telemetry(:pool_started, %{}, %{pool_name: pool_name, config: config})
 
             {:reply, {:ok, pool_pid}, new_state}
 
@@ -214,7 +218,7 @@ defmodule ElixirScope.Foundation.Infrastructure.ConnectionManager do
         }
 
         Logger.info("Stopped connection pool: #{pool_name}")
-        emit_telemetry(:pool_stopped, %{pool_name: pool_name}, %{})
+        emit_telemetry(:pool_stopped, %{}, %{pool_name: pool_name})
 
         {:reply, :ok, new_state}
     end
@@ -268,14 +272,57 @@ defmodule ElixirScope.Foundation.Infrastructure.ConnectionManager do
 
   @spec do_start_pool(pool_name(), pool_config()) :: {:ok, pid()} | {:error, term()}
   defp do_start_pool(pool_name, config) do
-    {poolboy_config, worker_args} = build_poolboy_config(pool_name, config)
+    # Validate configuration values
+    case validate_pool_config(config) do
+      :ok ->
+        # Validate worker module exists before attempting to start pool
+        worker_module = Keyword.get(config, :worker_module)
 
-    case :poolboy.start_link(poolboy_config, worker_args) do
-      {:ok, pid} -> {:ok, pid}
-      {:error, reason} -> {:error, reason}
+        case validate_worker_module(worker_module) do
+          :ok ->
+            {poolboy_config, worker_args} = build_poolboy_config(pool_name, config)
+
+            case :poolboy.start_link(poolboy_config, worker_args) do
+              {:ok, pid} -> {:ok, pid}
+              {:error, reason} -> {:error, reason}
+            end
+
+          {:error, reason} ->
+            {:error, reason}
+        end
+
+      {:error, reason} ->
+        {:error, reason}
     end
   rescue
     error -> {:error, error}
+  end
+
+  @spec validate_pool_config(pool_config()) :: :ok | {:error, term()}
+  defp validate_pool_config(config) do
+    merged_config = Keyword.merge(@default_config, config)
+
+    size = Keyword.get(merged_config, :size)
+    max_overflow = Keyword.get(merged_config, :max_overflow)
+
+    cond do
+      not is_integer(size) or size < 0 ->
+        {:error, {:invalid_config, :size, "Size must be a non-negative integer"}}
+
+      not is_integer(max_overflow) or max_overflow < 0 ->
+        {:error, {:invalid_config, :max_overflow, "Max overflow must be a non-negative integer"}}
+
+      true ->
+        :ok
+    end
+  end
+
+  @spec validate_worker_module(module()) :: :ok | {:error, term()}
+  defp validate_worker_module(worker_module) do
+    case Code.ensure_compiled(worker_module) do
+      {:module, _} -> :ok
+      _ -> {:error, {:invalid_worker_module, worker_module}}
+    end
   end
 
   @spec build_poolboy_config(pool_name(), pool_config()) :: {keyword(), keyword()}
@@ -303,20 +350,45 @@ defmodule ElixirScope.Foundation.Infrastructure.ConnectionManager do
     try do
       worker = :poolboy.checkout(pool_pid, true, timeout)
 
-      emit_telemetry(:checkout, %{pool_name: pool_name}, %{
-        checkout_time: System.monotonic_time() - start_time
-      })
+      emit_telemetry(
+        :checkout,
+        %{
+          checkout_time: System.monotonic_time() - start_time
+        },
+        %{pool_name: pool_name}
+      )
 
       try do
         result = fun.(worker)
         {:ok, result}
+      rescue
+        error ->
+          Logger.error("Function execution error in pool #{pool_name}: #{inspect(error)}")
+          {:error, error}
+      catch
+        :exit, reason ->
+          # If the worker process exits while we're calling it, treat it as a function result
+          # This allows the GenServer.call to return its response before the process exits
+          Logger.warning(
+            "Worker process exited during call in pool #{pool_name}: #{inspect(reason)}"
+          )
+
+          {:error, reason}
       after
         :poolboy.checkin(pool_pid, worker)
-        emit_telemetry(:checkin, %{pool_name: pool_name}, %{})
+        emit_telemetry(:checkin, %{}, %{pool_name: pool_name})
       end
     catch
+      :exit, {:timeout, {GenServer, :call, _}} ->
+        emit_telemetry(:timeout, %{timeout: timeout}, %{pool_name: pool_name})
+        {:error, :checkout_timeout}
+
       :exit, {:timeout, _} ->
-        emit_telemetry(:timeout, %{pool_name: pool_name}, %{timeout: timeout})
+        emit_telemetry(:timeout, %{timeout: timeout}, %{pool_name: pool_name})
+        {:error, :checkout_timeout}
+
+      :exit, {:noproc, _} ->
+        emit_telemetry(:timeout, %{timeout: timeout}, %{pool_name: pool_name})
         {:error, :checkout_timeout}
 
       :exit, reason ->

@@ -118,7 +118,9 @@ defmodule ElixirScope.Foundation.Infrastructure.CircuitBreaker do
       {:error, %Error{error_type: :circuit_breaker_blown}}
   """
   @spec execute(fuse_name(), operation(), map()) :: operation_result()
-  def execute(name, operation, metadata \\ %{}) when is_atom(name) and is_function(operation, 0) do
+  def execute(name, operation, metadata \\ %{})
+
+  def execute(name, operation, metadata) when is_atom(name) and is_function(operation, 0) do
     start_time = System.monotonic_time(:microsecond)
 
     try do
@@ -161,6 +163,33 @@ defmodule ElixirScope.Foundation.Infrastructure.CircuitBreaker do
                   duration: duration,
                   status: :failed,
                   exception: exception
+                })
+              )
+
+              {:error, error}
+          catch
+            kind, value ->
+              # Handle throw and exit
+              :fuse.melt(name)
+              duration = System.monotonic_time(:microsecond) - start_time
+
+              error =
+                Error.new(
+                  code: 5012,
+                  error_type: :protected_operation_failed,
+                  message: "Protected operation failed with #{kind}: #{inspect(value)}",
+                  severity: :medium,
+                  context: %{fuse_name: name, kind: kind, value: value}
+                )
+
+              emit_telemetry(
+                :call_executed,
+                Map.merge(metadata, %{
+                  name: name,
+                  duration: duration,
+                  status: :failed,
+                  kind: kind,
+                  value: value
                 })
               )
 
@@ -237,6 +266,31 @@ defmodule ElixirScope.Foundation.Infrastructure.CircuitBreaker do
     end
   end
 
+  def execute(name, operation, _metadata) do
+    {:error,
+     Error.new(
+       code: 5009,
+       error_type: :invalid_input,
+       message:
+         "Invalid circuit breaker inputs: name must be atom, operation must be 0-arity function",
+       severity: :medium,
+       context: %{
+         name: name,
+         operation_type: if(is_function(operation), do: :function, else: :not_function)
+       }
+     )}
+  rescue
+    _ ->
+      {:error,
+       Error.new(
+         code: 5010,
+         error_type: :invalid_input,
+         message: "Invalid circuit breaker inputs",
+         severity: :medium,
+         context: %{name: name, operation: operation}
+       )}
+  end
+
   @doc """
   Get the current status of a circuit breaker.
 
@@ -291,6 +345,17 @@ defmodule ElixirScope.Foundation.Infrastructure.CircuitBreaker do
 
         {:error, error}
     end
+  end
+
+  def get_status(name) do
+    {:error,
+     Error.new(
+       code: 5011,
+       error_type: :invalid_input,
+       message: "Invalid circuit breaker name: must be an atom",
+       severity: :medium,
+       context: %{name: name}
+     )}
   end
 
   @doc """
