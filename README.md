@@ -2,6 +2,12 @@
 
 ElixirScope is a unified AST-based debugging and code intelligence platform for Elixir applications. Built on a clean 8-layer architecture with Foundation as an external hex dependency for optimal modularity and deployment simplicity.
 
+[![CI](https://github.com/nshkrdotcom/elixir_scope/actions/workflows/elixir.yaml/badge.svg)](https://github.com/nshkrdotcom/elixir_sco
+pe/actions/workflows/elixir.yaml)
+[![Elixir](https://img.shields.io/badge/elixir-1.18.3-purple.svg)](https://elixir-lang.org)
+[![OTP](https://img.shields.io/badge/otp-27.3.3-blue.svg)](https://www.erlang.org)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 ## Architecture
 
 ElixirScope implements a clean 8-layer architecture built on top of the Foundation dependency:
