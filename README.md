@@ -5,6 +5,8 @@ ElixirScope is a unified AST-based debugging and code intelligence platform for 
 [![CI](https://github.com/nshkrdotcom/elixir_scope/actions/workflows/elixir.yaml/badge.svg)](https://github.com/nshkrdotcom/elixir_scope/actions/workflows/elixir.yaml)
 [![Elixir](https://img.shields.io/badge/elixir-1.18.3-purple.svg)](https://elixir-lang.org)
 [![OTP](https://img.shields.io/badge/otp-27.3.3-blue.svg)](https://www.erlang.org)
+[![Hex version badge](https://img.shields.io/hexpm/v/elixir_scope.svg)](https://hex.pm/packages/elixir_scope)
+[![Hexdocs badge](https://img.shields.io/badge/docs-hexdocs-purple)](https://hexdocs.pm/elixir_scope)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 ## Architecture
