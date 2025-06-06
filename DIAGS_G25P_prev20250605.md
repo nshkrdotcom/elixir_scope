@@ -3,7 +3,7 @@
 This diagram provides a high-level view of the entire 8-layer ElixirScope architecture, with Foundation as the base layer. It shows the components within each layer and their primary dependencies.
 
 ```mermaid
-graph TB
+graph LR
     subgraph "ElixirScope Unified Package"
         subgraph "Layer 8: Debugger Interface"
             DEBUG["Debugger Layer"]
@@ -48,7 +48,7 @@ graph TB
         end
         
         subgraph "Layer 3: Graph Algorithms"
-            GRAPH["Graph Layer - libgraph Hybrid"]
+            GRAPHG["Graph Layer - libgraph Hybrid"]
             CENTRALITY["Centrality Algorithms"]
             PATHFINDING["Pathfinding"]
             COMMUNITY["Community Detection"]
@@ -76,8 +76,8 @@ graph TB
     
     %% Layer Dependencies (bottom-up)
     FOUNDATION --> AST
-    AST --> GRAPH
-    GRAPH --> CPG
+    AST --> GRAPHG
+    GRAPHG --> CPG
     CPG --> ANALYSIS
     ANALYSIS --> CAPTURE
     ANALYSIS --> QUERY
@@ -93,7 +93,7 @@ graph TB
     
     %% Foundation integration (global access)
     CONFIG -.-> AST
-    CONFIG -.-> GRAPH
+    CONFIG -.-> GRAPHG
     CONFIG -.-> CPG
     CONFIG -.-> ANALYSIS
     CONFIG -.-> CAPTURE
@@ -102,7 +102,7 @@ graph TB
     CONFIG -.-> DEBUG
     
     TELEMETRY -.-> AST
-    TELEMETRY -.-> GRAPH
+    TELEMETRY -.-> GRAPHG
     TELEMETRY -.-> CPG
     TELEMETRY -.-> ANALYSIS
     TELEMETRY -.-> CAPTURE
@@ -112,7 +112,7 @@ graph TB
     
     classDef foundation fill:#e1f5fe,color:#000
     classDef ast fill:#f3e5f5,color:#000
-    classDef graph fill:#e8f5e8,color:#000
+    classDef graphg fill:#e8f5e8,color:#000
     classDef cpg fill:#fff3e0,color:#000
     classDef analysis fill:#fce4ec,color:#000
     classDef runtime fill:#f1f8e9,color:#000
@@ -121,7 +121,7 @@ graph TB
     
     class FOUNDATION,CONFIG,EVENTS,TELEMETRY,REGISTRY,PROTECTION foundation
     class AST,PARSER,REPOSITORY,MEMORY,PATTERNS_AST,QUERY_AST ast
-    class GRAPH,CENTRALITY,PATHFINDING,COMMUNITY,CONVERTERS graph
+    class GRAPHG,CENTRALITY,PATHFINDING,COMMUNITY,CONVERTERS graphg
     class CPG,BUILDER,CFG,DFG,CALLGRAPH,SEMANTIC cpg
     class ANALYSIS,PATTERNS,QUALITY,METRICS,RECOMMENDATIONS analysis
     class CAPTURE,QUERY,INSTR,CORRELATION,EXECUTOR,DSL runtime
@@ -134,7 +134,7 @@ graph TB
 This flowchart visualizes how data moves through the ElixirScope system, from input sources through the various processing pipelines to the final output interfaces.
 
 ```mermaid
-flowchart LR
+flowchart TD
     subgraph "Input Sources"
         SOURCE["Source Code"]
         RUNTIME_EVENTS["Runtime Events"]
@@ -218,6 +218,21 @@ flowchart LR
     CONFIG_DATA --> INSTRUMENT
     CONFIG_DATA --> QUERY_PARSE
     CONFIG_DATA --> AI_PROCESS
+    
+    %% Styling
+    classDef input fill:#fffde7,color:#000
+    classDef staticAnalysis fill:#f3e5f5,color:#000
+    classDef runtimeAnalysis fill:#f1f8e9,color:#000
+    classDef queryProcessing fill:#e8f5e8,color:#000
+    classDef intelligence fill:#e3f2fd,color:#000
+    classDef output fill:#f8f9fa,color:#000
+    
+    class SOURCE,RUNTIME_EVENTS,USER_QUERIES,CONFIG_DATA input
+    class PARSE,STORE,GRAPH_BUILD,CPG_BUILD,PATTERN_DETECT staticAnalysis
+    class INSTRUMENT,EVENT_CAPTURE,CORRELATE,TEMPORAL runtimeAnalysis
+    class QUERY_PARSE,QUERY_OPT,QUERY_EXEC,RESULT_FORMAT queryProcessing
+    class AI_PROCESS,INSIGHT_GEN,PREDICT,RECOMMEND intelligence
+    class DEBUG_UI,REPORTS,METRICS,ALERTS output
 ```
 
 ### 3. Foundation Layer API Architecture
@@ -293,7 +308,7 @@ graph TD
 This diagram breaks down the internal structure of the AST Layer (Layer 2), showing its main functional components, their interactions, and dependencies on the Foundation layer.
 
 ```mermaid
-graph TD
+graph LR
     subgraph "External Inputs & Consumers"
         direction TB
         subgraph "Input Sources"
@@ -345,25 +360,25 @@ graph TD
     FS --> Sync
     Parser --> Repo
     Sync --> Repo
-    MemMan -- "Manages" --> Repo
-    Repo -- "AST Data" --> PatternMatcher
-    Repo -- "AST Data" --> QueryEngine
-    Repo -- "AST Data" --> Transformer
-    DataStructs -- "Used by all components" -.-> Parser
+    MemMan --> Repo
+    Repo --> PatternMatcher
+    Repo --> QueryEngine
+    Repo --> Transformer
+    DataStructs -.-> Parser
     DataStructs -.-> Repo
     DataStructs -.-> PatternMatcher
     
     %% Integration with Foundation
-    Repo -- "Registers via" --> F_Registry
-    Parser -- "Emits Telemetry" --> F_Telemetry
-    MemMan -- "Emits Telemetry" --> F_Telemetry
-    QueryEngine -- "Uses Config" --> F_Config
-    Parser -- "Stores Events" --> F_Events
+    Repo --> F_Registry
+    Parser --> F_Telemetry
+    MemMan --> F_Telemetry
+    QueryEngine --> F_Config
+    Parser --> F_Events
 
     %% Integration with Upper Layers
-    Repo -- "Provides AST for" --> CPG_Layer
-    PatternMatcher -- "Provides patterns for" --> Analysis_Layer
-    QueryEngine -- "Executes queries for" --> Query_Layer
+    Repo --> CPG_Layer
+    PatternMatcher --> Analysis_Layer
+    QueryEngine --> Query_Layer
     
     %% Styling
     classDef ast fill:#f3e5f5,color:#000
@@ -388,7 +403,7 @@ graph TD
         Analysis["Analysis Layer (L5)"]
     end
 
-    subgraph "Graph Layer (Layer 3) - Hybrid Approach"
+    subgraph "Graph&nbsp;Layer&nbsp;(Layer&nbsp;3)&nbsp;Hybrid&nbsp;Approach"
         subgraph "Custom ElixirScope Logic"
             direction LR
             Converters["Converters (converters.ex)"]
@@ -402,7 +417,7 @@ graph TD
         end
     end
 
-    subgraph "External & Foundation Dependencies"
+    subgraph "External&nbsp;&&nbsp;Foundation&nbsp;Dependencies"
         direction LR
         Libgraph["libgraph (External Hex.pm Library)"]
         Foundation["Foundation Layer (L1)"]
@@ -421,11 +436,11 @@ graph TD
     FoundationIntegration -- "Calls" --> Foundation
 
     %% Styling
-    classDef graph fill:#e8f5e8,color:#000
+    classDef graphg fill:#e8f5e8,color:#000
     classDef consumer fill:#fff3e0,color:#000
     classDef dependency fill:#e1f5fe,color:#000
     
-    class Converters,CustomAlgos,CoreWrapper,FoundationIntegration graph
+    class Converters,CustomAlgos,CoreWrapper,FoundationIntegration graphg
     class CPG,Analysis consumer
     class Libgraph,Foundation dependency
 ```
@@ -598,7 +613,7 @@ This diagram visualizes the AI/Intelligence Layer, showing how the AI Orchestrat
 
 ```mermaid
 graph TD
-    subgraph "Lower Layers (Data Sources)"
+    subgraph "Lower&nbsp;Layers&nbsp;(Data&nbsp;Sources)"
         AST_Data["AST Layer (L2)<br/><i>Code Structure</i>"]
         CPG_Data["CPG Layer (L4)<br/><i>Semantic Relationships</i>"]
         Analysis_Data["Analysis Layer (L5)<br/><i>Detected Patterns</i>"]
@@ -700,29 +715,29 @@ This Gantt chart visualizes the 16-week implementation plan described in the doc
 ```mermaid
 gantt
     title ElixirScope Implementation Timeline
-    dateFormat W
-    axisFormat %W
+    dateFormat YYYY-MM-DD
+    axisFormat %m-%d
     
     section Phase 1: Foundation (Week 1)
-    Foundation Integration     :done, W1, 1w
-    Project & Test Setup       :done, W1, 1w
+    Foundation Integration     :done, 2025-06-15, 7d
+    Project & Test Setup       :done, 2025-06-15, 7d
     
     section Phase 2: Core Infrastructure (Weeks 2-6)
-    Graph Layer (Hybrid)       :active, W2, 1w
-    AST Layer (Core)           :W3, 2w
-    CPG Layer (Core)           :W5, 2w
+    Graph Layer (Hybrid)       :active, 2025-06-22, 7d
+    AST Layer (Core)           :2025-06-29, 14d
+    CPG Layer (Core)           :2025-07-13, 14d
     
     section Phase 3: Analysis & Processing (Weeks 7-10)
-    Analysis Layer             :W7, 2w
-    Capture Layer              :W8, 2w
-    Query Layer                :W10, 1w
+    Analysis Layer             :2025-07-27, 14d
+    Capture Layer              :2025-08-03, 14d
+    Query Layer                :2025-08-17, 7d
 
     section Phase 4: Intelligence & UI (Weeks 11-14)
-    Intelligence Layer (AI/ML) :W11, 2w
-    Debugger Layer             :W13, 2w
+    Intelligence Layer (AI/ML) :2025-08-24, 14d
+    Debugger Layer             :2025-09-07, 14d
     
     section Phase 5: Polish & Release (Weeks 15-16)
-    End-to-End Testing         :W15, 1w
-    Performance & Polish       :W15, 2w
-    Documentation & Release    :W16, 1w
+    End-to-End Testing         :2025-09-21, 7d
+    Performance & Polish       :2025-09-21, 14d
+    Documentation & Release    :2025-09-28, 7d
 ```
