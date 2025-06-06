@@ -1,594 +1,759 @@
-# DEV.md - ElixirScope Technical Development Guide
+# ElixirScope Technical Deep Dive
 
-> **Internal technical documentation for developers and AI assistants**  
-> This document contains architectural decisions, implementation details, and development context for ElixirScope.
+**Version:** 2.0  
+**Date:** June 5, 2025  
+**Status:** Unified Package Architecture - Technical Implementation Guide  
 
-## 🏗️ Architecture Deep Dive
+## Executive Summary
 
-### Layer Dependency Graph
+ElixirScope is a sophisticated AST-based debugging and code intelligence platform for Elixir applications. Built on a clean 8-layer architecture with Foundation as an external hex dependency, it provides comprehensive static code analysis, runtime correlation, and AI-powered insights. This document provides a detailed technical deep dive into the system architecture, implementation strategy, and layer interactions.
+
+## System Architecture Overview
 
 ```mermaid
-graph TD
-    D[Debugger] --> I[Intelligence]
-    D --> C[Capture]
-    D --> Q[Query]
+graph TB
+    subgraph "ElixirScope Unified Package"
+        subgraph "Layer 8: Debugger Interface"
+            DEBUG[Debugger Layer]
+            SESSIONS[Session Management]
+            BREAKPOINTS[Breakpoint Manager]
+            TIMETRAVEL[Time Travel Engine]
+            VISUALIZATION[Visualization Engine]
+        end
+        
+        subgraph "Layer 7: Intelligence/AI"
+            INTEL[Intelligence Layer]
+            LLM[LLM Integration]
+            INSIGHTS[Insight Generator]
+            PREDICTIONS[Prediction Engine]
+            ORCHESTRATOR[AI Orchestrator]
+        end
+        
+        subgraph "Layer 6: Runtime & Query"
+            CAPTURE[Capture Layer]
+            QUERY[Query Layer]
+            INSTR[Instrumentation]
+            CORRELATION[Event Correlation]
+            EXECUTOR[Query Executor]
+            DSL[Query DSL]
+        end
+        
+        subgraph "Layer 5: Analysis"
+            ANALYSIS[Analysis Layer]
+            PATTERNS[Pattern Detection]
+            QUALITY[Quality Assessment]
+            METRICS[Metrics Calculation]
+            RECOMMENDATIONS[Recommendations]
+        end
+        
+        subgraph "Layer 4: Code Property Graph"
+            CPG[CPG Layer]
+            BUILDER[CPG Builder]
+            CFG[Control Flow Graph]
+            DFG[Data Flow Graph]
+            CALLGRAPH[Call Graph]
+            SEMANTIC[Semantic Analysis]
+        end
+        
+        subgraph "Layer 3: Graph Algorithms"
+            GRAPH[Graph Layer - libgraph Hybrid]
+            CENTRALITY[Centrality Algorithms]
+            PATHFINDING[Pathfinding]
+            COMMUNITY[Community Detection]
+            CONVERTERS[Data Converters]
+        end
+        
+        subgraph "Layer 2: AST Operations"
+            AST[AST Layer]
+            PARSER[AST Parser]
+            REPOSITORY[AST Repository]
+            MEMORY[Memory Manager]
+            PATTERNS_AST[Pattern Matcher]
+            QUERY_AST[AST Query Engine]
+        end
+    end
     
-    I --> A[Analysis]
-    I --> Q
+    subgraph "Layer 1: Foundation (External Dependency)"
+        FOUNDATION[Foundation Layer]
+        CONFIG[Config Server]
+        EVENTS[Event Store]
+        TELEMETRY[Telemetry Service]
+        REGISTRY[Process Registry]
+        PROTECTION[Infrastructure Protection]
+    end
     
-    C --> AS[AST]
-    Q --> AS
-    Q --> A
+    %% Layer Dependencies (bottom-up)
+    FOUNDATION --> AST
+    AST --> GRAPH
+    GRAPH --> CPG
+    CPG --> ANALYSIS
+    ANALYSIS --> CAPTURE
+    ANALYSIS --> QUERY
+    CAPTURE --> INTEL
+    QUERY --> INTEL
+    INTEL --> DEBUG
     
-    A --> CPG[CPG]
+    %% Cross-layer integrations
+    AST -.-> CPG
+    CPG -.-> QUERY
+    CAPTURE -.-> DEBUG
+    ANALYSIS -.-> INTEL
     
-    CPG --> G[Graph]
-    CPG --> AS
+    %% Foundation integration (global access)
+    CONFIG -.-> AST
+    CONFIG -.-> GRAPH
+    CONFIG -.-> CPG
+    CONFIG -.-> ANALYSIS
+    CONFIG -.-> CAPTURE
+    CONFIG -.-> QUERY
+    CONFIG -.-> INTEL
+    CONFIG -.-> DEBUG
     
-    G --> F[Foundation]
-    AS --> F
+    TELEMETRY -.-> AST
+    TELEMETRY -.-> GRAPH
+    TELEMETRY -.-> CPG
+    TELEMETRY -.-> ANALYSIS
+    TELEMETRY -.-> CAPTURE
+    TELEMETRY -.-> QUERY
+    TELEMETRY -.-> INTEL
+    TELEMETRY -.-> DEBUG
     
-    F[Foundation: Utils, Events, Config, Telemetry]
+    classDef foundation fill:#e1f5fe
+    classDef ast fill:#f3e5f5
+    classDef graph fill:#e8f5e8
+    classDef cpg fill:#fff3e0
+    classDef analysis fill:#fce4ec
+    classDef runtime fill:#f1f8e9
+    classDef intelligence fill:#e3f2fd
+    classDef debugger fill:#f8f9fa
+    
+    class FOUNDATION,CONFIG,EVENTS,TELEMETRY,REGISTRY,PROTECTION foundation
+    class AST,PARSER,REPOSITORY,MEMORY,PATTERNS_AST,QUERY_AST ast
+    class GRAPH,CENTRALITY,PATHFINDING,COMMUNITY,CONVERTERS graph
+    class CPG,BUILDER,CFG,DFG,CALLGRAPH,SEMANTIC cpg
+    class ANALYSIS,PATTERNS,QUALITY,METRICS,RECOMMENDATIONS analysis
+    class CAPTURE,QUERY,INSTR,CORRELATION,EXECUTOR,DSL runtime
+    class INTEL,LLM,INSIGHTS,PREDICTIONS,ORCHESTRATOR intelligence
+    class DEBUG,SESSIONS,BREAKPOINTS,TIMETRAVEL,VISUALIZATION debugger
 ```
 
-### Critical Design Decisions
+## Data Flow Architecture
 
-#### 1. **Why 9 Layers Instead of Microservices?**
-- **Single Process Space**: Enables efficient data sharing between components
-- **Elixir OTP**: Leverages supervisor trees for fault tolerance within single application
-- **Performance**: Eliminates network overhead between closely coupled components
-- **Development**: Simpler development and testing compared to distributed system
-- **Memory Sharing**: CPG and AST data can be shared efficiently between layers
-
-#### 2. **Graph Layer Separation from CPG**
-- **Reusability**: Graph algorithms can be used independently
-- **Testing**: Mathematical graph operations can be tested in isolation
-- **Performance**: Pure functions without side effects enable better optimization
-- **Academic Compliance**: Follows computer science separation of concerns
-
-#### 3. **Intelligence Layer Above Analysis**
-- **Data Flow**: Analysis provides structured data that Intelligence enhances
-- **AI Provider Abstraction**: Multiple AI providers can enhance any analysis results
-- **Caching**: Analysis results can be cached and enhanced on-demand
-- **Optional Enhancement**: Core analysis works without AI providers
-
-## 📁 Directory Structure & File Organization
-
-### Current Structure After Migration
-
-```
-lib/elixir_scope/
-├── foundation/                     # Layer 1: Core Infrastructure
-│   ├── application.ex             # OTP Application
-│   ├── config.ex                  # Configuration management
-│   ├── events.ex                  # Event system
-│   ├── utils.ex                   # Core utilities
-│   ├── telemetry.ex               # Metrics and monitoring
-│   ├── infrastructure/            # Infrastructure protection patterns
-│   │   ├── circuit_breaker_wrapper.ex  # Circuit breaker (Fuse wrapper)
-│   │   ├── rate_limiter.ex        # Rate limiting (Hammer wrapper)
-│   │   ├── connection_manager.ex  # Connection pooling (Poolboy wrapper)
-│   │   ├── infrastructure.ex      # Unified infrastructure facade
-│   │   └── pool_workers/          # Poolboy worker implementations
-│   │       └── http_worker.ex     # Sample HTTP connection worker
-│   ├── core/                      # Core management
-│   └── distributed/               # Distributed coordination
-│
-├── ast/                           # Layer 2: AST Operations
-│   ├── parser.ex                  # Main AST parser
-│   ├── repository/                # AST storage and retrieval
-│   │   ├── core.ex               # Core repository
-│   │   └── enhanced.ex           # Enhanced repository features
-│   ├── data/                      # AST data structures
-│   │   ├── function_data.ex      # Function metadata
-│   │   ├── module_data.ex        # Module metadata
-│   │   └── module_analysis/      # Module analysis components
-│   ├── memory_manager/            # Memory optimization
-│   ├── performance_optimizer/     # AST performance optimization
-│   ├── pattern_matcher/           # AST pattern matching
-│   ├── query_builder/             # AST querying
-│   ├── enhanced/                  # Enhanced AST features
-│   ├── compiler/                  # AST transformation (old ast/)
-│   └── compile_time/              # Compile-time orchestration
-│
-├── graph/                         # Layer 3: Graph Algorithms
-│   ├── algorithms/                # Pure mathematical algorithms
-│   │   ├── centrality.ex         # Centrality measures
-│   │   ├── pathfinding.ex        # Path algorithms
-│   │   ├── connectivity.ex       # Connectivity analysis
-│   │   ├── community.ex          # Community detection
-│   │   ├── advanced_centrality.ex # Advanced centrality
-│   │   ├── temporal_analysis.ex  # Temporal graph analysis
-│   │   └── machine_learning.ex   # ML on graphs
-│   ├── data_structures.ex         # Graph data structures
-│   ├── utils.ex                   # Graph utilities
-│   └── math.ex                    # Graph mathematics
-│
-├── cpg/                           # Layer 4: Code Property Graph
-│   ├── builder.ex                 # Main CPG builder
-│   ├── builder/                   # CPG construction components
-│   │   ├── cfg.ex                # Control Flow Graph
-│   │   ├── dfg.ex                # Data Flow Graph
-│   │   ├── call_graph.ex         # Call Graph
-│   │   ├── core/                 # CPG builder core (old cpg_builder/)
-│   │   ├── cfg/                  # CFG components (old cfg_generator/)
-│   │   ├── dfg/                  # DFG components (old dfg_generator/)
-│   │   ├── project_populator.ex  # Project population
-│   │   └── project_analysis/     # Project analysis (old project_populator/)
-│   ├── data/                      # CPG data structures
-│   │   ├── cpg_data.ex           # Main CPG data
-│   │   ├── cfg_data.ex           # CFG data
-│   │   ├── dfg_data.ex           # DFG data
-│   │   ├── variable_data.ex      # Variable data
-│   │   ├── shared_structures.ex  # Shared data structures
-│   │   └── supporting_structures.ex # Supporting structures
-│   ├── semantics.ex               # Semantic analysis
-│   ├── optimization.ex            # CPG optimization
-│   ├── analysis/                  # CPG analysis
-│   │   └── complexity_metrics.ex # Complexity analysis
-│   ├── synchronizer.ex            # CPG synchronization
-│   ├── file_watcher.ex            # File watching
-│   └── enhanced/                  # Enhanced CPG features
-│
-├── analysis/                      # Layer 5: Architectural Analysis
-│   ├── patterns/                  # Pattern detection
-│   │   ├── smells.ex             # Architectural smells
-│   │   ├── design.ex             # Design patterns
-│   │   ├── anti_patterns.ex      # Anti-patterns
-│   │   ├── elixir_specific.ex    # Elixir-specific patterns
-│   │   └── otp_patterns.ex       # OTP patterns
-│   ├── quality.ex                 # Quality assessment
-│   ├── metrics.ex                 # Metrics calculation
-│   ├── recommendations.ex         # Improvement recommendations
-│   ├── architectural.ex           # Architectural analysis
-│   ├── performance.ex             # Performance analysis
-│   └── security.ex                # Security analysis
-│
-├── query/                         # Layer 6: Advanced Querying
-│   ├── builder.ex                 # Query builder
-│   ├── executor.ex                # Query executor
-│   ├── optimizer.ex               # Query optimizer
-│   ├── extensions/                # Query extensions
-│   │   ├── cpg.ex                # CPG queries
-│   │   ├── analysis.ex           # Analysis queries
-│   │   ├── temporal.ex           # Temporal queries
-│   │   ├── ml_queries.ex         # ML-powered queries
-│   │   ├── pattern_queries.ex    # Pattern queries
-│   │   └── security_queries.ex   # Security queries
-│   ├── dsl.ex                     # Query DSL
-│   ├── cache.ex                   # Query caching
-│   └── legacy/                    # Legacy query engine (old query/)
-│
-├── capture/                       # Layer 7: Runtime Capture
-│   ├── instrumentation.ex         # Main instrumentation
-│   ├── correlation.ex             # Event correlation
-│   ├── storage.ex                 # Event storage
-│   ├── ingestors.ex               # Data ingestors
-│   ├── temporal.ex                # Temporal event handling
-│   ├── runtime/                   # Runtime capture (old capture/)
-│   ├── correlation/               # Correlation components
-│   │   ├── runtime_correlator.ex # Runtime correlator
-│   │   └── runtime/              # Runtime correlation (old runtime_correlator/)
-│   ├── storage/                   # Storage components (old storage/)
-│   └── enhanced/                  # Enhanced capture features
-│
-├── intelligence/                  # Layer 8: AI/ML Integration
-│   ├── ai/                        # AI integration (old ai/)
-│   │   ├── llm/                  # LLM integration
-│   │   │   ├── client.ex         # LLM client
-│   │   │   ├── provider.ex       # Provider interface
-│   │   │   ├── response.ex       # Response structure
-│   │   │   ├── config.ex         # LLM configuration
-│   │   │   └── providers/        # LLM providers
-│   │   │       ├── mock.ex       # Mock provider
-│   │   │       ├── openai.ex     # OpenAI provider
-│   │   │       ├── anthropic.ex  # Anthropic provider
-│   │   │       └── gemini.ex     # Gemini provider
-│   │   ├── ml.ex                 # ML integration
-│   │   └── providers.ex          # AI providers
-│   ├── features.ex                # Feature extraction
-│   ├── models/                    # ML models
-│   │   ├── complexity_predictor.ex # Complexity prediction
-│   │   ├── bug_predictor.ex      # Bug prediction
-│   │   └── performance_predictor.ex # Performance prediction
-│   ├── insights.ex                # Insight generation
-│   ├── predictions.ex             # Prediction engine
-│   └── orchestration.ex           # AI orchestration
-│
-├── debugger/                      # Layer 9: Debugging Interface
-│   ├── core.ex                    # Core debugging
-│   ├── interface.ex               # User interface
-│   ├── session.ex                 # Debug sessions
-│   ├── breakpoints.ex             # Breakpoint management
-│   ├── time_travel.ex             # Time-travel debugging
-│   ├── visualization.ex           # Execution visualization
-│   ├── ai_assistant.ex            # AI debugging assistant
-│   └── enhanced/                  # Enhanced debugging
-│       ├── session.ex            # Enhanced sessions
-│       ├── breakpoints.ex        # Enhanced breakpoints
-│       ├── visualization.ex      # Enhanced visualization
-│       └── instrumentation/      # Enhanced instrumentation (old capture/enhanced_instrumentation/)
-│
-├── integration/                   # Cross-layer integration
-│   ├── ast_cpg.ex                # AST-CPG integration
-│   ├── cpg_analysis.ex           # CPG-Analysis integration
-│   ├── analysis_intelligence.ex  # Analysis-Intelligence integration
-│   ├── capture_debugger.ex       # Capture-Debugger integration
-│   └── phoenix/                  # Phoenix integration (old phoenix/)
-│
-├── shared/                        # Shared utilities
-│   ├── types.ex                  # Common types
-│   ├── protocols.ex              # Shared protocols
-│   ├── behaviours.ex             # Shared behaviours
-│   └── constants.ex              # Constants
-│
-├── testing/                       # Testing utilities
-│   ├── helpers.ex                # Test helpers
-│   ├── fixtures.ex               # Test fixtures
-│   └── mocks.ex                  # Test mocks
-│
-├── migration_helpers.ex           # Migration compatibility
-├── layer_integration.ex           # Layer coordination
-└── [layer].ex                    # Main layer modules (foundation.ex, ast.ex, etc.)
+```mermaid
+flowchart LR
+    subgraph "Input Sources"
+        SOURCE[Source Code]
+        RUNTIME_EVENTS[Runtime Events]
+        USER_QUERIES[User Queries]
+        CONFIG_DATA[Configuration]
+    end
+    
+    subgraph "Processing Pipeline"
+        subgraph "Static Analysis"
+            PARSE[AST Parsing]
+            STORE[AST Storage]
+            GRAPH_BUILD[Graph Construction]
+            CPG_BUILD[CPG Construction]
+            PATTERN_DETECT[Pattern Detection]
+        end
+        
+        subgraph "Runtime Analysis"
+            INSTRUMENT[Instrumentation]
+            EVENT_CAPTURE[Event Capture]
+            CORRELATE[Runtime Correlation]
+            TEMPORAL[Temporal Analysis]
+        end
+        
+        subgraph "Query Processing"
+            QUERY_PARSE[Query Parsing]
+            QUERY_OPT[Query Optimization]
+            QUERY_EXEC[Query Execution]
+            RESULT_FORMAT[Result Formatting]
+        end
+        
+        subgraph "Intelligence"
+            AI_PROCESS[AI Processing]
+            INSIGHT_GEN[Insight Generation]
+            PREDICT[Prediction Engine]
+            RECOMMEND[Recommendations]
+        end
+    end
+    
+    subgraph "Output Interfaces"
+        DEBUG_UI[Debug Interface]
+        REPORTS[Analysis Reports]
+        METRICS[Metrics Dashboard]
+        ALERTS[Smart Alerts]
+    end
+    
+    %% Static analysis flow
+    SOURCE --> PARSE
+    PARSE --> STORE
+    STORE --> GRAPH_BUILD
+    GRAPH_BUILD --> CPG_BUILD
+    CPG_BUILD --> PATTERN_DETECT
+    
+    %% Runtime analysis flow
+    RUNTIME_EVENTS --> INSTRUMENT
+    INSTRUMENT --> EVENT_CAPTURE
+    EVENT_CAPTURE --> CORRELATE
+    CORRELATE --> TEMPORAL
+    
+    %% Query processing flow
+    USER_QUERIES --> QUERY_PARSE
+    QUERY_PARSE --> QUERY_OPT
+    QUERY_OPT --> QUERY_EXEC
+    QUERY_EXEC --> RESULT_FORMAT
+    
+    %% Intelligence flow
+    PATTERN_DETECT --> AI_PROCESS
+    TEMPORAL --> AI_PROCESS
+    RESULT_FORMAT --> AI_PROCESS
+    AI_PROCESS --> INSIGHT_GEN
+    INSIGHT_GEN --> PREDICT
+    PREDICT --> RECOMMEND
+    
+    %% Output generation
+    RECOMMEND --> DEBUG_UI
+    RECOMMEND --> REPORTS
+    TEMPORAL --> METRICS
+    INSIGHT_GEN --> ALERTS
+    
+    %% Cross-cutting concerns
+    CONFIG_DATA --> PARSE
+    CONFIG_DATA --> INSTRUMENT
+    CONFIG_DATA --> QUERY_PARSE
+    CONFIG_DATA --> AI_PROCESS
 ```
 
-## 🔧 Technical Implementation Details
+## Layer-by-Layer Technical Analysis
 
-### Module Naming Conventions
+### Layer 1: Foundation (External Dependency)
 
+**Role**: Enterprise-grade OTP infrastructure providing core services for all upper layers.
+
+**Key Components**:
+- **ConfigServer**: Dynamic configuration with hot-reload capabilities
+- **EventStore**: High-performance event sourcing with CQRS patterns
+- **TelemetryService**: Comprehensive metrics collection and monitoring
+- **ProcessRegistry**: Service discovery with namespace isolation
+- **Infrastructure Protection**: Circuit breakers, rate limiting, connection pooling
+
+**Technical Details**:
 ```elixir
-# Layer modules follow this pattern:
-ElixirScope.[Layer].[Component].[SubComponent]
-
-# Examples:
-ElixirScope.Foundation.Utils
-ElixirScope.AST.Repository.Enhanced
-ElixirScope.Graph.Algorithms.Centrality
-ElixirScope.CPG.Builder.CFG
-ElixirScope.Analysis.Patterns.Smells
-ElixirScope.Query.Extensions.CPG
-ElixirScope.Capture.Runtime.Instrumentation
-ElixirScope.Intelligence.AI.LLM.Client
-ElixirScope.Debugger.Enhanced.Session
+# Global access pattern - no direct dependencies needed
+Foundation.ProcessRegistry.whereis(:elixir_scope_registry)
+Foundation.EventStore.query(event_criteria)
+Foundation.TelemetryService.emit_counter([:ast, :parsing, :completed])
+Foundation.ConfigServer.get([:graph, :algorithms, :pagerank, :max_iterations])
 ```
 
-### Data Flow Architecture
+**Integration Strategy**: All upper layers access Foundation services via global names, ensuring loose coupling while providing robust infrastructure capabilities.
 
+### Layer 2: AST Operations (Core Intelligence Hub)
+
+**Role**: Central intelligence engine providing deep static code analysis through AST manipulation and pattern matching.
+
+**Implementation Scope**: 70 files, 16,000 LOC (30% of total system complexity)
+
+**Key Modules**:
+- **Repository Core**: ETS-based AST storage with memory pressure handling
+- **Enhanced Repository**: Advanced querying and cross-referencing capabilities  
+- **Pattern Matcher**: 9-module sophisticated pattern detection engine
+- **Memory Manager**: Intelligent memory pressure response and optimization
+- **Query Engine**: SQL-like DSL for AST queries with optimization
+
+**Technical Architecture**:
 ```elixir
-# Typical analysis workflow:
-Source Code 
-  → AST.Parser 
-  → AST.Repository 
-  → CPG.Builder 
-  → Analysis.Patterns 
-  → Intelligence.AI 
-  → Debugger.Interface
+# Core repository operations
+ElixirScope.AST.Repository.store_module(module_data)
+ElixirScope.AST.Repository.get_module(module_name)
+ElixirScope.AST.Repository.query_functions(pattern_spec)
 
-# Runtime correlation workflow:
-Runtime Events 
-  → Capture.Instrumentation 
-  → Capture.Correlation 
-  → Analysis.Performance 
-  → Intelligence.Insights 
-  → Debugger.TimeTravel
+# Pattern matching capabilities
+ElixirScope.AST.PatternMatcher.detect_patterns(ast_context)
+ElixirScope.AST.PatternMatcher.analyze_complexity(function_ast)
+
+# Query engine
+query = ElixirScope.AST.Query.new()
+        |> from(:functions)
+        |> where(arity: 2, visibility: :public)
+        |> select([:name, :module, :complexity])
+        |> limit(100)
+
+{:ok, results} = ElixirScope.AST.Query.execute(query)
 ```
 
-### Critical Dependencies
+**Critical Integration Points**:
+- **CPG Layer**: Bidirectional mapping between AST nodes and CPG elements
+- **Query Layer**: Provides foundation for cross-layer querying
+- **Capture Layer**: Runtime correlation requires AST context mapping
+- **Analysis Layer**: Pattern detection builds on AST pattern matching
 
-#### External Dependencies
+**Performance Characteristics**:
+- Target: Parse 10,000 modules in <2 minutes
+- Memory efficiency: <2GB for large projects with pressure handling
+- Query performance: 95% of queries execute in <100ms
+
+### Layer 3: Graph Algorithms (Hybrid libgraph Approach)
+
+**Role**: Mathematical graph operations and algorithms used by higher layers for code analysis.
+
+**Strategic Decision**: Hybrid approach using libgraph as foundation + custom code-specific extensions.
+
+**Implementation Benefits**:
+- **70% faster implementation** vs. building from scratch
+- **Lower bug risk** with battle-tested algorithms
+- **Production ready** algorithms (Dijkstra, A*, centrality, SCC)
+- **Foundation integration** via wrapper layer
+
+**Key Components**:
 ```elixir
-# Required for core functionality
-{:jason, "~> 1.4"},           # JSON parsing
-{:ets, "~> 0.9"},             # Enhanced ETS operations
-{:libgraph, "~> 0.16"},       # Graph data structures
+# libgraph integration with Foundation telemetry
+ElixirScope.Graph.Core.shortest_path_with_telemetry(graph, source, target)
+ElixirScope.Graph.Core.centrality_with_config(graph, :betweenness)
 
-# AI/ML dependencies
-{:req, "~> 0.4"},             # HTTP client for AI APIs
-{:nx, "~> 0.6"},              # Numerical computing
-{:explorer, "~> 0.7"},        # Data analysis
+# Custom code analysis algorithms
+ElixirScope.Graph.Algorithms.CodeCentrality.dependency_importance/1
+ElixirScope.Graph.Algorithms.DependencyAnalysis.circular_dependencies/1
+ElixirScope.Graph.Algorithms.ModuleClustering.cohesive_modules/2
 
-# Optional dependencies
-{:phoenix, "~> 1.7", optional: true},     # Phoenix integration
-{:ecto, "~> 3.10", optional: true},       # Database integration
-{:telemetry, "~> 1.2"},                   # Metrics
+# Data converters for ElixirScope types
+ElixirScope.Graph.Converters.ast_to_dependency_graph(ast_data)
+ElixirScope.Graph.Converters.cpg_to_analysis_graph(cpg_data)
 ```
 
-#### Internal Dependencies (Layer Order)
+**Module Structure**:
+```
+lib/elixir_scope/graph/
+├── core.ex                     # libgraph integration wrapper
+├── foundation_integration.ex   # Telemetry & configuration wrappers  
+├── algorithms/
+│   ├── code_centrality.ex      # AST-specific centrality measures
+│   ├── dependency_analysis.ex  # Code dependency pathfinding
+│   ├── module_clustering.ex    # Module community detection
+│   └── temporal_analysis.ex    # Code evolution analysis
+├── converters.ex               # AST/CPG to libgraph conversion
+└── utils.ex                    # Helper functions and validation
+```
+
+**Integration Points**:
+- **CPG Layer**: Dependency analysis and critical path identification
+- **Analysis Layer**: Centrality measures for architectural insights
+- **Intelligence Layer**: Graph neural networks for ML analysis
+
+### Layer 4: Code Property Graph (Analysis Foundation)
+
+**Role**: Multi-graph integration combining AST, CFG, DFG, and Call Graphs for semantic analysis.
+
+**Implementation Scope**: 80 files, 14,000 LOC (26% of total system complexity)
+
+**Key Components**:
+- **CPG Builder**: Constructs unified graph from multiple source graphs
+- **Control Flow Graph (CFG)**: Models execution flow through functions
+- **Data Flow Graph (DFG)**: Tracks variable definitions and usages
+- **Call Graph**: Maps function call relationships
+- **Semantic Analysis**: Deep code understanding and relationship mapping
+- **Incremental Updates**: Efficient CPG updates for code changes
+
+**Technical Architecture**:
 ```elixir
-# Each layer can only depend on lower layers
-debugger: [:intelligence, :capture, :query, :analysis, :cpg, :graph, :ast, :foundation]
-intelligence: [:query, :analysis, :cpg, :graph, :ast, :foundation]
-capture: [:ast, :foundation]
-query: [:analysis, :ast, :foundation]
-analysis: [:cpg, :graph, :ast, :foundation]
-cpg: [:graph, :ast, :foundation]
-graph: [:foundation]
-ast: [:foundation]
-foundation: []
+# CPG construction from AST
+{:ok, cpg} = ElixirScope.CPG.Builder.build_from_ast(ast_repository)
+
+# Query control flow patterns
+control_flows = ElixirScope.CPG.Analysis.query_control_flow(cpg, %{
+  pattern: :conditional_nesting,
+  max_depth: 5
+})
+
+# Analyze data flow for variables
+data_flows = ElixirScope.CPG.Analysis.analyze_data_flow(cpg, [:user_input])
+
+# Cross-reference analysis
+call_patterns = ElixirScope.CPG.Analysis.analyze_call_patterns(cpg, %{
+  recursive: true,
+  indirect: true
+})
 ```
 
-## 🧪 Testing Strategy Deep Dive
+**Integration Patterns**:
+- **AST Integration**: `ElixirScope.Integration.ASTtoCPG.build_cpg(ast_repository)`
+- **Graph Integration**: Uses graph algorithms for dependency analysis
+- **Analysis Integration**: Provides rich semantic context for pattern detection
 
-### Test Organization
+### Layer 5: Analysis (Pattern Detection & Quality Assessment)
 
-```
-test/
-├── unit/                          # Layer isolation tests
-│   ├── foundation/               # Foundation layer tests
-│   ├── ast/                      # AST layer tests
-│   ├── graph/                    # Graph algorithm tests
-│   ├── cpg/                      # CPG construction tests
-│   ├── analysis/                 # Analysis layer tests
-│   ├── query/                    # Query engine tests
-│   ├── capture/                  # Capture layer tests
-│   ├── intelligence/             # Intelligence layer tests
-│   └── debugger/                 # Debugger layer tests
-│
-├── functional/                    # Feature-level tests
-│   ├── ast_parsing/              # End-to-end parsing tests
-│   ├── cpg_construction/         # CPG building workflows
-│   ├── pattern_detection/        # Pattern detection workflows
-│   ├── ai_integration/           # AI integration workflows
-│   └── debugging_workflow/       # Debugging feature tests
-│
-├── integration/                   # Cross-layer tests
-│   ├── ast_cpg/                  # AST → CPG integration
-│   ├── cpg_analysis/             # CPG → Analysis integration
-│   ├── analysis_intelligence/    # Analysis → Intelligence integration
-│   └── capture_debugger/         # Capture → Debugger integration
-│
-├── end_to_end/                    # Complete workflow tests
-│   ├── phoenix_project_analysis/ # Phoenix app analysis
-│   ├── genserver_debugging/      # GenServer debugging
-│   ├── otp_supervision_analysis/ # OTP analysis
-│   └── ai_assisted_debugging/    # AI debugging workflows
-│
-├── performance/                   # Performance validation
-│   ├── benchmarks/               # Algorithm benchmarks
-│   ├── memory_usage/             # Memory profiling
-│   ├── scalability/              # Scalability tests
-│   └── regression_tests/         # Performance regression
-│
-├── property/                      # Property-based testing
-│   ├── graph_algorithms/         # Graph algorithm properties
-│   ├── cpg_construction/         # CPG construction invariants
-│   └── data_transformations/     # Data transformation properties
-│
-├── contract/                      # API contract tests
-│   ├── layer_apis/               # Layer interface contracts
-│   ├── external_apis/            # External API contracts
-│   └── protocol_compliance/      # Protocol implementation tests
-│
-├── fixtures/                      # Test data
-│   ├── sample_projects/          # Sample Elixir projects
-│   ├── ast_data/                 # Pre-generated AST data
-│   ├── cpg_data/                 # Pre-generated CPG data
-│   └── ai_responses/             # Mock AI responses
-│
-├── mocks/                         # Mock implementations
-│   ├── ai_providers/             # AI provider mocks
-│   ├── external_services/        # External service mocks
-│   └── instrumentation/          # Instrumentation mocks
-│
-├── support/                       # Test utilities
-│   ├── helpers/                  # Test helper functions
-│   ├── generators/               # Data generators
-│   ├── assertions/               # Custom assertions
-│   └── setup/                    # Test environment setup
-│
-└── scenarios/                     # Real-world scenarios
-    ├── debugging_workflows/      # Realistic debugging scenarios
-    ├── code_analysis_workflows/  # Code analysis scenarios
-    └── performance_optimization/ # Performance optimization scenarios
-```
+**Role**: Architectural analysis, pattern detection, and code quality assessment.
 
-### Test Tags and Execution
+**Implementation Scope**: 38 files, 3,600 LOC
 
-```bash
-# Test execution patterns
-mix test                          # Unit tests only (fast)
-mix test --include integration    # Include integration tests
-mix test --include end_to_end     # Include E2E tests
-mix test --include slow           # Include slow tests
-mix test --include ai             # Include AI-dependent tests
-mix test --include capture        # Include capture tests
-mix test --include phoenix        # Include Phoenix tests
+**Key Components**:
+- **Pattern Detection**: Design patterns, anti-patterns, code smells
+- **Quality Assessment**: Code quality metrics and recommendations  
+- **Security Analysis**: Vulnerability detection and security patterns
+- **Performance Analysis**: Bottleneck identification and optimization suggestions
+- **Architectural Analysis**: Module cohesion and coupling analysis
 
-# Performance testing
-mix test --include benchmark      # Benchmark tests
-mix test --include memory         # Memory usage tests
-mix test --include stress         # Stress tests
-
-# Property testing
-mix test --include property       # Property-based tests
-
-# Contract testing
-mix test --include contract       # API contract tests
-
-# Scenario testing
-mix test --include scenario       # Real-world scenarios
-```
-
-## 🔀 Migration Context
-
-### Original → New Structure Mapping
-
+**Technical Capabilities**:
 ```elixir
-# Critical migrations that occurred:
-"ElixirScope.ASTRepository.Enhanced.CPGMath" 
-  → "ElixirScope.Graph.Algorithms"
+# Pattern detection across multiple analysis types
+patterns = ElixirScope.Analysis.Patterns.detect_all(cpg, %{
+  architectural: [:god_module, :feature_envy, :circular_dependencies],
+  security: [:injection_vulnerabilities, :unsafe_deserialization],
+  performance: [:n_plus_one_queries, :inefficient_loops]
+})
 
-"ElixirScope.ASTRepository.Enhanced.CPGBuilder" 
-  → "ElixirScope.CPG.Builder"
+# Quality assessment with recommendations
+quality = ElixirScope.Analysis.Quality.assess_codebase(ast_repository, %{
+  metrics: [:complexity, :maintainability, :test_coverage],
+  thresholds: %{complexity: 10, maintainability: 80}
+})
 
-"ElixirScope.ASTRepository.Enhanced.CPGSemantics" 
-  → "ElixirScope.CPG.Semantics"
-
-"ElixirScope.AI" 
-  → "ElixirScope.Intelligence.AI"
-
-"ElixirScope.Capture" 
-  → "ElixirScope.Capture.Runtime"
-
-"ElixirScope.Query.Engine" 
-  → "ElixirScope.Query.Legacy"
+# Architectural insights using graph analysis
+architecture = ElixirScope.Analysis.Architectural.analyze_structure(cpg, %{
+  modules: :all,
+  coupling_analysis: true,
+  layering_violations: true
+})
 ```
 
-### Files That Need Manual Extraction
-
-1. **Graph Algorithms from CPG Code**
-   ```
-   Source: cpg/builder/core/core.ex
-   Extract: Centrality calculations, pathfinding, community detection
-   Target: graph/algorithms/
-   ```
-
-2. **Semantic Analysis from CPG Builder**
-   ```
-   Source: cpg/builder/core/
-   Extract: Semantic analysis logic
-   Target: cpg/semantics.ex
-   ```
-
-3. **Optimization Logic from Various Files**
-   ```
-   Source: Multiple CPG files
-   Extract: Optimization algorithms
-   Target: cpg/optimization.ex
-   ```
-
-### Post-Migration Tasks Status
-
-```bash
-# Completed:
-✅ Directory structure created
-✅ Files moved to new locations
-✅ Integration modules created
-✅ Test structure created
-✅ Missing AI files created
-
-# TODO:
-⏳ Update module namespace references
-⏳ Extract graph algorithms from CPG code
-⏳ Implement missing semantic analysis modules
-⏳ Update import/alias statements
-⏳ Test compilation and fix errors
-⏳ Run comprehensive test suite
-```
-
-## 💡 Development Tips
-
-### Adding New Features
-
-1. **Identify the appropriate layer** based on functionality
-2. **Follow naming conventions** for modules and files
-3. **Add tests at multiple levels** (unit, functional, integration)
-4. **Update documentation** including this DEV.md
-5. **Consider performance implications** and add benchmarks if needed
-
-### Debugging Layer Integration
-
+**Integration with Graph Layer**:
 ```elixir
-# Use the layer integration module for debugging:
-ElixirScope.LayerIntegration.initialize_layers()
-
-# Check layer dependencies:
-ElixirScope.LayerIntegration.validate_dependencies()
-
-# Test cross-layer workflows:
-ElixirScope.LayerIntegration.full_analysis_workflow(some_module)
+# Uses graph algorithms for architectural insights
+defmodule ElixirScope.Analysis.Architectural do
+  alias ElixirScope.Graph.Algorithms.{Community, Connectivity}
+  
+  def detect_module_clusters(module_graph) do
+    communities = Community.detect_communities(module_graph, resolution: 1.2)
+    inter_cluster_connections = analyze_connectivity(communities, module_graph)
+    %{clusters: communities, connections: inter_cluster_connections}
+  end
+end
 ```
 
-### Performance Monitoring
+### Layer 6a: Capture (Runtime Correlation)
 
+**Role**: Runtime instrumentation, event capture, and correlation with static analysis.
+
+**Implementation Scope**: 50 files, 10,700 LOC (20% of total system complexity)
+
+**Key Components**:
+- **Instrumentation Core**: Non-intrusive runtime instrumentation
+- **Event Correlation**: Links runtime events to static AST context
+- **Temporal Storage**: Time-series storage for debugging and analysis
+- **Multiple Ingestors**: Support for GenServer, Phoenix, Ecto patterns
+
+**Technical Architecture**:
 ```elixir
-# Built-in performance monitoring:
-ElixirScope.Foundation.Telemetry.start_monitoring()
+# Runtime instrumentation with correlation
+ElixirScope.Capture.Instrumentation.instrument_module(MyModule, %{
+  functions: :all,
+  correlation_id: generate_correlation_id(),
+  metadata: %{session_id: session_id}
+})
 
-# Memory usage tracking:
-ElixirScope.AST.MemoryManager.get_usage_stats()
+# Event correlation with AST context
+correlation = ElixirScope.Integration.CaptureCorrelation.correlate_runtime_event(
+  runtime_event, 
+  ast_context
+)
 
-# Query performance:
-ElixirScope.Query.Cache.get_performance_stats()
+# Temporal analysis for debugging
+timeline = ElixirScope.Capture.Temporal.build_execution_timeline(%{
+  correlation_id: correlation_id,
+  time_range: {start_time, end_time}
+})
 ```
 
-## 🚨 Known Issues & Gotchas
+**Critical Integration**:
+- **AST Layer**: Requires AST context for accurate correlation
+- **Debugger Layer**: Provides foundation for time-travel debugging
+- **Intelligence Layer**: Runtime patterns inform AI insights
 
-### 1. Module Loading Order
-- Foundation must be loaded first
-- Some modules have circular dependency potential
-- Use `ElixirScope.LayerIntegration.initialize_layers/1` for proper startup
+### Layer 6b: Query (Advanced Querying System)
 
-### 2. Memory Management
-- AST data can grow large for big projects
-- Use `ElixirScope.AST.MemoryManager` for cleanup
-- Monitor memory usage in production
+**Role**: Unified querying interface across all layers with SQL-like DSL.
 
-### 3. AI Provider Rate Limits
-- Implement exponential backoff
-- Use mock providers for testing
-- Cache AI responses when possible
+**Implementation Scope**: 13 files, 1,800 LOC
 
-### 4. Graph Algorithm Performance
-- Large graphs (>10k nodes) may be slow
-- Consider sampling for very large codebases
-- Use incremental analysis when possible
+**Key Components**:
+- **Query Builder**: SQL-like DSL for complex queries
+- **Query Optimizer**: Performance optimization and execution planning
+- **Query Executor**: Multi-layer query execution engine
+- **Extension Framework**: Custom query extensions and functions
 
-### 5. Test Environment Setup
-- AI tests require API keys or mocks
-- Capture tests may require instrumentation setup
-- Phoenix tests need Phoenix app context
-
-## 🔍 Debugging ElixirScope Itself
-
-### Common Debug Scenarios
-
+**Technical Capabilities**:
 ```elixir
-# Debug AST parsing issues:
-ElixirScope.AST.Parser.debug_parse("path/to/file.ex")
+# Cross-layer unified queries
+query = ElixirScope.Query.Builder.new()
+        |> from(:modules, layer: :ast)
+        |> join(:call_graph, layer: :cpg, on: :module_name)
+        |> join(:runtime_metrics, layer: :capture, on: :function_signature)
+        |> where([complexity: {:gt, 10}, call_frequency: {:gt, 100}])
+        |> select([:name, :complexity, :call_frequency, :performance_impact])
+        |> order_by(:performance_impact, :desc)
+        |> limit(50)
 
-# Debug CPG construction:
-ElixirScope.CPG.Builder.debug_build(ast_data, verbose: true)
+{:ok, results} = ElixirScope.Query.execute(query)
 
-# Debug AI integration:
-ElixirScope.Intelligence.AI.LLM.Client.debug_call(provider, prompt)
+# Advanced query with AI insights
+ai_query = ElixirScope.Query.Builder.new()
+           |> from(:patterns, layer: :analysis)
+           |> where(pattern_type: :performance_antipattern)
+           |> ai_enhance(:refactoring_suggestions)
+           |> ai_enhance(:impact_prediction)
 
-# Debug query execution:
-ElixirScope.Query.Executor.debug_execute(query, trace: true)
+{:ok, enhanced_results} = ElixirScope.Query.execute_with_ai(ai_query)
 ```
 
-### Logging Configuration
+### Layer 7: Intelligence (AI/ML Integration)
 
+**Role**: AI/ML integration for insights, predictions, and intelligent analysis.
+
+**Implementation Scope**: 22 files, 5,400 LOC
+
+**Key Components**:
+- **LLM Integration**: Multiple LLM providers (OpenAI, Gemini, Vertex AI)
+- **Feature Extraction**: Code features for ML models
+- **Insight Generation**: AI-powered code insights and explanations
+- **Prediction Engine**: Predictive analysis for refactoring and maintenance
+- **Orchestration**: Multi-layer AI analysis coordination
+
+**Technical Architecture**:
 ```elixir
-# Development logging configuration:
-config :logger, level: :debug
+# Multi-layer AI analysis orchestration
+analysis = ElixirScope.Intelligence.Orchestration.analyze_codebase(%{
+  layers: [:ast, :cpg, :analysis, :capture],
+  ai_models: [:gpt4, :claude3, :gemini_pro],
+  analysis_types: [:code_quality, :refactoring_opportunities, :performance_insights]
+})
 
-config :elixir_scope, :logging,
-  ast_parsing: :debug,
-  cpg_construction: :info,
-  graph_algorithms: :info,
-  ai_integration: :debug,
-  query_execution: :debug
+# LLM-powered code insights
+insights = ElixirScope.Intelligence.LLM.generate_insights(%{
+  code_context: ast_context,
+  runtime_data: capture_data,
+  analysis_results: analysis_results,
+  prompt_template: :comprehensive_analysis
+})
+
+# Predictive refactoring suggestions
+predictions = ElixirScope.Intelligence.Prediction.predict_refactoring_candidates(%{
+  codebase: ast_repository,
+  historical_changes: git_history,
+  quality_metrics: quality_analysis
+})
 ```
 
-## 📚 Additional Resources
+**AI Model Integration**:
+```elixir
+# Multi-provider LLM support
+defmodule ElixirScope.Intelligence.LLM do
+  def configure_providers(%{
+    openai: %{api_key: openai_key, model: "gpt-4"},
+    google: %{api_key: google_key, model: "gemini-pro"},
+    anthropic: %{api_key: anthropic_key, model: "claude-3-opus"}
+  })
+end
+```
 
-### Academic References
-- "Static Program Analysis" by Møller & Schwartzbach
-- "Code Property Graphs for Program Analysis" by Yamaguchi et al.
-- "Graph Algorithms" by Sedgewick & Wayne
+### Layer 8: Debugger (Complete Interface)
 
-### Elixir/OTP Resources
-- "Designing for Scalability with Erlang/OTP" by Cesarini & Thompson
-- "Elixir in Action" by Šašo Jurić
-- "The Little Elixir & OTP Guidebook" by Benjamin Tan Wei Hao
+**Role**: Comprehensive debugging interface with time-travel capabilities.
 
-### AI/ML Integration
-- OpenAI API Documentation
-- Anthropic Claude API Documentation
-- "Hands-On Machine Learning" by Aurélien Géron
+**Implementation Scope**: 18 files, 1,600 LOC
+
+**Key Components**:
+- **Session Management**: Debug session lifecycle and state management
+- **Breakpoint Manager**: Advanced breakpoint management with conditions
+- **Time Travel Engine**: Historical state reconstruction and replay
+- **Visualization Engine**: Code flow and state visualization
+- **AI Assistant**: AI-powered debugging assistance
+
+**Technical Capabilities**:
+```elixir
+# Time-travel debugging with AI assistance
+{:ok, session} = ElixirScope.Debugger.SessionManager.create_session(%{
+  target_module: MyModule,
+  correlation_id: correlation_id,
+  ai_assistance: true
+})
+
+# Set intelligent breakpoints
+breakpoint = ElixirScope.Debugger.BreakpointManager.set_conditional_breakpoint(%{
+  location: {MyModule, :my_function, 2},
+  condition: "param1 > 100 and runtime_metrics.call_frequency > 50",
+  ai_context: true
+})
+
+# Time-travel to specific execution point
+{:ok, historical_state} = ElixirScope.Debugger.TimeTravelEngine.goto_timestamp(%{
+  session_id: session.id,
+  timestamp: event_timestamp,
+  reconstruction_mode: :full_context
+})
+
+# AI-powered debugging suggestions
+suggestions = ElixirScope.Debugger.AIAssistant.analyze_execution_context(%{
+  current_state: historical_state,
+  execution_history: execution_timeline,
+  code_context: ast_context
+})
+```
+
+## Cross-Layer Integration Patterns
+
+### AST ↔ CPG Integration
+```elixir
+# Bidirectional mapping and incremental updates
+ElixirScope.Integration.ASTtoCPG.build_cpg(ast_repository)
+ElixirScope.Integration.ASTtoCPG.update_cpg_incremental(ast_changes, existing_cpg)
+```
+
+### Capture ↔ AST Correlation
+```elixir
+# Runtime event correlation with static context
+ElixirScope.Integration.CaptureCorrelation.correlate_runtime_event(
+  runtime_event, 
+  ast_context
+)
+```
+
+### Intelligence ↔ Multi-Layer
+```elixir
+# AI orchestration across multiple layers
+ElixirScope.Intelligence.Orchestration.analyze_codebase(%{
+  layers: [:ast, :cpg, :analysis, :capture],
+  ai_enhancement: true,
+  cross_layer_insights: true
+})
+```
+
+## Implementation Timeline & Priorities
+
+### Phase 1: Foundation Integration (Week 1)
+- ✅ **Complete**: Foundation integration validated
+- ✅ **Complete**: Project structure established
+- ✅ **Complete**: Testing framework implemented
+
+### Phase 2: Core Infrastructure (Weeks 2-6)
+
+#### Week 2: Graph Layer (HYBRID APPROACH - PRIORITY 1)
+- **Status**: ✅ **IMPLEMENTED** (libgraph integration complete)
+- **Scope**: 11 files, 506 LOC
+- **Strategy**: libgraph + custom code analysis extensions
+- **Benefits**: 70% faster implementation, battle-tested algorithms
+
+#### Weeks 3-4: AST Layer (PRIORITY 2)
+- **Status**: 🚧 **SKELETON READY**
+- **Scope**: 70 files, 16,000 LOC (30% of total complexity)
+- **Focus**: Central intelligence hub, core repository, pattern matching
+
+#### Weeks 5-6: CPG Layer (PRIORITY 3)
+- **Status**: 🚧 **SKELETON READY**
+- **Scope**: 80 files, 14,000 LOC (26% of total complexity)
+- **Focus**: Multi-graph integration, semantic analysis
+
+### Phase 3: Analysis & Processing (Weeks 7-10)
+- **Analysis Layer**: Pattern detection, quality assessment
+- **Query Layer**: SQL-like DSL, cross-layer queries
+- **Capture Layer**: Runtime instrumentation, event correlation
+
+### Phase 4: Intelligence & Integration (Weeks 11-14)
+- **Intelligence Layer**: AI/ML integration, LLM providers
+- **Debugger Layer**: Time-travel debugging, AI assistance
+
+### Phase 5: Integration & Polish (Weeks 15-16)
+- End-to-end testing, performance optimization
+- Documentation completion, production readiness
+
+## Performance Targets & Metrics
+
+### System-Wide Performance Goals
+- **Parse Performance**: 10,000 modules in <2 minutes
+- **Query Performance**: 95% of queries execute in <100ms
+- **Memory Efficiency**: <2GB memory usage for large projects
+- **Concurrent Operations**: Support 50+ concurrent operations
+- **Uptime Target**: >99.9% availability in production
+
+### Layer-Specific Metrics
+- **AST Layer**: Repository operations <10ms, pattern matching <50ms
+- **Graph Layer**: Centrality calculations <100ms for 1000-node graphs
+- **CPG Layer**: Incremental updates <200ms for single module changes
+- **Query Layer**: Cross-layer queries <500ms with result caching
+- **Intelligence Layer**: AI insights generation <2s per analysis
+
+### Quality Metrics
+- **Test Coverage**: >95% across all layers
+- **Dialyzer**: Zero errors with strict configuration
+- **Credo**: <100ms response time for typical operations
+- **Documentation**: 100% public API documentation coverage
+
+## Technology Stack & Dependencies
+
+### Core Dependencies
+```elixir
+# Foundation infrastructure (external)
+{:foundation, "~> 0.1.0"}
+
+# Graph algorithms (hybrid approach)
+{:libgraph, "~> 0.16"}
+
+# Development & Quality Assurance
+{:mox, "~> 1.2"},
+{:stream_data, "~> 1.1"},
+{:credo, "~> 1.7"},
+{:dialyxir, "~> 1.4"},
+{:excoveralls, "~> 0.18"}
+```
+
+### Architecture Benefits
+- **Single Dependency**: `{:elixir_scope, "~> 0.1.0"}`
+- **Atomic Deployments**: All layers versioned together
+- **Direct Integration**: Function calls vs. message passing
+- **Shared Memory**: Efficient ETS table and cache sharing
+- **Foundation Services**: Enterprise-grade OTP infrastructure
+
+## Risk Mitigation & Success Factors
+
+### Technical Risks
+1. **Complexity Management**: 54k LOC across 302 files
+   - **Mitigation**: Phased implementation with validation gates
+   - **Strategy**: Comprehensive test coverage (>95% target)
+
+2. **Performance Bottlenecks**: AST layer as central hub
+   - **Mitigation**: Horizontal scaling design, intelligent caching
+   - **Strategy**: Async processing, Foundation Infrastructure integration
+
+3. **Memory Pressure**: Large codebase analysis
+   - **Mitigation**: Graduated memory pressure response
+   - **Strategy**: Lazy loading, data compression for cold storage
+
+4. **Integration Complexity**: 124 cross-layer dependencies
+   - **Mitigation**: Clear interface contracts, dependency injection
+   - **Strategy**: Comprehensive integration testing
+
+### Success Metrics
+- **Developer Experience**: Single dependency installation
+- **Performance**: Target metrics achieved consistently  
+- **Quality**: >95% test coverage, zero Dialyzer errors
+- **Community**: Active adoption and contribution
+
+## Conclusion
+
+ElixirScope represents a sophisticated, enterprise-grade code intelligence platform that balances architectural complexity with practical implementation strategies. The unified package approach with Foundation as an external dependency provides optimal simplicity while maintaining clean layer separation.
+
+The hybrid libgraph approach for the Graph layer exemplifies the strategic decision-making that prioritizes rapid, reliable implementation over custom development. This pattern of leveraging proven libraries while adding domain-specific extensions is applied throughout the system.
+
+The comprehensive 8-layer architecture enables powerful capabilities including:
+- **Deep Static Analysis**: AST-based pattern detection and quality assessment
+- **Runtime Correlation**: Linking runtime behavior to static code structure  
+- **AI-Powered Insights**: LLM integration for intelligent code analysis
+- **Time-Travel Debugging**: Historical state reconstruction with AI assistance
+- **Unified Querying**: SQL-like interface across all system layers
+
+With Foundation providing enterprise-grade infrastructure and the upper 8 layers implementing domain-specific intelligence, ElixirScope delivers a complete code intelligence platform that is both powerful and maintainable.
 
 ---
 
-**Last Updated**: May 2025
-**Maintainer**: ElixirScope Development Team
+**Implementation Ready**: All layers have skeleton implementations with clear interface contracts. The system is ready for incremental development following the established 16-week roadmap, starting with the Graph layer (already complete) and progressing through AST and CPG layers as the foundational components.
