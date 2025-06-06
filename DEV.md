@@ -11,7 +11,7 @@ ElixirScope is a sophisticated AST-based debugging and code intelligence platfor
 ## System Architecture Overview
 
 ```mermaid
-graph TB
+graph LR
     subgraph "ElixirScope Unified Package"
         subgraph "Layer 8: Debugger Interface"
             DEBUG[Debugger Layer]
@@ -56,7 +56,7 @@ graph TB
         end
         
         subgraph "Layer 3: Graph Algorithms"
-            GRAPH[Graph Layer - libgraph Hybrid]
+            GRAPHG[Graph Layer - libgraph Hybrid]
             CENTRALITY[Centrality Algorithms]
             PATHFINDING[Pathfinding]
             COMMUNITY[Community Detection]
@@ -84,8 +84,8 @@ graph TB
     
     %% Layer Dependencies (bottom-up)
     FOUNDATION --> AST
-    AST --> GRAPH
-    GRAPH --> CPG
+    AST --> GRAPHG
+    GRAPHG --> CPG
     CPG --> ANALYSIS
     ANALYSIS --> CAPTURE
     ANALYSIS --> QUERY
@@ -101,7 +101,7 @@ graph TB
     
     %% Foundation integration (global access)
     CONFIG -.-> AST
-    CONFIG -.-> GRAPH
+    CONFIG -.-> GRAPHG
     CONFIG -.-> CPG
     CONFIG -.-> ANALYSIS
     CONFIG -.-> CAPTURE
@@ -110,7 +110,7 @@ graph TB
     CONFIG -.-> DEBUG
     
     TELEMETRY -.-> AST
-    TELEMETRY -.-> GRAPH
+    TELEMETRY -.-> GRAPHG
     TELEMETRY -.-> CPG
     TELEMETRY -.-> ANALYSIS
     TELEMETRY -.-> CAPTURE
@@ -118,18 +118,18 @@ graph TB
     TELEMETRY -.-> INTEL
     TELEMETRY -.-> DEBUG
     
-    classDef foundation fill:#e1f5fe
-    classDef ast fill:#f3e5f5
-    classDef graph fill:#e8f5e8
-    classDef cpg fill:#fff3e0
-    classDef analysis fill:#fce4ec
-    classDef runtime fill:#f1f8e9
-    classDef intelligence fill:#e3f2fd
-    classDef debugger fill:#f8f9fa
+    classDef foundation fill:#e1f5fe,color:#000
+    classDef ast fill:#f3e5f5,color:#000
+    classDef graphg fill:#e8f5e8,color:#000
+    classDef cpg fill:#fff3e0,color:#000
+    classDef analysis fill:#fce4ec,color:#000
+    classDef runtime fill:#f1f8e9,color:#000
+    classDef intelligence fill:#e3f2fd,color:#000
+    classDef debugger fill:#f8f9fa,color:#000
     
     class FOUNDATION,CONFIG,EVENTS,TELEMETRY,REGISTRY,PROTECTION foundation
     class AST,PARSER,REPOSITORY,MEMORY,PATTERNS_AST,QUERY_AST ast
-    class GRAPH,CENTRALITY,PATHFINDING,COMMUNITY,CONVERTERS graph
+    class GRAPHG,CENTRALITY,PATHFINDING,COMMUNITY,CONVERTERS graphg
     class CPG,BUILDER,CFG,DFG,CALLGRAPH,SEMANTIC cpg
     class ANALYSIS,PATTERNS,QUALITY,METRICS,RECOMMENDATIONS analysis
     class CAPTURE,QUERY,INSTR,CORRELATION,EXECUTOR,DSL runtime
@@ -140,7 +140,7 @@ graph TB
 ## Data Flow Architecture
 
 ```mermaid
-flowchart LR
+flowchart TD
     subgraph "Input Sources"
         SOURCE[Source Code]
         RUNTIME_EVENTS[Runtime Events]
@@ -224,6 +224,29 @@ flowchart LR
     CONFIG_DATA --> INSTRUMENT
     CONFIG_DATA --> QUERY_PARSE
     CONFIG_DATA --> AI_PROCESS
+    
+    classDef foundation fill:#e1f5fe,color:#000
+    classDef ast fill:#f3e5f5,color:#000
+    classDef graphg fill:#e8f5e8,color:#000
+    classDef cpg fill:#fff3e0,color:#000
+    classDef analysis fill:#fce4ec,color:#000
+    classDef runtime fill:#f1f8e9,color:#000
+    classDef intelligence fill:#e3f2fd,color:#000
+    classDef debugger fill:#f8f9fa,color:#000
+    classDef input fill:#e8eaf6,color:#000
+    classDef output fill:#f3e5f5,color:#000
+    
+    class CONFIG_DATA foundation
+    class SOURCE,RUNTIME_EVENTS,USER_QUERIES input
+    class PARSE,STORE ast
+    class GRAPH_BUILD graphg
+    class CPG_BUILD cpg
+    class PATTERN_DETECT analysis
+    class INSTRUMENT,EVENT_CAPTURE,CORRELATE,TEMPORAL runtime
+    class QUERY_PARSE,QUERY_OPT,QUERY_EXEC,RESULT_FORMAT runtime
+    class AI_PROCESS,INSIGHT_GEN,PREDICT,RECOMMEND intelligence
+    class DEBUG_UI debugger
+    class REPORTS,METRICS,ALERTS output
 ```
 
 ## Layer-by-Layer Technical Analysis
